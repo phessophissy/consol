@@ -201,6 +201,16 @@ contract GeneralManager is
   }
 
   /**
+   * @dev Modifier to check if the caller is an origination pool
+   */
+  modifier onlyRegisteredOriginationPool() {
+    if (!IOriginationPoolScheduler(originationPoolScheduler()).isRegistered(_msgSender())) {
+      revert InvalidOriginationPool(_msgSender());
+    }
+    _;
+  }
+
+  /**
    * @inheritdoc IERC165
    */
   function supportsInterface(bytes4 interfaceId)
@@ -315,7 +325,7 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function originationPoolScheduler() external view returns (address) {
+  function originationPoolScheduler() public view returns (address) {
     return _getGeneralManagerStorage()._originationPoolScheduler;
   }
 
@@ -686,7 +696,10 @@ contract GeneralManager is
    * @dev amount = amountBorrowed
    * @dev returnAmount = amountBorrowed + originationFee
    */
-  function originationPoolDeployCallback(uint256 amount, uint256 returnAmount, bytes calldata data) external {
+  function originationPoolDeployCallback(uint256 amount, uint256 returnAmount, bytes calldata data)
+    external
+    onlyRegisteredOriginationPool
+  {
     // Decode the callback data
     // Fetch storage
     GeneralManagerStorage storage $ = _getGeneralManagerStorage();

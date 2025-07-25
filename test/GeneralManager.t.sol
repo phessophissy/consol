@@ -1014,6 +1014,22 @@ contract GeneralManagerTest is BaseTest {
   // // ToDo: test_originate_compoundingWithoutPaymentPlanExpansion
   // // ToDo: test_originate_nonCompoundingWithoutPaymentPlanExpansion
 
+  function test_originationPoolDeployCallback_notRegisteredOriginationPool(
+    address caller,
+    uint256 amount,
+    uint256 returnAmount,
+    bytes calldata data
+  ) public {
+    // Ensure caller is not a registered origination pool
+    vm.assume(!originationPoolScheduler.isRegistered(caller));
+
+    // Attempt to call the origination pool deploy callback
+    vm.startPrank(caller);
+    vm.expectRevert(abi.encodeWithSelector(IGeneralManagerErrors.InvalidOriginationPool.selector, caller));
+    generalManager.originationPoolDeployCallback(amount, returnAmount, data);
+    vm.stopPrank();
+  }
+
   function test_convert_revertsIfDoesNotHaveConversionRole(
     address caller,
     uint256 tokenId,
