@@ -1014,7 +1014,7 @@ contract GeneralManagerTest is BaseTest {
   // // ToDo: test_originate_compoundingWithoutPaymentPlanExpansion
   // // ToDo: test_originate_nonCompoundingWithoutPaymentPlanExpansion
 
-  function test_originationPoolDeployCallback_notRegisteredOriginationPool(
+  function test_originationPoolDeployCallback_revertsIfNotRegisteredOriginationPool(
     address caller,
     uint256 amount,
     uint256 returnAmount,
