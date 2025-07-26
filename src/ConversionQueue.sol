@@ -271,7 +271,13 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
       if (amountToUse >= request.amount) {
         // Emit Withdrawal event
         emit WithdrawalProcessed(
-          request.account, request.shares, request.amount, request.timestamp, request.gasFee, block.timestamp
+          withdrawalQueueHead,
+          request.account,
+          request.shares,
+          request.amount,
+          request.timestamp,
+          request.gasFee,
+          block.timestamp
         );
         // Increment the collected gas fees for the caller
         collectedGasFees += request.gasFee;

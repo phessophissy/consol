@@ -37,9 +37,9 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
    */
   uint256 public override withdrawalGasFee;
   /**
-   * @dev The first index of the withdrawal queue
+   * @inheritdoc ILenderQueue
    */
-  uint256 internal withdrawalQueueHead;
+  uint256 public override withdrawalQueueHead;
   /**
    * @dev The withdrawal queue (in mapping form)
    */
@@ -122,9 +122,12 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
     // Transfer the amount of consols from the _msgSender's balance to the LenderQueue contract
     IERC20(consol).safeTransferFrom(_msgSender(), address(this), amount);
 
+    // Calculate the index of the request
+    uint256 index = withdrawalQueueHead + withdrawalQueueLength++;
+
     // Add the request to the queue
     uint256 shares = IRebasingERC20(consol).convertToShares(amount);
-    withdrawalRequests[withdrawalQueueHead + withdrawalQueueLength++] = WithdrawalRequest({
+    withdrawalRequests[index] = WithdrawalRequest({
       account: _msgSender(),
       shares: shares,
       amount: amount,
@@ -132,14 +135,14 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
       gasFee: withdrawalGasFee
     });
 
-    emit WithdrawalRequested(_msgSender(), shares, amount, block.timestamp, withdrawalGasFee);
+    emit WithdrawalRequested(index, _msgSender(), shares, amount, block.timestamp, withdrawalGasFee);
   }
 
   /**
    * @inheritdoc ILenderQueue
    */
-  function withdrawalQueue(uint256 index) external view override returns (WithdrawalRequest memory withdrawalRequest) {
-    withdrawalRequest = withdrawalRequests[withdrawalQueueHead + index];
+  function withdrawalQueue(uint256 index) external view override returns (WithdrawalRequest memory) {
+    return withdrawalRequests[index];
   }
 
   /**
@@ -157,7 +160,7 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
     }
 
     // Get the request from storage
-    WithdrawalRequest storage request = withdrawalRequests[withdrawalQueueHead + index];
+    WithdrawalRequest storage request = withdrawalRequests[index];
 
     // Validate the caller is the request's account
     if (_msgSender() != request.account) {
@@ -171,7 +174,7 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
     IERC20(consol).safeTransfer(request.account, request.amount);
 
     // Emit the event
-    emit WithdrawalCancelled(request.account, request.shares, request.amount, request.timestamp, request.gasFee);
+    emit WithdrawalCancelled(index, request.account, request.shares, request.amount, request.timestamp, request.gasFee);
 
     // Does not delete the request, but is overriden to get skipped.
     // Gas fee is not refunded as the request is still in the queue. This is to prevent griefing.

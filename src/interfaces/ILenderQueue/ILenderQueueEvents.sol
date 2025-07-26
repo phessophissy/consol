@@ -27,16 +27,20 @@ interface ILenderQueueEvents {
 
   /**
    * @notice Emitted when a withdrawal request is made.
+   * @param index The index of the withdrawal request
    * @param account The account that made the request
    * @param shares The amount of shares to withdraw
    * @param amount The amount to withdraw
    * @param timestamp The timestamp of the request
    * @param gasFee The gas fee paid for the request
    */
-  event WithdrawalRequested(address indexed account, uint256 shares, uint256 amount, uint256 timestamp, uint256 gasFee);
+  event WithdrawalRequested(
+    uint256 index, address indexed account, uint256 shares, uint256 amount, uint256 timestamp, uint256 gasFee
+  );
 
   /**
    * @notice Emitted when a withdrawal is processed.
+   * @param index The index of the withdrawal request
    * @param account The account that made the request
    * @param shares The amount of shares to withdraw
    * @param amount The amount to withdraw
@@ -45,6 +49,7 @@ interface ILenderQueueEvents {
    * @param timestampProcessed The timestamp of the request
    */
   event WithdrawalProcessed(
+    uint256 indexed index,
     address indexed account,
     uint256 shares,
     uint256 amount,
@@ -64,11 +69,14 @@ interface ILenderQueueEvents {
 
   /**
    * @notice Emitted when a withdrawal request is cancelled.
+   * @param index The index of the withdrawal request
    * @param account The account that made the request
    * @param shares The amount of shares being withdraw
    * @param amount The amount being withdrawn
    * @param timestamp The timestamp of the request
    * @param gasFee The gas fee paid for the request
    */
-  event WithdrawalCancelled(address indexed account, uint256 shares, uint256 amount, uint256 timestamp, uint256 gasFee);
+  event WithdrawalCancelled(
+    uint256 indexed index, address indexed account, uint256 shares, uint256 amount, uint256 timestamp, uint256 gasFee
+  );
 }

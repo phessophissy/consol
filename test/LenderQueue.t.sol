@@ -225,7 +225,7 @@ contract LenderQueueTest is BaseTest, ILenderQueueEvents {
     // Request a withdrawal of USDX from the Consol contract
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true);
-    emit WithdrawalRequested(caller, expectedShares, amount, block.timestamp, lenderQueue.withdrawalGasFee());
+    emit WithdrawalRequested(0, caller, expectedShares, amount, block.timestamp, lenderQueue.withdrawalGasFee());
     lenderQueue.requestWithdrawal(amount);
     vm.stopPrank();
 
@@ -346,7 +346,7 @@ contract LenderQueueTest is BaseTest, ILenderQueueEvents {
     // Have the withdrawer cancel the withdrawal
     vm.startPrank(withdrawer);
     vm.expectEmit(true, true, true, true);
-    emit WithdrawalCancelled(withdrawer, expectedShares, amount, block.timestamp - 1, gasFee);
+    emit WithdrawalCancelled(0, withdrawer, expectedShares, amount, block.timestamp - 1, gasFee);
     lenderQueue.cancelWithdrawal(0);
     vm.stopPrank();
 

@@ -99,7 +99,7 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
     // Request a withdrawal via the UsdxQueue
     vm.startPrank(withdrawer);
     vm.expectEmit(true, true, true, true);
-    emit WithdrawalRequested(withdrawer, expectedShares, amount, block.timestamp, usdxQueue.withdrawalGasFee());
+    emit WithdrawalRequested(0, withdrawer, expectedShares, amount, block.timestamp, usdxQueue.withdrawalGasFee());
     usdxQueue.requestWithdrawal{value: gasFee}(amount);
     vm.stopPrank();
 
@@ -112,7 +112,7 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
     // Have the caller process the USDX withdrawal requests
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true);
-    emit WithdrawalProcessed(withdrawer, expectedShares, amount, block.timestamp - 1, gasFee, block.timestamp);
+    emit WithdrawalProcessed(0, withdrawer, expectedShares, amount, block.timestamp - 1, gasFee, block.timestamp);
     usdxQueue.processWithdrawalRequests(1);
     vm.stopPrank();
 
@@ -179,7 +179,7 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
         // Request a withdrawal via the UsdxQueue
         vm.expectEmit(true, true, true, true);
         emit WithdrawalRequested(
-          withdrawer, expectedShares, withdrawalAmount, block.timestamp, usdxQueue.withdrawalGasFee()
+          i, withdrawer, expectedShares, withdrawalAmount, block.timestamp, usdxQueue.withdrawalGasFee()
         );
         usdxQueue.requestWithdrawal{value: gasFee}(withdrawalAmount);
         vm.stopPrank();

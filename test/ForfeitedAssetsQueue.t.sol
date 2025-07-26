@@ -101,7 +101,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
     vm.startPrank(withdrawer);
     vm.expectEmit(true, true, true, true);
     emit WithdrawalRequested(
-      withdrawer, expectedShares, amount, block.timestamp, forfeitedAssetsQueue.withdrawalGasFee()
+      0, withdrawer, expectedShares, amount, block.timestamp, forfeitedAssetsQueue.withdrawalGasFee()
     );
     forfeitedAssetsQueue.requestWithdrawal{value: gasFee}(amount);
     vm.stopPrank();
@@ -115,7 +115,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
     // Have the caller process the forfeited assets withdrawal requests
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true);
-    emit WithdrawalProcessed(withdrawer, expectedShares, amount, block.timestamp - 1, gasFee, block.timestamp);
+    emit WithdrawalProcessed(0, withdrawer, expectedShares, amount, block.timestamp - 1, gasFee, block.timestamp);
     forfeitedAssetsQueue.processWithdrawalRequests(1);
     vm.stopPrank();
 
@@ -180,7 +180,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
         // Request a withdrawal via the ForfeitedAssetsQueue
         vm.expectEmit(true, true, true, true);
         emit WithdrawalRequested(
-          withdrawer, expectedShares, withdrawalAmount, block.timestamp, forfeitedAssetsQueue.withdrawalGasFee()
+          i, withdrawer, expectedShares, withdrawalAmount, block.timestamp, forfeitedAssetsQueue.withdrawalGasFee()
         );
         forfeitedAssetsQueue.requestWithdrawal{value: gasFee}(withdrawalAmount);
         vm.stopPrank();

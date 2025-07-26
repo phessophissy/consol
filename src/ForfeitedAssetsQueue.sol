@@ -56,7 +56,13 @@ contract ForfeitedAssetsQueue is LenderQueue {
 
       // Emit the event
       emit WithdrawalProcessed(
-        request.account, request.shares, request.amount, request.timestamp, request.gasFee, block.timestamp
+        withdrawalQueueHead,
+        request.account,
+        request.shares,
+        request.amount,
+        request.timestamp,
+        request.gasFee,
+        block.timestamp
       );
 
       // Delete the request from the queue

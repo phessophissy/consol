@@ -66,14 +66,20 @@ interface ILenderQueue is ILenderQueueErrors, ILenderQueueEvents {
   function cancelWithdrawal(uint256 index) external;
 
   /**
-   * @notice Get the length of the withdrawal queue.
+   * @notice Get the head of the withdrawal queue. The index of the request at the front of the queue.
+   * @return index The index of the withdrawal request at the head of the queue
+   */
+  function withdrawalQueueHead() external view returns (uint256 index);
+
+  /**
+   * @notice Get the length of the withdrawal queue (number of requests in withdrawalRequests that have not been processed yet)
    * @return length The length of the withdrawal queue
    */
   function withdrawalQueueLength() external view returns (uint256 length);
 
   /**
-   * @notice Get the withdrawal queue at a given index.
-   * @param index The index of the withdrawal queue
+   * @notice Get the withdrawal request at a given index. The index is absolute, not relative to the withdrawal queue head.
+   * @param index The index of the withdrawal request
    * @return withdrawalRequest The withdrawal request at the given index
    */
   function withdrawalQueue(uint256 index) external view returns (WithdrawalRequest memory withdrawalRequest);
