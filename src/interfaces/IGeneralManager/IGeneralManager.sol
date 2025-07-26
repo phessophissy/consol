@@ -213,7 +213,7 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
    * @param conversionQueue The address of the conversion queue to use
    * @param hintPrevId The hint for the previous mortgage position in the conversion queue
    */
-  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external;
+  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external payable;
 
   /**
    * @notice Converts a mortgage position

@@ -31,6 +31,9 @@ import {ILoanManager} from "../src/interfaces/ILoanManager/ILoanManager.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {CreationRequest, ExpansionRequest, BaseRequest} from "../src/types/orders/OrderRequests.sol";
 import {Roles} from "../src/libraries/Roles.sol";
+import {PurchaseOrder} from "../src/types/orders/PurchaseOrder.sol";
+import {OriginationParameters} from "../src/types/orders/OriginationParameters.sol";
+import {Constants} from "../src/libraries/Constants.sol";
 
 contract GeneralManagerTest is BaseTest {
   function setUp() public override {
@@ -379,7 +382,6 @@ contract GeneralManagerTest is BaseTest {
     assertEq(generalManager.priceOracles(collateral), newPriceOracle, "Price oracle should be set correctly");
   }
 
-  // ToDo: test_requestMortgageCreation_revertsIfCompoundingAndNoConversionQueue
   function test_requestMortgageCreation_revertsIfCompoundingAndNoConversionQueue(
     CreationRequest memory createRequestSeed
   ) public {
@@ -1432,7 +1434,6 @@ contract GeneralManagerTest is BaseTest {
     assertEq(address(orderPool).balance, gasFee, "Order pool should have received the gas fee");
   }
 
-  // ToDo:
   function test_originate_compoundingWithoutPaymentPlanExpansion(
     CreationRequest memory createRequestSeed,
     ExpansionRequest memory expansionRequestSeed,
@@ -1604,5 +1605,108 @@ contract GeneralManagerTest is BaseTest {
     assertEq(subConsol.balanceOf(address(generalManager)), 0, "GeneralManager should have 0 SubConsol");
     assertEq(consol.balanceOf(address(generalManager)), 0, "GeneralManager should have 0 Consol");
     assertEq(wbtc.balanceOf(address(generalManager)), 0, "GeneralManager should have 0 Collateral");
+  }
+
+  function test_enqueueMortgage(
+    CreationRequest memory createRequestSeed,
+    uint256 gasFee
+  ) public {
+    // Fuzz the create request
+    CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
+    creationRequest.base.isCompounding = false;
+    creationRequest.hasPaymentPlan = true;
+    creationRequest.base.conversionQueue = address(0);
+
+    // Have the admin set the gas fee on the order pool
+    vm.startPrank(admin);
+    orderPool.setGasFee(gasFee);
+    vm.stopPrank();
+
+    // Deal the borrower the gas fee
+    vm.deal(borrower, gasFee);
+
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
+    // Calculating the required usdx deposit amount
+    uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmount, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    uint256 amountBorrowed = purchaseAmount / 2;
+    uint256 requiredUsdxAmount = Math.mulDiv(amountBorrowed, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
+    if (purchaseAmount % 2 == 1) {
+      requiredUsdxAmount += 1;
+    }
+    // Make sure the amountBorrowed is less than the pool limit
+    vm.assume(amountBorrowed < originationPool.poolLimit());
+
+    // Make sure the amountBorrowed is greater than or equal to the minimum origination deposit amount
+    vm.assume(amountBorrowed >= Constants.MINIMUM_ORIGINATION_DEPOSIT);
+
+    // Minting USDX to the borrower and approving the generalManager to spend it
+    _mintUsdx(borrower, requiredUsdxAmount);
+    vm.startPrank(borrower);
+    usdx.approve(address(generalManager), requiredUsdxAmount);
+    vm.stopPrank();
+
+    // Request a non-compounding mortgage with a payment plan
+    vm.startPrank(borrower);
+    generalManager.requestMortgageCreation{value: gasFee}(creationRequest);
+    vm.stopPrank();
+
+    // Fetch the PurchaseOrder from the order pool
+    PurchaseOrder memory purchaseOrder = orderPool.orders(0);
+
+    // Validate that the orderPool has the usdxCollected
+    assertEq(usdx.balanceOf(address(orderPool)), requiredUsdxAmount, "OrderPool should have the required usdx amount");
+
+    // Set up origination parameters
+    OriginationParameters memory originationParameters = OriginationParameters({
+      mortgageParams: purchaseOrder.mortgageParams,
+      fulfiller: fulfiller,
+      originationPool: purchaseOrder.originationPool,
+      conversionQueue: purchaseOrder.conversionQueue,
+      hintPrevId: 0,
+      expansion: purchaseOrder.expansion,
+      purchaseAmount: purchaseOrder.orderAmounts.purchaseAmount
+    });
+
+    // Deposit a bunch of USDX into the origination pool
+    _mintUsdx(lender, amountBorrowed);
+    vm.startPrank(lender);
+    usdx.approve(address(originationPool), amountBorrowed);
+    originationPool.deposit(amountBorrowed);
+    vm.stopPrank();
+
+    // Pre-deal collateral to the GeneralManager to mock some transfers
+    ERC20Mock(address(wbtc)).mint(address(generalManager), purchaseOrder.mortgageParams.collateralAmount);
+
+    // Presend the usdxCollected from the orderPool to the GeneralManager [mocking this]
+    vm.startPrank(address(orderPool));
+    usdx.transfer(address(generalManager), requiredUsdxAmount);
+    vm.stopPrank();
+
+    // Skip to the origination pool's deploy phase
+    vm.warp(originationPool.deployPhaseTimestamp());
+    
+    // The order pool calls originate
+    vm.startPrank(address(orderPool));
+    generalManager.originate(originationParameters);
+    vm.stopPrank();
+
+    // Have the admin set the gas fee for enqueuing mortgages into the conversion queue
+    vm.startPrank(admin);
+    conversionQueue.setMortgageGasFee(gasFee);
+    vm.stopPrank();
+
+    // Deal the borrower the mortgage gas fee
+    vm.deal(borrower, gasFee);
+
+    // Have the borrower enqueue the mortgage into the conversion queue
+    vm.startPrank(borrower);
+    generalManager.enqueueMortgage{value: gasFee}(1, address(conversionQueue), 0);
+    vm.stopPrank();
+
+    // Validate that the mortgage was enqueued into the conversion queue
+    assertEq(conversionQueue.mortgageSize(), 1, "Conversion queue should have 1 mortgage");
   }
 }

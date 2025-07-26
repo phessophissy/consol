@@ -778,7 +778,7 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external whenNotPaused {
+  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external payable whenNotPaused {
     // Make sure the msg.sender is the owner of the mortgage position
     if (IMortgageNFT(mortgageNFT()).ownerOf(tokenId) != _msgSender()) {
       revert NotMortgageOwner(_msgSender(), IMortgageNFT(mortgageNFT()).ownerOf(tokenId), tokenId);
