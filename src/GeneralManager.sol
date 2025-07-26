@@ -216,7 +216,11 @@ contract GeneralManager is
    * @param conversionQueue The address of the conversion queue
    * @return requiredGasFee The required gas fee
    */
-  function _checkSufficientGas(bool usingOrderPool, address conversionQueue) internal view returns (uint256 requiredGasFee) {
+  function _checkSufficientGas(bool usingOrderPool, address conversionQueue)
+    internal
+    view
+    returns (uint256 requiredGasFee)
+  {
     // Add in required gas fee for the order pool
     if (usingOrderPool) {
       requiredGasFee += IOrderPool(orderPool()).gasFee();
@@ -826,7 +830,12 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external payable whenNotPaused sufficientGasFeeAndRefund(false, conversionQueue){
+  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId)
+    external
+    payable
+    whenNotPaused
+    sufficientGasFeeAndRefund(false, conversionQueue)
+  {
     // Make sure the msg.sender is the owner of the mortgage position
     if (IMortgageNFT(mortgageNFT()).ownerOf(tokenId) != _msgSender()) {
       revert NotMortgageOwner(_msgSender(), IMortgageNFT(mortgageNFT()).ownerOf(tokenId), tokenId);
