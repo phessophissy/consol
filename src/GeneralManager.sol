@@ -211,6 +211,58 @@ contract GeneralManager is
   }
 
   /**
+   * @dev Checks if the caller sent enough value to cover the required gas fee
+   * @param usingOrderPool Whether the caller is using the order pool
+   * @param conversionQueue The address of the conversion queue
+   * @return requiredGasFee The required gas fee
+   */
+  function _checkSufficientGas(bool usingOrderPool, address conversionQueue)
+    internal
+    view
+    returns (uint256 requiredGasFee)
+  {
+    // Add in required gas fee for the order pool
+    if (usingOrderPool) {
+      requiredGasFee += IOrderPool(orderPool()).gasFee();
+    }
+
+    // Add in the required gas fee for the conversion queue
+    if (conversionQueue != address(0)) {
+      requiredGasFee += IConversionQueue(conversionQueue).mortgageGasFee();
+    }
+
+    // Validate that the caller sent enough value to cover the required gas fee
+    if (msg.value < requiredGasFee) {
+      revert InsufficientGas(msg.value, requiredGasFee);
+    }
+  }
+
+  /**
+   * @dev Refunds the surplus gas to the caller
+   * @param requiredGasFee The required gas fee
+   */
+  function _refundSurplusGas(uint256 requiredGasFee) internal {
+    uint256 surplus = msg.value - requiredGasFee;
+    if (surplus > 0) {
+      (bool success,) = _msgSender().call{value: surplus}("");
+      if (!success) {
+        revert FailedToWithdrawNativeGas(surplus);
+      }
+    }
+  }
+
+  /**
+   * @dev Modifier to both check if the caller has sent enough gas and to refund the surplus
+   * @param usingOrderPool Whether the caller is using the order pool
+   * @param conversionQueue The address of the conversion queue
+   */
+  modifier sufficientGasFeeAndRefund(bool usingOrderPool, address conversionQueue) {
+    uint256 requiredGasFee = _checkSufficientGas(usingOrderPool, conversionQueue);
+    _;
+    _refundSurplusGas(requiredGasFee);
+  }
+
+  /**
    * @inheritdoc IERC165
    */
   function supportsInterface(bytes4 interfaceId)
@@ -392,7 +444,7 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function orderPool() external view returns (address) {
+  function orderPool() public view returns (address) {
     return _getGeneralManagerStorage()._orderPool;
   }
 
@@ -603,6 +655,7 @@ contract GeneralManager is
     external
     payable
     whenNotPaused
+    sufficientGasFeeAndRefund(true, creationRequest.base.conversionQueue)
     returns (uint256 tokenId)
   {
     // If compounding, a conversion queue must be provided
@@ -635,6 +688,7 @@ contract GeneralManager is
     payable
     onlyRole(Roles.EXPANSION_ROLE)
     whenNotPaused
+    sufficientGasFeeAndRefund(true, expansionRequest.base.conversionQueue)
   {
     // Fetch the mortgagePosition from the loan manager
     MortgagePosition memory mortgagePosition = ILoanManager(loanManager()).getMortgagePosition(expansionRequest.tokenId);
@@ -778,7 +832,12 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external payable whenNotPaused {
+  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId)
+    external
+    payable
+    whenNotPaused
+    sufficientGasFeeAndRefund(false, conversionQueue)
+  {
     // Make sure the msg.sender is the owner of the mortgage position
     if (IMortgageNFT(mortgageNFT()).ownerOf(tokenId) != _msgSender()) {
       revert NotMortgageOwner(_msgSender(), IMortgageNFT(mortgageNFT()).ownerOf(tokenId), tokenId);

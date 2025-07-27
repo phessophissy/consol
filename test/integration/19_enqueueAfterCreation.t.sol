@@ -79,12 +79,12 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
     usdx.approve(address(generalManager), 102_000e18);
     vm.stopPrank();
 
-    // Deal 0.02 native tokens to the borrow to pay for the gas fees
-    vm.deal(address(borrower), 0.02e18);
+    // Deal 0.02 native tokens to the borrow to pay for the gas fees (not enqueuing into a conversion queue)
+    vm.deal(address(borrower), 0.01e18);
 
     // Borrower requests a non-compounding mortgage
     vm.startPrank(borrower);
-    generalManager.requestMortgageCreation{value: 0.02e18}(
+    generalManager.requestMortgageCreation{value: 0.01e18}(
       CreationRequest({
         base: BaseRequest({
           collateralAmount: 2e8,
@@ -152,9 +152,12 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
     // Refetch the mortgagePosition
     mortgagePosition = loanManager.getMortgagePosition(1);
 
+    // Deal the friend the gas fee
+    vm.deal(address(friend), 0.01e18);
+
     // Friends enqueues the mortgagePosition into the conversion queue
     vm.startPrank(friend);
-    generalManager.enqueueMortgage(mortgagePosition.tokenId, address(conversionQueue), 0);
+    generalManager.enqueueMortgage{value: 0.01e18}(mortgagePosition.tokenId, address(conversionQueue), 0);
     vm.stopPrank();
 
     // Validate that the mortgagePosition is in the conversion queue

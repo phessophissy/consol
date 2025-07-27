@@ -68,4 +68,17 @@ interface IGeneralManagerErrors {
    * @param maximumCap The maximum cap
    */
   error MaximumCapExceeded(uint256 amountBorrowed, uint256 maximumCap);
+
+  /**
+   * @notice Thrown when the caller sends too little gas to the contract
+   * @param sentGas The amount of gas sent
+   * @param requiredGas The required gas
+   */
+  error InsufficientGas(uint256 sentGas, uint256 requiredGas);
+
+  /**
+   * @notice Failed Withdraw Native Gas.
+   * @param amount The amount of native gas to withdraw
+   */
+  error FailedToWithdrawNativeGas(uint256 amount);
 }
