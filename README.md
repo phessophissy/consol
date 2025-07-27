@@ -25,7 +25,7 @@ $ forge test
 
 ```shell
 $ forge fmt
-$ yarn solhint
+$ pnpm solhint
 $ lintspec src --compact
 ```
 

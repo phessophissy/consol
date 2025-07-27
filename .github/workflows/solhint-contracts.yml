@@ -29,9 +29,9 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Run Solhint
         run: |
-          yarn solhint
+          pnpm solhint
         id: solhint
