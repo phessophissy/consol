@@ -14,7 +14,8 @@ import {OrderAmounts} from "./OrderAmounts.sol";
  * @param mortgageParams The parameters for the mortgage being created. Includes the owner, collateral, collateralAmount, subConsol, interestRate, amountBorrowed, and totalPeriods
  * @param timestamp The timestamp of when the PurchaseOrder was created
  * @param expiration The expiration timestamp of the PurchaseOrder
- * @param gasFee The gas fee paid for processing the PurchaseOrder
+ * @param conversionQueueGasFee The gas fee paid for enqueuing the mortgage into the conversion queue
+ * @param orderPoolGasFee The gas fee paid for adding the PurchaseOrder to the OrderPool
  * @param expansion Whether the purchase order is for a new mortgage creation or a balance sheet expansion
  */
 struct PurchaseOrder {
@@ -24,6 +25,7 @@ struct PurchaseOrder {
   MortgageParams mortgageParams;
   uint256 timestamp;
   uint256 expiration;
-  uint256 gasFee;
+  uint256 conversionQueueGasFee;
+  uint256 orderPoolGasFee;
   bool expansion;
 }

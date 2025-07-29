@@ -139,7 +139,8 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
     );
     assertEq(orderPool.orders(0).timestamp, block.timestamp, "orderPool.orders(0).timestamp");
     assertEq(orderPool.orders(0).expiration, block.timestamp + 5 minutes, "orderPool.orders(0).expiration");
-    assertEq(orderPool.orders(0).gasFee, 0.01e18, "orderPool.orders(0).gasFee");
+    assertEq(orderPool.orders(0).conversionQueueGasFee, 0, "orderPool.orders(0).conversionQueueGasFee");
+    assertEq(orderPool.orders(0).orderPoolGasFee, 0.01e18, "orderPool.orders(0).orderPoolGasFee");
     assertEq(orderPool.orders(0).expansion, false, "orderPool.orders(0).expansion");
 
     // Skip time ahead to the expiration of the order
