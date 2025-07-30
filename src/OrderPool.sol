@@ -136,23 +136,18 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
   }
 
   /**
-   * @inheritdoc IOrderPool
+   * @dev Helper function for sending collected assets to the general manager or refunding to the borrower
+   * @param receiver The address to send the assets to
+   * @param order The order being processed
    */
-  function processOrders(uint256[] memory indices, uint256[] memory hintPrevIds)
-    external
-    onlyRole(Roles.FULFILLMENT_ROLE)
-    nonReentrant
-  {
-    // Start tracking total amount of gas to reimburse
-    uint256 collectedGasFees;
-    for (uint256 i = 0; i < indices.length; i++) {
-      collectedGasFees += _processOrder(indices[i], hintPrevIds[i]);
+  function _sendCollectedAssets(address receiver, PurchaseOrder memory order) internal {
+    // Send collateral collected to the receiver
+    if (order.orderAmounts.collateralCollected > 0) {
+      IERC20(order.mortgageParams.collateral).safeTransfer(receiver, order.orderAmounts.collateralCollected);
     }
-
-    // Send the collected gas fees to the _msgSender
-    (bool success,) = _msgSender().call{value: collectedGasFees}("");
-    if (!success) {
-      revert FailedToWithdrawNativeGas(collectedGasFees);
+    // Send usdx collected to the receiver
+    if (order.orderAmounts.usdxCollected > 0) {
+      IERC20(usdx).safeTransfer(receiver, order.orderAmounts.usdxCollected);
     }
   }
 
@@ -179,15 +174,13 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
 
       // Emit the PurchaseOrderExpired event
       emit PurchaseOrderExpired(index);
+
+      // Return assets to the borrower
+      _sendCollectedAssets(order.mortgageParams.owner, order);
     } else {
-      // Send collateral collected to the general manager
-      if (order.orderAmounts.collateralCollected > 0) {
-        IERC20(order.mortgageParams.collateral).safeTransfer(generalManager, order.orderAmounts.collateralCollected);
-      }
-      // Send usdx collected to the general manager
-      if (order.orderAmounts.usdxCollected > 0) {
-        IERC20(usdx).safeTransfer(generalManager, order.orderAmounts.usdxCollected);
-      }
+      // Send the collected assets to the general manager
+      _sendCollectedAssets(generalManager, order);
+
       // Send the rest of the purchased collateral to the general manager
       uint256 collateralRequested = order.mortgageParams.collateralAmount - order.orderAmounts.collateralCollected;
       if (collateralRequested > 0) {
@@ -215,5 +208,26 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
 
     // Delete the order
     delete _orders[index];
+  }
+
+  /**
+   * @inheritdoc IOrderPool
+   */
+  function processOrders(uint256[] memory indices, uint256[] memory hintPrevIds)
+    external
+    onlyRole(Roles.FULFILLMENT_ROLE)
+    nonReentrant
+  {
+    // Start tracking total amount of gas to reimburse
+    uint256 collectedGasFees;
+    for (uint256 i = 0; i < indices.length; i++) {
+      collectedGasFees += _processOrder(indices[i], hintPrevIds[i]);
+    }
+
+    // Send the collected gas fees to the _msgSender
+    (bool success,) = _msgSender().call{value: collectedGasFees}("");
+    if (!success) {
+      revert FailedToWithdrawNativeGas(collectedGasFees);
+    }
   }
 }

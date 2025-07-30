@@ -417,6 +417,13 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
       "Native balance mismatch"
     );
 
+    // Validate that the borrower has received their collateral back
+    assertEq(
+      ERC20Mock(address(wbtc)).balanceOf(borrower),
+      orderAmounts.collateralCollected,
+      "Borrower receives their collateral collected back"
+    );
+
     // Validate that the order was deleted
     assertEq(orderPool.orders(0).originationPool, address(0), "Origination pool should be 0");
     assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
