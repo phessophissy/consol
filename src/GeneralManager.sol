@@ -211,12 +211,12 @@ contract GeneralManager is
   }
 
   /**
-   * @dev Checks if the caller sent enough value to cover the required gas fee
+   * @dev Calculates the required gas fee for the caller
    * @param usingOrderPool Whether the caller is using the order pool
    * @param conversionQueue The address of the conversion queue
    * @return requiredGasFee The required gas fee
    */
-  function _checkSufficientGas(bool usingOrderPool, address conversionQueue)
+  function _calculateRequiredGasFee(bool usingOrderPool, address conversionQueue)
     internal
     view
     returns (uint256 requiredGasFee)
@@ -230,7 +230,13 @@ contract GeneralManager is
     if (conversionQueue != address(0)) {
       requiredGasFee += IConversionQueue(conversionQueue).mortgageGasFee();
     }
+  }
 
+  /**
+   * @dev Checks if the caller sent enough value to cover the required gas fee
+   * @param requiredGasFee The required gas fee
+   */
+  function _checkSufficientGas(uint256 requiredGasFee) internal view {
     // Validate that the caller sent enough value to cover the required gas fee
     if (msg.value < requiredGasFee) {
       revert InsufficientGas(msg.value, requiredGasFee);
@@ -257,7 +263,8 @@ contract GeneralManager is
    * @param conversionQueue The address of the conversion queue
    */
   modifier sufficientGasFeeAndRefund(bool usingOrderPool, address conversionQueue) {
-    uint256 requiredGasFee = _checkSufficientGas(usingOrderPool, conversionQueue);
+    uint256 requiredGasFee = _calculateRequiredGasFee(usingOrderPool, conversionQueue);
+    _checkSufficientGas(requiredGasFee);
     _;
     _refundSurplusGas(requiredGasFee);
   }
@@ -638,7 +645,7 @@ contract GeneralManager is
     }
 
     // Send the order to the order pool
-    IOrderPool($._orderPool).sendOrder{value: IOrderPool($._orderPool).gasFee()}(
+    IOrderPool($._orderPool).sendOrder{value: _calculateRequiredGasFee(true, baseRequest.conversionQueue)}(
       baseRequest.originationPool,
       baseRequest.conversionQueue,
       orderAmounts,
@@ -715,7 +722,7 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function originate(OriginationParameters calldata originationParameters) external onlyOrderPool whenNotPaused {
+  function originate(OriginationParameters calldata originationParameters) external payable onlyOrderPool whenNotPaused {
     // Fetch storage
     GeneralManagerStorage storage $ = _getGeneralManagerStorage();
 

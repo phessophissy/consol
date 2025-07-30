@@ -8,14 +8,14 @@ pragma solidity ^0.8.20;
  */
 interface IMortgageQueueEvents {
   /**
-   * @notice Emitted when a MortgagePosition is inserted into the Conversion Queue.
+   * @notice Emitted when a MortgagePosition is inserted into the Mortgage Queue.
    * @param tokenId The tokenId of the MortgagePosition that was inserted.
    * @param triggerPrice The trigger price of the MortgagePosition that was inserted.
    */
   event Inserted(uint256 indexed tokenId, uint256 triggerPrice);
 
   /**
-   * @notice Emitted when a MortgagePosition is removed from the Conversion Queue.
+   * @notice Emitted when a MortgagePosition is removed from the Mortgage Queue.
    * @param tokenId The tokenId of the MortgagePosition that was removed.
    */
   event Removed(uint256 indexed tokenId);

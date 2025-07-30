@@ -202,10 +202,10 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
   function burnMortgageNFT(uint256 tokenId) external;
 
   /**
-   * @notice Originates a mortgage position
+   * @notice Originates a mortgage position. Only callable by the OrderPool.
    * @param originationParameters The parameters for originating a mortgage creation or balance sheet expansion
    */
-  function originate(OriginationParameters calldata originationParameters) external;
+  function originate(OriginationParameters calldata originationParameters) external payable;
 
   /**
    * @notice Enqueues a mortgage position into a conversion queue

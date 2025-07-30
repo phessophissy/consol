@@ -14,6 +14,7 @@ import {OrderAmounts} from "./types/orders/OrderAmounts.sol";
 import {OriginationParameters} from "./types/orders/OriginationParameters.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Roles} from "./libraries/Roles.sol";
+import {IConversionQueue} from "./interfaces/IConversionQueue/IConversionQueue.sol";
 
 /**
  * @title PurchasePool
@@ -120,7 +121,8 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
       mortgageParams: mortgageParams,
       timestamp: block.timestamp,
       expiration: expiration,
-      gasFee: gasFee,
+      mortgageGasFee: conversionQueue == address(0) ? 0 : IConversionQueue(conversionQueue).mortgageGasFee(),
+      orderPoolGasFee: gasFee,
       expansion: expansion
     });
 
@@ -172,6 +174,9 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
       // Delete the order
       delete _orders[index];
 
+      // Collected the mortgage gas fee
+      collectedGasFee += order.mortgageGasFee;
+
       // Emit the PurchaseOrderExpired event
       emit PurchaseOrderExpired(index);
     } else {
@@ -190,7 +195,7 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
       }
 
       // Originate the mortgage (fulfiller will receive back the purchaseAmount of USDX)
-      IGeneralManager(generalManager).originate(
+      IGeneralManager(generalManager).originate{value: order.mortgageGasFee}(
         OriginationParameters({
           mortgageParams: order.mortgageParams,
           fulfiller: _msgSender(),
@@ -206,7 +211,7 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
       emit PurchaseOrderFilled(index);
     }
     // Record the amount of gas to reimburse
-    collectedGasFee = order.gasFee;
+    collectedGasFee += order.orderPoolGasFee;
 
     // Delete the order
     delete _orders[index];

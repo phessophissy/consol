@@ -74,7 +74,7 @@ contract Integration_23_RequestWithGasFeesTest is IntegrationBaseTest {
     usdx.approve(address(generalManager), 101_000e18);
     vm.stopPrank();
 
-    // Deal 0.01 native tokens to the borrow to pay for the gas fees
+    // Deal 0.02 native tokens to the borrow to pay for the gas fees
     vm.deal(address(borrower), 0.02e18);
 
     // Borrower requests a non-compounding mortgage
@@ -109,5 +109,12 @@ contract Integration_23_RequestWithGasFeesTest is IntegrationBaseTest {
 
     // Validate that the borrower has the mortgageNFT
     assertEq(mortgageNFT.ownerOf(1), address(borrower));
+
+    // Validate that the general manager does not have any balance
+    assertEq(address(generalManager).balance, 0, "GeneralManager should have 0 balance");
+
+    // Validate that the fulfiller and the conversion queue both have their collected gas fees
+    assertEq(fulfiller.balance, 0.01e18, "Fulfiller should have 0.01 native tokens");
+    assertEq(address(conversionQueue).balance, 0.01e18, "ConversionQueue should have 0.01 native tokens");
   }
 }

@@ -182,7 +182,7 @@ contract Integration_12_CompoundingHalfConvertTest is IntegrationBaseTest {
     originationPool.redeem(originationPool.balanceOf(address(lender)));
     vm.stopPrank();
 
-    // Deal the conversion queue gas fee to the lender
+    // Deal the mortgage gas fee to the lender
     vm.deal(address(lender), 0.01e18);
 
     // Lender enters the conversion queue with 50k Consol

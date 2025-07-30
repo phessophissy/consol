@@ -74,18 +74,18 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
     usdx.approve(address(generalManager), 101_000e18);
     vm.stopPrank();
 
-    // Deal 0.01 native tokens to the borrow to pay for the gas fee (not enqueuing into a conversion queue)
-    vm.deal(address(borrower), 0.01e18);
+    // Deal 0.02 native tokens to the borrow to pay for the gas fee (enqueuing into a conversion queue)
+    vm.deal(address(borrower), 0.02e18);
 
     // Borrower requests a non-compounding mortgage
     vm.startPrank(borrower);
-    generalManager.requestMortgageCreation{value: 0.01e18}(
+    generalManager.requestMortgageCreation{value: 0.02e18}(
       CreationRequest({
         base: BaseRequest({
           collateralAmount: 2e8,
           totalPeriods: 36,
           originationPool: address(originationPool),
-          conversionQueue: address(0),
+          conversionQueue: address(conversionQueue),
           isCompounding: false,
           expiration: block.timestamp + 5 minutes
         }),
@@ -103,7 +103,7 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
 
     // Validate that the orderPool has the order
     assertEq(orderPool.orders(0).originationPool, address(originationPool), "orderPool.orders(0).originationPool");
-    assertEq(orderPool.orders(0).conversionQueue, address(0), "orderPool.orders(0).conversionQueue");
+    assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "orderPool.orders(0).conversionQueue");
     assertEq(
       orderPool.orders(0).orderAmounts.purchaseAmount, 200_000e18, "orderPool.orders(0).orderAmounts.purchaseAmount"
     );
@@ -139,7 +139,8 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
     );
     assertEq(orderPool.orders(0).timestamp, block.timestamp, "orderPool.orders(0).timestamp");
     assertEq(orderPool.orders(0).expiration, block.timestamp + 5 minutes, "orderPool.orders(0).expiration");
-    assertEq(orderPool.orders(0).gasFee, 0.01e18, "orderPool.orders(0).gasFee");
+    assertEq(orderPool.orders(0).mortgageGasFee, 0.01e18, "orderPool.orders(0).mortgageGasFee");
+    assertEq(orderPool.orders(0).orderPoolGasFee, 0.01e18, "orderPool.orders(0).orderPoolGasFee");
     assertEq(orderPool.orders(0).expansion, false, "orderPool.orders(0).expansion");
 
     // Skip time ahead to the expiration of the order
@@ -161,5 +162,11 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
 
     // Validate that no mortgagePosition exists
     assertEq(loanManager.getMortgagePosition(1).tokenId, 0, "loanManager.getMortgagePosition(1).tokenId");
+
+    // Validate the balances of all the participants
+    assertEq(address(generalManager).balance, 0, "GeneralManager should have 0 balance");
+    assertEq(address(conversionQueue).balance, 0, "ConversionQueue should have 0 balance");
+    assertEq(address(orderPool).balance, 0, "OrderPool should have 0 balance");
+    assertEq(address(fulfiller).balance, 0.02e18, "Fulfiller should have 0.02 native tokens");
   }
 }

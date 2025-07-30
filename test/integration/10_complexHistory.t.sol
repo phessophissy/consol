@@ -246,7 +246,7 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     originationPool.redeem(originationPool.balanceOf(address(lender)));
     vm.stopPrank();
 
-    // Deal the conversion queue gas fee to the lender
+    // Deal the mortgage gas fee to the lender
     vm.deal(address(lender), 0.01e18);
 
     // Lender enters the conversion queue with 25k Consol
@@ -359,7 +359,7 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     // Update the mortgagePosition details
     mortgagePosition = loanManager.getMortgagePosition(1);
 
-    // Deal the conversion queue gas fee to the lender
+    // Deal the mortgage gas fee to the lender
     vm.deal(address(lender), 0.01e18);
 
     // Lender enters the conversion queue with the rest of the mortgagePosition amountOutstanding (100k - 25k)
