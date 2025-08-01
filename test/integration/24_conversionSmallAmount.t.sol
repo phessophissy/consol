@@ -207,7 +207,7 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
       conversionQueue.requestWithdrawal{value: 0.01e18}(1e18);
       vm.stopPrank();
     }
-    
+
     // Have holder update the price of btc to $150k to hit the trigger price of both mortgages
     {
       vm.startPrank(rando);

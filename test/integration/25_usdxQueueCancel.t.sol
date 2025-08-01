@@ -41,7 +41,7 @@ contract Integration_25_UsdxQueueCancel is IntegrationBaseTest {
       consol.deposit(address(usdx), usdxAmount);
       vm.stopPrank();
     }
-    
+
     // Mint 100k of Consol to the second lender via USDT
     {
       uint256 usdxAmount = consol.convertUnderlying(address(usdx), 100_000e18);

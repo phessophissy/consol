@@ -39,7 +39,7 @@ contract Integration_26_ForfeitedAssetsQueueCancel is IntegrationBaseTest {
       usdx.deposit(address(usdt), usdtAmount);
       vm.stopPrank();
     }
-    
+
     // Mint 100k of USDX to the second lender via USDT
     {
       uint256 usdxAmount = consol.convertUnderlying(address(usdx), 100_000e18);
