@@ -38,14 +38,14 @@ contract UsdxQueue is LenderQueue {
       // Get the first request from the queue
       WithdrawalRequest memory request = withdrawalRequests[withdrawalQueueHead];
 
-      // Burn the excess shares that correspond to forfeited yield while the request was in the queue
-      IConsol(consol).burnExcessShares(request.shares, request.amount);
+      // If the request hasn't been cancelled, transfer the amount of USDX to the request's account
+      if (request.shares > 0 && request.amount > 0) {
+        // Burn the excess shares that correspond to forfeited yield while the request was in the queue
+        IConsol(consol).burnExcessShares(request.shares, request.amount);
 
-      // Withdraw request.amount of USDX from the Consol contract
-      IConsol(consol).withdraw(asset, request.amount);
+        // Withdraw request.amount of USDX from the Consol contract
+        IConsol(consol).withdraw(asset, request.amount);
 
-      // Transfer the amount of USDX to the request's account
-      if (request.amount > 0) {
         IERC20(asset).safeTransfer(request.account, request.amount);
       }
 
