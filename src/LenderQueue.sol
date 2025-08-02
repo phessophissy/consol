@@ -159,13 +159,18 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
       revert WithdrawalRequestOutOfBounds(index, withdrawalQueueLength);
     }
 
-    // Get the request from storage
-    WithdrawalRequest storage request = withdrawalRequests[index];
+    // Cache the request into memory
+    WithdrawalRequest memory request = withdrawalRequests[index];
 
     // Validate the caller is the request's account
     if (_msgSender() != request.account) {
       revert CallerIsNotRequestAccount(request.account, _msgSender());
     }
+
+    // Soft-delete the request from storage, such that it is overriden to get skipped.
+    // Gas fee is not refunded as the request is still in the queue. This is to prevent griefing.
+    withdrawalRequests[index].amount = 0;
+    withdrawalRequests[index].shares = 0;
 
     // Burn the excess shares that correspond to forfeited yield while the request was in the queue
     IConsol(consol).burnExcessShares(request.shares, request.amount);
@@ -175,10 +180,5 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
 
     // Emit the event
     emit WithdrawalCancelled(index, request.account, request.shares, request.amount, request.timestamp, request.gasFee);
-
-    // Does not delete the request, but is overriden to get skipped.
-    // Gas fee is not refunded as the request is still in the queue. This is to prevent griefing.
-    request.amount = 0;
-    request.shares = 0;
   }
 }
