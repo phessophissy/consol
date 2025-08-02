@@ -90,9 +90,9 @@ contract USDX is IUSDX, MultiTokenVault {
    */
   function convertAmount(address token, uint256 amount)
     public
+    view
     virtual
     override(MultiTokenVault, IMultiTokenVault)
-    view
     returns (uint256)
   {
     // Fetch the token scalars
@@ -107,9 +107,9 @@ contract USDX is IUSDX, MultiTokenVault {
    */
   function convertUnderlying(address token, uint256 amount)
     public
+    view
     virtual
     override(MultiTokenVault, IMultiTokenVault)
-    view
     returns (uint256)
   {
     // Fetch the token scalars
