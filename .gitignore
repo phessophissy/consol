@@ -21,5 +21,9 @@ docs/
 # Dotenv file
 .env
 
+# Coverage files
+coverage/
+lcov.info
+
 # Misc
 .DS_Store

@@ -32,3 +32,14 @@ jobs:
         run: |
           forge test -vvv
         id: test
+      
+      - name: Run Forge Coverage
+        run: |
+          forge coverage > ./coverage-report.md
+        id: coverage
+
+      - name: Report Coverage in PR
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          file-path: ./coverage-report.md
+          comment-tag: coverage-report

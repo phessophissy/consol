@@ -63,7 +63,11 @@ contract Consol is IConsol, MultiTokenVault, ReentrancyGuard {
     cap[forfeitedAssetsPool_] = cap[forfeitedAssetsPool];
     delete cap[forfeitedAssetsPool];
 
-    // Update forfeited assets pool
+    // Remove the old forfeited assets pool from the supported tokens
+    supportedTokens.remove(forfeitedAssetsPool);
+    emit TokenRemoved(forfeitedAssetsPool);
+
+    // Update forfeited assets pool to new value
     forfeitedAssetsPool = forfeitedAssetsPool_;
     supportedTokens.add(address(forfeitedAssetsPool));
     emit TokenAdded(address(forfeitedAssetsPool));
