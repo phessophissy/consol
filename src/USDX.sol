@@ -92,6 +92,7 @@ contract USDX is IUSDX, MultiTokenVault {
     public
     virtual
     override(MultiTokenVault, IMultiTokenVault)
+    view
     returns (uint256)
   {
     // Fetch the token scalars
@@ -108,6 +109,7 @@ contract USDX is IUSDX, MultiTokenVault {
     public
     virtual
     override(MultiTokenVault, IMultiTokenVault)
+    view
     returns (uint256)
   {
     // Fetch the token scalars
