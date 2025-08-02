@@ -199,7 +199,7 @@ contract MortgageMathTest is Test {
 
     // Attempt to make a partial prepayment on the mortgage and expect a revert
     vm.expectRevert(abi.encodeWithSelector(MortgageMath.CannotPartialPrepay.selector, mortgagePosition));
-    (mortgagePosition,) = mortgagePosition.periodPay(amount, latePaymentWindow);
+    (mortgagePosition,,) = mortgagePosition.periodPay(amount, latePaymentWindow);
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
@@ -224,15 +224,15 @@ contract MortgageMathTest is Test {
 
     // Attempt to make a payment on the mortgage without paying the penalties and expect a revert
     vm.expectRevert(abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, mortgagePosition));
-    (mortgagePosition,) = mortgagePosition.periodPay(amount, latePaymentWindow);
+    (mortgagePosition,,) = mortgagePosition.periodPay(amount, latePaymentWindow);
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
-  function test_periodPay_revertsWhenOverpaying(
+  function test_periodPay_refundsWhenOverpaying(
     MortgagePositionSeed memory mortgagePositionSeed,
     uint256 latePaymentWindow,
     uint256 amount
-  ) public validLatePenaltyWindow(latePaymentWindow) {
+  ) public view validLatePenaltyWindow(latePaymentWindow) {
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
@@ -240,8 +240,30 @@ contract MortgageMathTest is Test {
     amount = bound(amount, mortgagePosition.termBalance + 1, type(uint128).max);
 
     // Attempt to overpay the mortgage and expect a revert
+    uint256 refund;
+    (mortgagePosition,,refund) = mortgagePosition.periodPay(amount, latePaymentWindow);
+
+    // Validate that the refund is correct (no termPaid yet)
+    assertEq(refund, amount - mortgagePosition.termBalance, "refund should be the same as amount - termBalance");
+  }
+
+  /// forge-config: default.allow_internal_expect_revert = true
+  function test_periodPay_revertsWhenAlreadyPaid(
+    MortgagePositionSeed memory mortgagePositionSeed,
+    uint256 latePaymentWindow,
+    uint256 amount
+  ) public validLatePenaltyWindow(latePaymentWindow) {
+    // Fuzz the mortgage position
+    MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
+    mortgagePosition.hasPaymentPlan = true;
+    mortgagePosition.termPaid = mortgagePosition.termBalance;
+
+    // Make sure amount > 1
+    amount = bound(amount, 1, type(uint128).max);
+
+    // Attempt to overpay the mortgage and expect a revert
     vm.expectRevert(abi.encodeWithSelector(MortgageMath.CannotOverpay.selector, mortgagePosition, amount));
-    (mortgagePosition,) = mortgagePosition.periodPay(amount, latePaymentWindow);
+    (mortgagePosition,,) = mortgagePosition.periodPay(amount, latePaymentWindow);
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
@@ -250,7 +272,7 @@ contract MortgageMathTest is Test {
     uint256 latePaymentWindow,
     uint256 amount1,
     uint256 amount2
-  ) public validLatePenaltyWindow(latePaymentWindow) {
+  ) public view validLatePenaltyWindow(latePaymentWindow) {
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
     mortgagePosition.hasPaymentPlan = true;
@@ -261,11 +283,18 @@ contract MortgageMathTest is Test {
     amount2 = bound(amount2, mortgagePosition.termBalance - amount1 + 1, mortgagePosition.termBalance - 1);
 
     // Make the first payment
-    (mortgagePosition,) = mortgagePosition.periodPay(amount1, latePaymentWindow);
+    uint256 refund;
+    (mortgagePosition,,refund) = mortgagePosition.periodPay(amount1, latePaymentWindow);
+
+    // Validate that the refund is 0
+    assertEq(refund, 0, "refund should be 0");
 
     // Attempt to make a second payment and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.CannotOverpay.selector, mortgagePosition, amount2));
-    (mortgagePosition,) = mortgagePosition.periodPay(amount2, latePaymentWindow);
+    // vm.expectRevert(abi.encodeWithSelector(MortgageMath.CannotOverpay.selector, mortgagePosition, amount2));
+    (mortgagePosition,,refund) = mortgagePosition.periodPay(amount2, latePaymentWindow);
+
+    // Validate that the refund is correct
+    assertEq(refund, amount2 - (mortgagePosition.termBalance - amount1), "refund should be the same as amount2 - (termBalance - amount1)");
   }
 
   function test_periodPay_hasPaymentPlan(
@@ -284,8 +313,8 @@ contract MortgageMathTest is Test {
     uint256 expectedPrincipalPaid = MortgageMath.convertPaymentToPrincipal(mortgagePosition, amount);
 
     // Pay the mortgage
-    uint256 principalPayment;
-    (mortgagePosition, principalPayment) = mortgagePosition.periodPay(amount, latePaymentWindow);
+    uint256 principalPayment; uint256 refund;
+    (mortgagePosition, principalPayment, refund) = mortgagePosition.periodPay(amount, latePaymentWindow);
 
     // Validate the termPaid is correct and that amountPrior hasn't changed (still 0)
     assertEq(mortgagePosition.amountPrior, 0, "amountPrior should be 0");
@@ -307,6 +336,7 @@ contract MortgageMathTest is Test {
     assertEq(
       mortgagePosition.periodsPaid(), expectedPeriodsPaid, "periodsPaid should be the same as expectedPeriodsPaid"
     );
+    assertEq(refund, 0, "refund should be 0");
   }
 
   function test_periodPay_noPaymentPlanLumpsum(
@@ -320,8 +350,8 @@ contract MortgageMathTest is Test {
     MortgagePosition memory oldMortgagePosition = mortgagePosition.copy();
 
     // Pay the mortgage
-    uint256 principalPayment;
-    (mortgagePosition, principalPayment) = mortgagePosition.periodPay(mortgagePosition.termBalance, latePaymentWindow);
+    uint256 principalPayment; uint256 refund;
+    (mortgagePosition, principalPayment, refund) = mortgagePosition.periodPay(mortgagePosition.termBalance, latePaymentWindow);
 
     // Validate the termPaid is correct and that amountPrior hasn't changed (still 0)
     assertEq(mortgagePosition.amountPrior, 0, "amountPrior should be 0");
@@ -339,6 +369,7 @@ contract MortgageMathTest is Test {
     assertEq(
       mortgagePosition.periodsPaid(), oldMortgagePosition.totalPeriods, "periodsPaid should be the same as totalPeriods"
     );
+    assertEq(refund, 0, "refund should be 0");
   }
 
   function test_applyPenalties_simpleAndHasPaymentPlan(
@@ -565,7 +596,7 @@ contract MortgageMathTest is Test {
     timePassed = bound(timePassed, mortgagePositionSeed.totalPeriods * Constants.PERIOD_DURATION + 1, type(uint32).max);
 
     // Pay the mortgage in full
-    (mortgagePosition,) = mortgagePosition.periodPay(mortgagePosition.termBalance, 0);
+    (mortgagePosition,,) = mortgagePosition.periodPay(mortgagePosition.termBalance, 0);
 
     // Skip time forward
     skip(timePassed);
@@ -774,33 +805,57 @@ contract MortgageMathTest is Test {
     assertEq(mortgagePosition.penaltyPaid, 0, "penaltyPaid should be 0");
   }
 
-  /// forge-config: default.allow_internal_expect_revert = true
-  function test_penaltyPay_revertsWhenOverpaying(
+  function test_penaltyPay_refundsWhenOverpaying(
     MortgagePositionSeed memory mortgagePositionSeed,
     uint256 penaltyAccrued,
     uint256 amount
-  ) public {
+  ) public view {
     // Ensure penaltyAccrued is less than max uint256 and that amount is greater
-    penaltyAccrued = bound(penaltyAccrued, 0, type(uint256).max - 1);
+    penaltyAccrued = bound(penaltyAccrued, 1, type(uint256).max - 1);
     amount = bound(amount, penaltyAccrued + 1, type(uint256).max);
 
-    // Fuzz the mortgage position
+    // Fuzz the mortgage position    
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
     // Update the mortgage position with the penaltyAccrued
     mortgagePosition.penaltyAccrued = penaltyAccrued;
 
     // Attempt to overpay the penalty and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.CannotOverpayPenalty.selector, mortgagePosition, amount));
-    mortgagePosition = mortgagePosition.penaltyPay(amount);
+    uint256 refund;
+    (mortgagePosition, refund) = mortgagePosition.penaltyPay(amount);
+
+    // Validate that the refund is correct (no penaltyPaid yet)
+    assertEq(refund, amount - penaltyAccrued, "refund should be the same as amount - penaltyAccrued");
   }
+
+  /// forge-config: default.allow_internal_expect_revert = true
+  function test_penaltyPay_revertsWhenAlreadyPaid(
+    MortgagePositionSeed memory mortgagePositionSeed,
+    uint256 penaltyAccrued,
+    uint256 amount
+  ) public {
+    // Ensure penaltyAccrued is less than max uint256 and that amount is greater
+    penaltyAccrued = bound(penaltyAccrued, 0, type(uint256).max - 1);
+    amount = bound(amount, 1, type(uint128).max);
+
+    // Fuzz the mortgage position
+    MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
+
+    // Update the mortgage position with the penaltyAccrued = penaltyPaid
+    mortgagePosition.penaltyAccrued = penaltyAccrued;
+    mortgagePosition.penaltyPaid = penaltyAccrued;
+
+    // Attempt to overpay the penalty and expect a revert
+    vm.expectRevert(abi.encodeWithSelector(MortgageMath.CannotOverpayPenalty.selector, mortgagePosition, amount));
+    (mortgagePosition,) = mortgagePosition.penaltyPay(amount);
+  } 
 
   function test_penaltyPay(MortgagePositionSeed memory mortgagePositionSeed, uint256 penaltyAccrued, uint256 amount)
     public
     view
   {
     // Ensure amount is less than or equal to penaltyAccrued
-    penaltyAccrued = bound(penaltyAccrued, 0, type(uint256).max);
+    penaltyAccrued = bound(penaltyAccrued, 1, type(uint256).max);
     amount = bound(amount, 0, penaltyAccrued);
 
     // Fuzz the mortgage position
@@ -821,7 +876,7 @@ contract MortgageMathTest is Test {
     MortgagePosition memory oldMortgagePosition = mortgagePosition.copy();
 
     // Pay the penalty
-    mortgagePosition = mortgagePosition.penaltyPay(amount);
+    (mortgagePosition,) = mortgagePosition.penaltyPay(amount);
 
     // Validate that penaltyPaid has increased
     assertEq(mortgagePosition.penaltyPaid, amount, "penaltyPaid should be the same as amount");
@@ -888,6 +943,9 @@ contract MortgageMathTest is Test {
 
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
+    mortgagePosition.termBalance = bound(mortgagePosition.termBalance, 1, type(uint128).max);
+    mortgagePosition.penaltyAccrued = bound(mortgagePosition.penaltyAccrued, 1, type(uint128).max);
+    mortgagePosition.penaltyPaid = bound(mortgagePosition.penaltyPaid, 0, mortgagePosition.penaltyAccrued - 1);
     mortgagePosition.hasPaymentPlan = true;
 
     // Ensure amount is less than or equal to termBalance
@@ -905,10 +963,10 @@ contract MortgageMathTest is Test {
     (mortgagePosition,,) = MortgageMath.applyPenalties(mortgagePosition, latePaymentWindow, penaltyRate);
 
     // Pay the penalities
-    mortgagePosition = mortgagePosition.penaltyPay(mortgagePosition.penaltyAccrued);
+    (mortgagePosition,) = mortgagePosition.penaltyPay(mortgagePosition.penaltyAccrued);
 
     // Make some mortgage payments
-    (mortgagePosition,) = mortgagePosition.periodPay(amount, latePaymentWindow);
+    (mortgagePosition,,) = mortgagePosition.periodPay(amount, latePaymentWindow);
 
     // Validate that periodsPaid and paymentsMissed are correct
     assertEq(
@@ -948,7 +1006,7 @@ contract MortgageMathTest is Test {
       MortgageMath.applyPenalties(mortgagePosition, 0, penaltyRate);
 
     // PenaltyPay the penalties
-    mortgagePosition = mortgagePosition.penaltyPay(penaltyAmount);
+    (mortgagePosition,) = mortgagePosition.penaltyPay(penaltyAmount);
 
     // missedPayments should now be be timePassed / PERIOD_DURATION
     assertEq(
@@ -958,7 +1016,7 @@ contract MortgageMathTest is Test {
     );
 
     // Pay the monthlyPayment * totalPeriods
-    (mortgagePosition,) =
+    (mortgagePosition,,) =
       mortgagePosition.periodPay(oldMortgagePosition.monthlyPayment() * oldMortgagePosition.totalPeriods, 0);
 
     // Validate that the mortgage is now fully paid off
@@ -1094,7 +1152,7 @@ contract MortgageMathTest is Test {
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
     // Pay the mortgage in full
-    (mortgagePosition,) = mortgagePosition.periodPay(mortgagePosition.termBalance, latePaymentWindow);
+    (mortgagePosition,,) = mortgagePosition.periodPay(mortgagePosition.termBalance, latePaymentWindow);
 
     // Call refinance on the mortgage position
     (mortgagePosition,) = mortgagePosition.refinance(refinanceRate, newInterestRate, newTotalPeriods);
@@ -1129,7 +1187,7 @@ contract MortgageMathTest is Test {
 
     // Pay half of the mortgage (only if hasPaymentPlan)
     if (mortgagePosition.hasPaymentPlan) {
-      (mortgagePosition,) = mortgagePosition.periodPay(
+      (mortgagePosition,,) = mortgagePosition.periodPay(
         MortgageMath.monthlyPayment(mortgagePosition) * mortgagePosition.totalPeriods / 2, latePaymentWindow
       );
     }
@@ -1480,7 +1538,7 @@ contract MortgageMathTest is Test {
     // Make paymentsMadeBeforeExpansion payments (only if the mortgage has a payment plan)
     uint256 principalPayment;
     if (mortgagePosition.hasPaymentPlan) {
-      (mortgagePosition, principalPayment) = mortgagePosition.periodPay(
+      (mortgagePosition, principalPayment,) = mortgagePosition.periodPay(
         MortgageMath.monthlyPayment(mortgagePosition) * paymentsMadeBeforeExpansion, latePaymentWindow
       );
     }

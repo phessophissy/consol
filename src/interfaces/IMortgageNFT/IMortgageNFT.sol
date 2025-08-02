@@ -59,13 +59,6 @@ interface IMortgageNFT is IERC721, IMortgageNFTEvents, IMortgageNFTErrors {
   function ownerOf(string memory mortgageId) external view returns (address owner);
 
   /**
-   * @notice Updates the mortgageId of a mortgage NFT. Only callable by the owner of the mortgage NFT.
-   * @param tokenId The tokenId of the mortgage NFT to update the mortgageId for
-   * @param mortgageId The new mortageId of the mortgage NFT
-   */
-  function updateMortgageId(uint256 tokenId, string memory mortgageId) external;
-
-  /**
    * @notice Returns the last tokenId created
    * @return lastTokenIdCreated The last tokenId created
    */

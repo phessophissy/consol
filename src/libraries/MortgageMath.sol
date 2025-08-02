@@ -263,23 +263,30 @@ library MortgageMath {
    * @param latePenaltyWindow The number of days after the due date that a payment is still considered on time
    * @return The updated mortgage position and the principal payment
    * @return principalPayment The principal payment
+   * @return refund The amount of the refund in the case of overpayment
    */
   function periodPay(MortgagePosition memory mortgagePosition, uint256 amount, uint256 latePenaltyWindow)
     internal
     view
-    returns (MortgagePosition memory, uint256 principalPayment)
+    returns (MortgagePosition memory, uint256 principalPayment, uint256 refund)
   {
-    // If the mortgage does not have a payment plan, the mortgage is paid in full at the end of the term
-    if (!mortgagePosition.hasPaymentPlan && amount < mortgagePosition.termBalance) {
-      revert CannotPartialPrepay(mortgagePosition);
-    }
     // Revert if there are unpaid penalties
     if (mortgagePosition.penaltyAccrued > mortgagePosition.penaltyPaid) {
       revert UnpaidPenalties(mortgagePosition);
     }
-    // Ensure that the amount is not greater than the termBalance
-    if (amount > mortgagePosition.termBalance - mortgagePosition.termPaid) {
+    // Ensure that the amount is not greater than the termBalance. Refund the surplus.
+    uint256 termRemaining = mortgagePosition.termBalance - mortgagePosition.termPaid;
+    if (termRemaining == 0 && amount > 0) {
       revert CannotOverpay(mortgagePosition, amount);
+    }
+    // If the mortgage does not have a payment plan, the mortgage is paid in full at the end of the term
+    if (!mortgagePosition.hasPaymentPlan && amount < mortgagePosition.termBalance) {
+      revert CannotPartialPrepay(mortgagePosition);
+    }
+    // Calculate the refund and subtract it from the amount
+    if (amount > termRemaining) {
+      refund = amount - termRemaining;
+      amount = termRemaining;
     }
     // Calculate principal payment
     principalPayment = mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termPaid + amount)
@@ -292,7 +299,7 @@ library MortgageMath {
     mortgagePosition.paymentsMissed =
       _periodsPaid > periodsSinceOrigination ? 0 : periodsSinceOrigination - _periodsPaid;
     // Return the updated mortgage position
-    return (mortgagePosition, principalPayment);
+    return (mortgagePosition, principalPayment, refund);
   }
 
   /**
@@ -385,20 +392,26 @@ library MortgageMath {
    * @param mortgagePosition The mortgage position
    * @param amount The amount of the penalty
    * @return The updated mortgage position
+   * @return refund The amount of the refund in the case of overpayment
    */
   function penaltyPay(MortgagePosition memory mortgagePosition, uint256 amount)
     internal
     pure
-    returns (MortgagePosition memory)
+    returns (MortgagePosition memory, uint256 refund)
   {
-    // Revert if overpaying the penalty
-    if (mortgagePosition.penaltyPaid + amount > mortgagePosition.penaltyAccrued) {
+    // Ensure that the amount is not greater than the penaltyAccrued. Refund the surplus.
+    uint256 penaltyRemaining = mortgagePosition.penaltyAccrued - mortgagePosition.penaltyPaid;
+    if (penaltyRemaining == 0 && amount > 0) {
       revert CannotOverpayPenalty(mortgagePosition, amount);
+    }
+    if (amount > penaltyRemaining) {
+      refund = amount - penaltyRemaining;
+      amount = penaltyRemaining;
     }
     // Increase the penalty paid by the amount
     mortgagePosition.penaltyPaid += amount;
     // paymentsMissed does not change until they make a payment.
-    return mortgagePosition;
+    return (mortgagePosition, refund);
   }
 
   /**

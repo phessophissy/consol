@@ -50,17 +50,6 @@ contract MortgageNFT is IMortgageNFT, ERC721 {
   }
 
   /**
-   * @dev Modifier to check if the caller is the owner of the mortgage
-   * @param tokenId The ID of the mortgage position
-   */
-  modifier onlyOwner(uint256 tokenId) {
-    if (ownerOf(tokenId) != msg.sender) {
-      revert OnlyOwner(ownerOf(tokenId), msg.sender);
-    }
-    _;
-  }
-
-  /**
    * @dev Modifier to check if the caller is the general manager
    */
   modifier onlyGeneralManager() {
@@ -111,24 +100,6 @@ contract MortgageNFT is IMortgageNFT, ERC721 {
    */
   function ownerOf(string memory mortgageId) external view returns (address owner) {
     return ownerOf(getTokenId[mortgageId]);
-  }
-
-  /**
-   * @notice Updates the mortgage ID of a mortgage position. Only the owner of the mortgage position can update the mortgage ID.
-   * @param tokenId The ID of the mortgage position to update
-   * @param mortgageId The new mortgage ID
-   */
-  function updateMortgageId(uint256 tokenId, string memory mortgageId)
-    external
-    onlyOwner(tokenId)
-    mortgageIdNotTaken(mortgageId)
-  {
-    // Update the mortgageId and tokenId mappings
-    getMortgageId[tokenId] = mortgageId;
-    getTokenId[mortgageId] = tokenId;
-
-    // Emit the event
-    emit MortgageIdUpdate(tokenId, mortgageId);
   }
 
   /**

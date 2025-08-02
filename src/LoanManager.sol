@@ -257,12 +257,12 @@ contract LoanManager is ILoanManager, ERC165, Context {
     mortgageExistsAndActive(tokenId)
     imposePenaltyBefore(tokenId)
   {
-    uint256 principalPayment;
-    (mortgagePositions[tokenId], principalPayment) =
+    uint256 principalPayment; uint256 refund;
+    (mortgagePositions[tokenId], principalPayment, refund) =
       mortgagePositions[tokenId].periodPay(amount, Constants.LATE_PAYMENT_WINDOW);
 
     // Pull Consol from the user
-    IConsol(consol).safeTransferFrom(_msgSender(), address(this), amount);
+    IConsol(consol).safeTransferFrom(_msgSender(), address(this), amount - refund);
 
     // Withdraw the principalPayment amount of SubConsol from the Consol contract
     IConsol(consol).withdraw(mortgagePositions[tokenId].subConsol, principalPayment);
@@ -284,10 +284,11 @@ contract LoanManager is ILoanManager, ERC165, Context {
     imposePenaltyBefore(tokenId)
   {
     // Update the mortgage position with the penalty payment
-    mortgagePositions[tokenId] = mortgagePositions[tokenId].penaltyPay(amount);
+    uint256 refund;
+    (mortgagePositions[tokenId], refund) = mortgagePositions[tokenId].penaltyPay(amount);
 
     // Pull the tokens from the user
-    IConsol(consol).safeTransferFrom(_msgSender(), address(this), amount);
+    IConsol(consol).safeTransferFrom(_msgSender(), address(this), amount - refund);
 
     // Forfeit the tokens in the Consol contract (distributed as interest to Consol holders)
     IConsol(consol).forfeit(IConsol(consol).balanceOf(address(this)));
