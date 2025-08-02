@@ -24,7 +24,7 @@ contract DeployInterestOracle is BaseScript {
   }
 
   function getOrCreatePyth() public returns (IPyth) {
-    if (isTest) {
+    if (isTest || isTestnet) {
       pyth = IPyth(address(new MockPyth()));
     } else {
       pyth = IPyth(vm.envAddress("PYTH_ADDRESS"));

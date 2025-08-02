@@ -28,6 +28,10 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
   address public supportedTokenManager = makeAddr("SupportedTokenManager");
   MockRouter public router;
 
+  function integrationTestId() public view override returns (string memory) {
+    return type(Integration_5_UsdxCapTest).name;
+  }
+
   function setUp() public virtual override(IntegrationBaseTest) {
     super.setUp();
 
@@ -48,7 +52,7 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
     vm.stopPrank();
   }
 
-  function test_run() public virtual override {
+  function run() public virtual override {
     // Have the router approve their collaterals and usdTokens
     router.approveCollaterals();
     router.approveUsdTokens();

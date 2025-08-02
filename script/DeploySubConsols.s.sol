@@ -65,7 +65,7 @@ contract DeploySubConsols is CollateralSetup {
   }
 
   function deployYieldStrategies() public {
-    if (isTest) {
+    if (isTest || isTestnet) {
       for (uint256 i = 0; i < collateralTokens.length; i++) {
         yieldStrategies.push(new MockYieldStrategy(address(subConsols[i])));
       }

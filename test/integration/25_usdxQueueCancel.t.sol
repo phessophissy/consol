@@ -24,11 +24,15 @@ contract Integration_25_UsdxQueueCancel is IntegrationBaseTest {
 
   address public secondLender = makeAddr("SecondLender");
 
+  function integrationTestId() public view override returns (string memory) {
+    return type(Integration_25_UsdxQueueCancel).name;
+  }
+
   function setUp() public virtual override(IntegrationBaseTest) {
     super.setUp();
   }
 
-  function test_run() public virtual override {
+  function run() public virtual override {
     // Mint 100k of Consol to the first lender via USDT
     {
       uint256 usdxAmount = consol.convertUnderlying(address(usdx), 100_000e18);

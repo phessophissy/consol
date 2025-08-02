@@ -31,8 +31,8 @@ contract DeployOrderPool is DeployGeneralManager {
       IAccessControl(address(orderPool)).grantRole(Roles.FULFILLMENT_ROLE, admins[i]);
     }
 
-    // If running inside test/localhost, grant fulfillment role to the deployerAddress
-    if (isTest) {
+    // If running inside test/localhost/testnet, grant fulfillment role to the deployerAddress
+    if (isTest || isTestnet) {
       IAccessControl(address(orderPool)).grantRole(Roles.FULFILLMENT_ROLE, deployerAddress);
     }
 

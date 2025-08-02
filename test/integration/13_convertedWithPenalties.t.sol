@@ -22,11 +22,15 @@ import {MortgageNode} from "../../src/types/MortgageNode.sol";
 contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
+  function integrationTestId() public view override returns (string memory) {
+    return type(Integration_13_ConvertedWithPenaltiesTest).name;
+  }
+
   function setUp() public virtual override(IntegrationBaseTest) {
     super.setUp();
   }
 
-  function test_run() public virtual override {
+  function run() public virtual override {
     // Mint 120k usdt to the lender
     MockERC20(address(usdt)).mint(address(lender), 120_000e6);
 

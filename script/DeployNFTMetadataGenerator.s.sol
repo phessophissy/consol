@@ -20,7 +20,7 @@ contract DeployNFTMetadataGenerator is BaseScript {
   }
 
   function deployNFTMetadataGenerator() public {
-    if (isTest) {
+    if (isTest || isTestnet) {
       nftMetadataGenerator = new MockNFTMetadataGenerator();
     } else {
       revert("NFTMetadataGenerator is not implemented yet for production");

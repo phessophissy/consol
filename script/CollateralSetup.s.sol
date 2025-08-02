@@ -65,7 +65,7 @@ contract CollateralSetup is BaseScript {
   function setupOrDeployUSDTokens() public {
     uint256 usdTokenLength = vm.envUint("USD_TOKEN_LENGTH");
     for (uint256 i = 0; i < usdTokenLength; i++) {
-      if (isTest) {
+      if (isTest || isTestnet) {
         string memory usdName = vm.envString(string.concat("USD_NAME_", i.toString()));
         string memory usdSymbol = vm.envString(string.concat("USD_SYMBOL_", i.toString()));
         uint8 usdDecimals = uint8(vm.envUint(string.concat("USD_DECIMALS_", i.toString())));

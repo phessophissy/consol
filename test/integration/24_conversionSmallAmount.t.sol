@@ -26,11 +26,15 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
   string public secondMortgageId = "alfredo-sauce";
   address public holder = makeAddr("Holder");
 
+  function integrationTestId() public view override returns (string memory) {
+    return type(Integration_24_ConversionSmallAmount).name;
+  }
+
   function setUp() public virtual override(IntegrationBaseTest) {
     super.setUp();
   }
 
-  function test_run() public virtual override {
+  function run() public virtual override {
     // Mint 100k usdt to the lender
     MockERC20(address(usdt)).mint(address(lender), 100_000e6);
 

@@ -22,7 +22,7 @@ contract LocalhostSetupTest is DeployAllTest {
     localhostSetupPart3 = new LocalhostSetupPart3();
   }
 
-  function test_run() public override(DeployAllTest) {
+  function run() public override(DeployAllTest) {
     localhostSetupPart1.run();
     IOriginationPool originationPool2 =
       IOriginationPool(deployAll.originationPoolScheduler().lastConfigDeployment(2).deploymentAddress);

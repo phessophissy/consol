@@ -24,11 +24,15 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 contract Integration_20_CompleteConversionTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
+  function integrationTestId() public view override returns (string memory) {
+    return type(Integration_20_CompleteConversionTest).name;
+  }
+
   function setUp() public virtual override(IntegrationBaseTest) {
     super.setUp();
   }
 
-  function test_run() public virtual override {
+  function run() public virtual override {
     // Mint 100k usdt to the lender
     MockERC20(address(usdt)).mint(address(lender), 100_000e6);
 

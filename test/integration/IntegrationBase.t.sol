@@ -28,7 +28,7 @@ import {IConversionQueue} from "../../src/interfaces/IConversionQueue/IConversio
  * @author @SocksNFlops
  * @notice Base test file for all integration tests.
  */
-contract IntegrationBaseTest is DeployAllTest {
+abstract contract IntegrationBaseTest is DeployAllTest {
   address public lender = makeAddr("lender");
   address public borrower = makeAddr("borrower");
   address public fulfiller = makeAddr("fulfiller");
@@ -55,6 +55,12 @@ contract IntegrationBaseTest is DeployAllTest {
   bytes32 public pythPriceIdBTC = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
   bytes32 public pythPriceId3YrInterestRate = 0x25ac38864cd1802a9441e82d4b3e0a4eed9938a1849b8d2dcd788e631e3b288c;
   bytes32 public pythPriceId5YrInterestRate = 0x7d220b081152db0d74a93d3ce383c61d0ec5250c6dd2b2cdb2d1e4b8919e1a6e;
+
+  function integrationTestId() public view virtual returns (string memory);
+
+  function testId() public view virtual override(DeployAllTest) returns (string memory) {
+    return integrationTestId();
+  }
 
   function setUp() public virtual override(DeployAllTest) {
     super.setUp();
@@ -94,6 +100,4 @@ contract IntegrationBaseTest is DeployAllTest {
     conversionQueue.setWithdrawalGasFee(0.01e18);
     vm.stopPrank();
   }
-
-  function test_run() public virtual override(DeployAllTest) {}
 }

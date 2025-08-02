@@ -8,6 +8,8 @@ import {DeployOrderPool} from "./DeployOrderPool.s.sol";
 import {DeployQueues} from "./DeployQueues.s.sol";
 
 contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanManager, DeployQueues {
+  string public testAddressesFileSuffix;
+
   function setUp() public override(DeployOriginationScheduler, DeployOrderPool, DeployLoanManager, DeployQueues) {
     BaseScript.setUp();
   }
@@ -78,7 +80,12 @@ contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanMan
   function logAddresses() public {
     uint256 chainId = block.chainid;
     string memory root = vm.projectRoot();
-    string memory path = string.concat(root, "/addresses/addresses-", vm.toString(chainId), ".json");
+    string memory path;
+    if (isTest) {
+      path = string.concat(root, "/addresses/tests/addresses-", testAddressesFileSuffix, ".json");
+    } else {
+      path = string.concat(root, "/addresses/addresses-", vm.toString(chainId), ".json");
+    }
     string memory obj = "key";
     string memory json;
     // Remove the file if it exists
@@ -125,5 +132,10 @@ contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanMan
 
     // Output final json to file
     vm.writeJson(json, path);
+  }
+
+  /// @dev This creates a unique file suffix during unit tests. Not used in actual deployment.
+  function setTestAddressesFileSuffix(string memory _testAddressesFileSuffix) public {
+    testAddressesFileSuffix = _testAddressesFileSuffix;
   }
 }

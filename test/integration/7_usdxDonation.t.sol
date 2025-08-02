@@ -21,11 +21,15 @@ import {MortgageMath} from "../../src/libraries/MortgageMath.sol";
 contract Integration_7_UsdxDonationTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
+  function integrationTestId() public view override returns (string memory) {
+    return type(Integration_7_UsdxDonationTest).name;
+  }
+
   function setUp() public virtual override(IntegrationBaseTest) {
     super.setUp();
   }
 
-  function test_run() public virtual override {
+  function run() public virtual override {
     // Mint 1_000_001 usdt to the attacker
     MockERC20(address(usdt)).mint(address(attacker), 1_000_001e6);
 

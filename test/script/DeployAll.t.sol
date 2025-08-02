@@ -11,6 +11,10 @@ contract DeployAllTest is Test {
   uint256 public deployerPrivateKey;
   DeployAll public deployAll;
 
+  function testId() public view virtual returns (string memory) {
+    return type(DeployAllTest).name;
+  }
+
   function setUp() public virtual {
     skip((31557600) * 55); // Skip 55 years into the future (for required for the scheduling)
 
@@ -96,12 +100,22 @@ contract DeployAllTest is Test {
     vm.setEnv("CONVERSION_LUMP_SUM_INTEREST_RATE_BPS_1", "2000");
     vm.setEnv("CONVERSION_PAYMENT_PLAN_LUMP_SUM_INTEREST_RATE_BPS_1", "1000");
     vm.setEnv("CONVERSION_PRICE_MULTIPLIER_BPS", "5000");
-
     deployAll = new DeployAll();
+    deployAll.setTestAddressesFileSuffix(testId());
     deployAll.setUp();
   }
 
-  function test_run() public virtual {
+  function run() public virtual {
     deployAll.run();
+  }
+
+  function test_run() public {
+    // Run the test logic
+    run();
+
+    // Remove the file that was created by the deployAll script
+    string memory root = vm.projectRoot();
+    string memory path = string.concat(root, "/addresses/tests/addresses-", testId(), ".json");
+    vm.removeFile(path);
   }
 }
