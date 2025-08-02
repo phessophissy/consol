@@ -1391,7 +1391,7 @@ contract MortgageMathTest is Test {
     uint256 expected = (left + right) / (mortgagePosition.amountOutstanding() + amountIn);
 
     // Calculate the new average interest rate
-    uint256 actual = MortgageMath.calculateNewAvergageInterestRate(mortgagePosition, amountIn, newInterestRate);
+    uint256 actual = MortgageMath.calculateNewAverageInterestRate(mortgagePosition, amountIn, newInterestRate);
 
     // Validate the new average interest rate
     assertEq(actual, expected, "new average interest rate should be correct");
@@ -1494,7 +1494,7 @@ contract MortgageMathTest is Test {
 
     // Calculate the expected values
     uint16 expectedInterestRate =
-      MortgageMath.calculateNewAvergageInterestRate(oldMortgagePosition, amountIn, newInterestRate);
+      MortgageMath.calculateNewAverageInterestRate(oldMortgagePosition, amountIn, newInterestRate);
     uint256 expectedTermBalance = MortgageMath.calculateTermBalance(
       oldMortgagePosition.amountOutstanding() + amountIn, expectedInterestRate, newTotalPeriods, newTotalPeriods
     );

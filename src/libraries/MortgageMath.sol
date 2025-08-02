@@ -546,7 +546,7 @@ library MortgageMath {
    * @param newInterestRate The new interest rate
    * @return The new average interest rate
    */
-  function calculateNewAvergageInterestRate(
+  function calculateNewAverageInterestRate(
     MortgagePosition memory mortgagePosition,
     uint256 amountIn,
     uint16 newInterestRate
@@ -582,7 +582,7 @@ library MortgageMath {
       revert MissedPayments(mortgagePosition);
     }
     // Calculate the new interest rate
-    uint16 averageInterestRate = mortgagePosition.calculateNewAvergageInterestRate(amountIn, newInterestRate);
+    uint16 averageInterestRate = mortgagePosition.calculateNewAverageInterestRate(amountIn, newInterestRate);
     // Calculate how much of the principal has been paid off
     uint256 principalPaid = mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termPaid);
     // Calculate the new term balance

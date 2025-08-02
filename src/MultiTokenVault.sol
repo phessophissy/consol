@@ -148,14 +148,14 @@ contract MultiTokenVault is Context, ERC165, AccessControl, RebasingERC20, IMult
   /**
    * @inheritdoc IMultiTokenVault
    */
-  function convertAmount(address, uint256 amount) public virtual override returns (uint256) {
+  function convertAmount(address, uint256 amount) public view virtual override returns (uint256) {
     return amount;
   }
 
   /**
    * @inheritdoc IMultiTokenVault
    */
-  function convertUnderlying(address, uint256 amount) public virtual override returns (uint256) {
+  function convertUnderlying(address, uint256 amount) public view virtual override returns (uint256) {
     return SharesMath.convertToUnderlying(amount, totalShares, _totalSupply());
   }
 

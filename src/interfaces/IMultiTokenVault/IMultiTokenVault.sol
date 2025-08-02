@@ -42,7 +42,7 @@ interface IMultiTokenVault is IRebasingERC20, IMultiTokenVaultEvents, IMultiToke
    * @param amount The amount of tokens to deposit/withdraw
    * @return The mint/burn amount
    */
-  function convertAmount(address token, uint256 amount) external returns (uint256);
+  function convertAmount(address token, uint256 amount) external view returns (uint256);
 
   /**
    * @notice Calculates the amount of underlying tokens required to deposit/withdraw a given amount of tokens
@@ -50,7 +50,7 @@ interface IMultiTokenVault is IRebasingERC20, IMultiTokenVaultEvents, IMultiToke
    * @param amount The amount of tokens minted/burned as a result of the deposit/withdraw operation
    * @return The amount of underlying tokens required to deposit/withdraw the given amount of tokens
    */
-  function convertUnderlying(address token, uint256 amount) external returns (uint256);
+  function convertUnderlying(address token, uint256 amount) external view returns (uint256);
 
   /**
    * @notice Deposit tokens into the MultiTokenVault and mint an equivalent amount of the MultiTokenVault token.
