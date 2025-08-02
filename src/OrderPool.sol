@@ -166,9 +166,6 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
       // Cancel the mortgage request
       IGeneralManager(generalManager).burnMortgageNFT(order.mortgageParams.tokenId);
 
-      // Delete the order
-      delete _orders[index];
-
       // Collected the mortgage gas fee
       collectedGasFee += order.mortgageGasFee;
 
