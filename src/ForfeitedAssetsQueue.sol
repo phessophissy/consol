@@ -39,14 +39,14 @@ contract ForfeitedAssetsQueue is LenderQueue {
       // Get the first request from the queue
       WithdrawalRequest memory request = withdrawalRequests[withdrawalQueueHead];
 
-      // Burn the excess shares that correspond to forfeited yield while the request was in the queue
-      IConsol(consol).burnExcessShares(request.shares, request.amount);
-
-      // Withdraw request.amount of forfeitedAssetsPool from the Consol contract
-      IConsol(consol).withdraw(asset, request.amount);
-
-      // Burn the forfeited assets pool tokens to the request owner's address
+      // If the request hasn't been cancelled, burn the forfeited assets pool tokens to the request owner's address
       if (request.amount > 0) {
+        // Burn the excess shares that correspond to forfeited yield while the request was in the queue
+        IConsol(consol).burnExcessShares(request.shares, request.amount);
+
+        // Withdraw request.amount of forfeitedAssetsPool from the Consol contract
+        IConsol(consol).withdraw(asset, request.amount);
+
         // Burn the forfeited assets pool tokens
         IForfeitedAssetsPool(asset).burn(request.account, request.amount);
       }
