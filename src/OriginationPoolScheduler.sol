@@ -112,6 +112,7 @@ contract OriginationPoolScheduler is
   function initialize(address generalManager_, address oPoolAdmin_) external initializer {
     __OriginationPoolScheduler_init(generalManager_, oPoolAdmin_);
     _grantRole(Roles.DEFAULT_ADMIN_ROLE, _msgSender());
+    _grantRole(Roles.DEFAULT_ADMIN_ROLE, oPoolAdmin_);
   }
 
   /// @custom:oz-upgrades-unsafe-allow constructor
