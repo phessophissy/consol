@@ -267,6 +267,11 @@ contract OriginationPoolScheduler is
       revert OriginationPoolConfigAlreadyExists(config);
     }
 
+    // Confirm that the config has nonzero consol and usdx
+    if (config.consol == address(0) || config.usdx == address(0)) {
+      revert InvalidOriginationPoolConfig(config);
+    }
+
     // Add the config
     $._oPoolConfigIds.push(oPoolConfigId);
     $._oPoolConfigIndexes[oPoolConfigId] = $._oPoolConfigIds.length - 1;

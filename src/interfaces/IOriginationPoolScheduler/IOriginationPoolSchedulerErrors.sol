@@ -24,6 +24,12 @@ interface IOriginationPoolSchedulerErrors {
   error OriginationPoolConfigDoesNotExist(OriginationPoolConfig oPoolConfig);
 
   /**
+   * @notice The origination pool config is invalid
+   * @param oPoolConfig The origination pool config that is invalid
+   */
+  error InvalidOriginationPoolConfig(OriginationPoolConfig oPoolConfig);
+
+  /**
    * @notice The origination pool has already been deployed this epoch
    * @param oPoolConfig The origination pool config
    * @param deploymentAddress The address of the deployment
