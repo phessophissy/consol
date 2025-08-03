@@ -1276,6 +1276,7 @@ contract GeneralManagerTest is BaseTest {
     // Mock the loan manager to return a blank mortgage position (with wbtc as the collateral)
     MortgagePosition memory mortgagePosition;
     mortgagePosition.collateral = address(wbtc);
+    mortgagePosition.subConsol = address(subConsol);
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),

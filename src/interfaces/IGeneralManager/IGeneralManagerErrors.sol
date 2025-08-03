@@ -16,6 +16,13 @@ interface IGeneralManagerErrors {
   error InvalidOriginationPool(address originationPool);
 
   /**
+   * @notice The subConsol is not supported by the consol
+   * @param subConsol The address of the subConsol
+   * @param consol The address of the consol
+   */
+  error InvalidSubConsol(address subConsol, address consol);
+
+  /**
    * @notice The total periods are invalid
    * @param collateral The address of the collateral
    * @param totalPeriods The total periods

@@ -622,6 +622,11 @@ contract GeneralManager is
       revert InvalidConversionQueue(baseRequest.conversionQueue);
     }
 
+    // Validate that the subConsol is supported by the consol
+    if (!IConsol($._consol).isTokenSupported(subConsol)) {
+      revert InvalidSubConsol(subConsol, $._consol);
+    }
+
     // Prepare the mortgage params and order amounts
     (MortgageParams memory mortgageParams, OrderAmounts memory orderAmounts) =
       _prepareOrder(tokenId, baseRequest, collateral, subConsol, hasPaymentPlan);
