@@ -28,6 +28,7 @@ contract OriginationPoolSchedulerTest is BaseTest {
   modifier ensureValidConfig(OriginationPoolConfig memory config) {
     // Make sure config.consol is not address(0) during test
     vm.assume(config.consol != address(0));
+    vm.assume(config.usdx != address(0));
     _;
   }
 
@@ -165,7 +166,42 @@ contract OriginationPoolSchedulerTest is BaseTest {
     vm.stopPrank();
   }
 
-  function test_addConfig_isAdmin(OriginationPoolConfig memory config) public {
+  function test_addConfig_revertWhenConfigAlreadyExists(OriginationPoolConfig memory config)
+    public
+    ensureValidConfig(config)
+  {
+    // Add the config
+    vm.startPrank(admin);
+    originationPoolScheduler.addConfig(config);
+    vm.stopPrank();
+
+    // Attempt to add the same config again
+    vm.startPrank(admin);
+    vm.expectRevert(
+      abi.encodeWithSelector(IOriginationPoolSchedulerErrors.OriginationPoolConfigAlreadyExists.selector, config)
+    );
+    originationPoolScheduler.addConfig(config);
+    vm.stopPrank();
+  }
+
+  function test_addConfig_revertWhenInvalidConfig(OriginationPoolConfig memory config, bool isConsolInvalid) public {
+    // Ensure that config.consol or config.usdx is address(0)
+    if (isConsolInvalid) {
+      config.consol = address(0);
+    } else {
+      config.usdx = address(0);
+    }
+
+    // Attempt to add the invalid config
+    vm.startPrank(admin);
+    vm.expectRevert(
+      abi.encodeWithSelector(IOriginationPoolSchedulerErrors.InvalidOriginationPoolConfig.selector, config)
+    );
+    originationPoolScheduler.addConfig(config);
+    vm.stopPrank();
+  }
+
+  function test_addConfig_isAdmin(OriginationPoolConfig memory config) public ensureValidConfig(config) {
     // Add the config
     vm.startPrank(admin);
     originationPoolScheduler.addConfig(config);
@@ -193,24 +229,6 @@ contract OriginationPoolSchedulerTest is BaseTest {
     assertEq(addedConfig.poolMultiplierBps, config.poolMultiplierBps, "Pool multiplier BPS should be the same");
   }
 
-  function test_addConfig_revertWhenConfigAlreadyExists(OriginationPoolConfig memory config) public {
-    // Make sure config.consol is not address(0) during test
-    vm.assume(config.consol != address(0));
-
-    // Add the config
-    vm.startPrank(admin);
-    originationPoolScheduler.addConfig(config);
-    vm.stopPrank();
-
-    // Attempt to add the same config again
-    vm.startPrank(admin);
-    vm.expectRevert(
-      abi.encodeWithSelector(IOriginationPoolSchedulerErrors.OriginationPoolConfigAlreadyExists.selector, config)
-    );
-    originationPoolScheduler.addConfig(config);
-    vm.stopPrank();
-  }
-
   function test_removeConfig_revertWhenNotAdmin(address caller, OriginationPoolConfig memory config) public {
     // Make sure caller is not admin
     vm.assume(caller != admin);
@@ -234,10 +252,7 @@ contract OriginationPoolSchedulerTest is BaseTest {
     vm.stopPrank();
   }
 
-  function test_removeConfig_isAdmin(OriginationPoolConfig memory config) public {
-    // Make sure config.consol is not address(0) during test
-    vm.assume(config.consol != address(0));
-
+  function test_removeConfig_isAdmin(OriginationPoolConfig memory config) public ensureValidConfig(config) {
     // Add the config
     vm.startPrank(admin);
     originationPoolScheduler.addConfig(config);
