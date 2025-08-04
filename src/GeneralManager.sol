@@ -270,6 +270,10 @@ contract GeneralManager is
     _refundSurplusGas(requiredGasFee);
   }
 
+  /**
+   * @dev Validates that the caller is the owner of the mortgage
+   * @param tokenId The ID of the mortgage position
+   */
   function _validateMortgageOwner(uint256 tokenId) internal view {
     // Get the owner of the mortgage
     address owner = IMortgageNFT(mortgageNFT()).ownerOf(tokenId);
