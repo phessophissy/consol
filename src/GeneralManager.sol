@@ -27,6 +27,7 @@ import {OriginationParameters} from "./types/orders/OriginationParameters.sol";
 import {IPausable} from "./interfaces/IPausable/IPausable.sol";
 // solhint-disable-next-line no-unused-import
 import {IOriginationPoolDeployCallback} from "./interfaces/IOriginationPoolDeployCallback.sol";
+import {ISubConsol} from "./interfaces/ISubConsol/ISubConsol.sol";
 import {Roles} from "./libraries/Roles.sol";
 
 /**
@@ -622,9 +623,9 @@ contract GeneralManager is
       revert InvalidConversionQueue(baseRequest.conversionQueue);
     }
 
-    // Validate that the subConsol is supported by the consol
-    if (!IConsol($._consol).isTokenSupported(subConsol)) {
-      revert InvalidSubConsol(subConsol, $._consol);
+    // Validate that the subConsol is supported by the consol and is backed by the collateral
+    if (!IConsol($._consol).isTokenSupported(subConsol) || ISubConsol(subConsol).collateral() != collateral) {
+      revert InvalidSubConsol(collateral, subConsol, $._consol);
     }
 
     // Prepare the mortgage params and order amounts
