@@ -270,6 +270,25 @@ contract GeneralManager is
     _refundSurplusGas(requiredGasFee);
   }
 
+  function _validateMortgageOwner(uint256 tokenId) internal view {
+    // Get the owner of the mortgage
+    address owner = IMortgageNFT(mortgageNFT()).ownerOf(tokenId);
+
+    // Validate that the caller is the owner of the mortgage
+    if (owner != _msgSender()) {
+      revert NotMortgageOwner(_msgSender(), owner, tokenId);
+    }
+  }
+
+  /**
+   * @dev Modifier to check if the caller is the owner of the mortgage
+   * @param tokenId The ID of the mortgage position
+   */
+  modifier onlyMortgageOwner(uint256 tokenId) {
+    _validateMortgageOwner(tokenId);
+    _;
+  }
+
   /**
    * @inheritdoc IERC165
    */
@@ -702,6 +721,7 @@ contract GeneralManager is
     onlyRole(Roles.EXPANSION_ROLE)
     whenNotPaused
     sufficientGasFeeAndRefund(true, expansionRequest.base.conversionQueue)
+    onlyMortgageOwner(expansionRequest.tokenId)
   {
     // Fetch the mortgagePosition from the loan manager
     MortgagePosition memory mortgagePosition = ILoanManager(loanManager()).getMortgagePosition(expansionRequest.tokenId);
@@ -854,12 +874,8 @@ contract GeneralManager is
     payable
     whenNotPaused
     sufficientGasFeeAndRefund(false, conversionQueue)
+    onlyMortgageOwner(tokenId)
   {
-    // Make sure the msg.sender is the owner of the mortgage position
-    if (IMortgageNFT(mortgageNFT()).ownerOf(tokenId) != _msgSender()) {
-      revert NotMortgageOwner(_msgSender(), IMortgageNFT(mortgageNFT()).ownerOf(tokenId), tokenId);
-    }
-
     _enqueueMortgage(tokenId, conversionQueue, hintPrevId, false);
   }
 
