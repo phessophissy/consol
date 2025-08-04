@@ -459,7 +459,9 @@ contract GeneralManagerTest is BaseTest {
 
     // Attempt to request a mortgage with an invalid conversion queue
     vm.expectRevert(
-      abi.encodeWithSelector(IGeneralManagerErrors.InvalidSubConsol.selector, address(wbtc), address(invalidSubConsol), address(consol))
+      abi.encodeWithSelector(
+        IGeneralManagerErrors.InvalidSubConsol.selector, address(wbtc), address(invalidSubConsol), address(consol)
+      )
     );
     generalManager.requestMortgageCreation(creationRequest);
   }
@@ -485,7 +487,9 @@ contract GeneralManagerTest is BaseTest {
 
     // Attempt to request a mortgage with an invalid conversion queue
     vm.expectRevert(
-      abi.encodeWithSelector(IGeneralManagerErrors.InvalidSubConsol.selector, address(wbtc), address(invalidSubConsol), address(consol))
+      abi.encodeWithSelector(
+        IGeneralManagerErrors.InvalidSubConsol.selector, address(wbtc), address(invalidSubConsol), address(consol)
+      )
     );
     generalManager.requestMortgageCreation(creationRequest);
   }
