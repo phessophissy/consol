@@ -446,20 +446,46 @@ contract GeneralManagerTest is BaseTest {
     generalManager.requestMortgageCreation(creationRequest);
   }
 
-  function test_requestMortgageCreation_shouldRevertIfInvalidSubConsol(
+  function test_requestMortgageCreation_shouldRevertIfSubConsolNotSupportedByConsol(
     CreationRequest memory createRequestSeed,
-    address invalidSubConsol
+    bytes32 salt
   ) public {
-    // Ensure that the subConsol is not supported
-    vm.assume(!IConsol(address(consol)).isTokenSupported(invalidSubConsol));
+    // Create a new unsupported SubConsol
+    SubConsol invalidSubConsol = new SubConsol{salt: salt}("name", "symbol", address(admin), address(wbtc));
 
     // Fuzz the create request
     CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
-    creationRequest.subConsol = invalidSubConsol;
+    creationRequest.subConsol = address(invalidSubConsol);
 
     // Attempt to request a mortgage with an invalid conversion queue
     vm.expectRevert(
-      abi.encodeWithSelector(IGeneralManagerErrors.InvalidSubConsol.selector, invalidSubConsol, address(consol))
+      abi.encodeWithSelector(IGeneralManagerErrors.InvalidSubConsol.selector, address(wbtc), address(invalidSubConsol), address(consol))
+    );
+    generalManager.requestMortgageCreation(creationRequest);
+  }
+
+  function test_requestMortgageCreation_shouldRevertIfSubConsolNotBackedByCollateral(
+    CreationRequest memory createRequestSeed,
+    address newCollateral
+  ) public {
+    // Ensure that newColalteral != wbtc
+    vm.assume(newCollateral != address(wbtc));
+
+    // Create a new unsupported SubConsol
+    SubConsol invalidSubConsol = new SubConsol("name", "symbol", address(admin), newCollateral);
+
+    // Make sure SubConsol is supported by Consol (but still not backed by the actual collateral)
+    vm.startPrank(admin);
+    consol.addSupportedToken(address(invalidSubConsol));
+    vm.stopPrank();
+
+    // Fuzz the create request
+    CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
+    creationRequest.subConsol = address(invalidSubConsol);
+
+    // Attempt to request a mortgage with an invalid conversion queue
+    vm.expectRevert(
+      abi.encodeWithSelector(IGeneralManagerErrors.InvalidSubConsol.selector, address(wbtc), address(invalidSubConsol), address(consol))
     );
     generalManager.requestMortgageCreation(creationRequest);
   }
