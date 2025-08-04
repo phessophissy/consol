@@ -25,7 +25,7 @@ import {LoanManager} from "../../src/LoanManager.sol";
 contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_10_ComplexHistoryTest).name;
   }
 

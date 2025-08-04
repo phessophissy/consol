@@ -103,6 +103,9 @@ contract ConsolTest is Test, IConsolEvents, IMultiTokenVaultEvents {
 
   // test_setForfeitedAssetsPool
   function test_setForfeitedAssetsPool(address caller, address newForfeitedAssetsPool) public {
+    // Make sure the new forfeited assets pool is not the same as the old forfeited assets pool
+    vm.assume(newForfeitedAssetsPool != address(forfeitedAssetsPool));
+
     // Have admin grant the supported token role to the caller
     vm.startPrank(admin);
     consol.grantRole(Roles.SUPPORTED_TOKEN_ROLE, caller);

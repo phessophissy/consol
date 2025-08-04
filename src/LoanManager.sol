@@ -461,13 +461,13 @@ contract LoanManager is ILoanManager, ERC165, Context {
   /**
    * @inheritdoc ILoanManager
    */
-  function expandBalanceSheet(
-    uint256 tokenId,
-    uint256 amountIn,
-    uint256 collateralAmountIn,
-    uint16 newInterestRate,
-    uint8 newTotalPeriods
-  ) external override mortgageExistsAndActive(tokenId) imposePenaltyBefore(tokenId) onlyGeneralManager {
+  function expandBalanceSheet(uint256 tokenId, uint256 amountIn, uint256 collateralAmountIn, uint16 newInterestRate)
+    external
+    override
+    mortgageExistsAndActive(tokenId)
+    imposePenaltyBefore(tokenId)
+    onlyGeneralManager
+  {
     // Validate that amountIn (the new amount being borrowed) is above a minimum threshold
     if (amountIn < Constants.MINIMUM_AMOUNT_BORROWED) {
       revert AmountBorrowedBelowMinimum(amountIn, Constants.MINIMUM_AMOUNT_BORROWED);
@@ -475,13 +475,13 @@ contract LoanManager is ILoanManager, ERC165, Context {
 
     // Update the mortgage position to be expanded
     mortgagePositions[tokenId] =
-      mortgagePositions[tokenId].expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate, newTotalPeriods);
+      mortgagePositions[tokenId].expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate);
 
     // Cache the mortgage position
     MortgagePosition memory mortgagePosition = mortgagePositions[tokenId];
 
     // Emit a expand balance sheet event
-    emit ExpandBalanceSheet(tokenId, amountIn, collateralAmountIn, newInterestRate, newTotalPeriods);
+    emit ExpandBalanceSheet(tokenId, amountIn, collateralAmountIn, newInterestRate);
 
     // Approve the SubConsol contract to spend the collateral
     IERC20(mortgagePosition.collateral).approve(mortgagePosition.subConsol, collateralAmountIn);

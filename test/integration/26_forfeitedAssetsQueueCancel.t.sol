@@ -24,7 +24,7 @@ contract Integration_26_ForfeitedAssetsQueueCancel is IntegrationBaseTest {
 
   address public secondLender = makeAddr("SecondLender");
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_26_ForfeitedAssetsQueueCancel).name;
   }
 

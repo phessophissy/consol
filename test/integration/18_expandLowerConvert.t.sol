@@ -28,7 +28,7 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
 
   address hyperstrategy = makeAddr("hyperstrategy");
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_18_ExpandLowerConvertTest).name;
   }
 

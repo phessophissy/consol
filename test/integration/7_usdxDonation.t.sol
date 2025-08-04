@@ -21,7 +21,7 @@ import {MortgageMath} from "../../src/libraries/MortgageMath.sol";
 contract Integration_7_UsdxDonationTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_7_UsdxDonationTest).name;
   }
 

@@ -1571,7 +1571,7 @@ contract LoanManagerTest is BaseTest {
         ILoanManagerErrors.AmountBorrowedBelowMinimum.selector, amountIn, Constants.MINIMUM_AMOUNT_BORROWED
       )
     );
-    loanManager.expandBalanceSheet(tokenId, amountIn, collateralAmountIn, interestRate, totalPeriods);
+    loanManager.expandBalanceSheet(tokenId, amountIn, collateralAmountIn, interestRate);
     vm.stopPrank();
   }
 }

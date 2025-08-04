@@ -26,7 +26,7 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
   string public secondMortgageId = "alfredo-sauce";
   address public holder = makeAddr("Holder");
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_24_ConversionSmallAmount).name;
   }
 

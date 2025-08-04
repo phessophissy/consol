@@ -1307,8 +1307,9 @@ contract GeneralManagerTest is BaseTest {
     ExpansionRequest memory expansionRequest = fuzzExpansionRequestFromSeed(expansionRequestSeed);
     expansionRequest.base.originationPool = unregisteredOriginationPool;
 
-    // Mock the loan manager to return a blank mortgage position
+    // Mock the loan manager to return a blank mortgage position (with matching total periods)
     MortgagePosition memory mortgagePosition;
+    mortgagePosition.totalPeriods = expansionRequest.base.totalPeriods;
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),
@@ -1326,14 +1327,14 @@ contract GeneralManagerTest is BaseTest {
 
   function test_requestBalanceSheetExpansion_shouldRevertIfInvalidTotalPeriods(
     ExpansionRequest memory expansionRequestSeed,
-    uint8 invalidPeriods
+    uint8 invalidTotalPeriods
   ) public {
     // Ensure that the total periods are not supported
-    vm.assume(!generalManager.isSupportedMortgagePeriodTerms(address(wbtc), invalidPeriods));
+    vm.assume(!generalManager.isSupportedMortgagePeriodTerms(address(wbtc), invalidTotalPeriods));
 
     // Fuzz the expansion request
     ExpansionRequest memory expansionRequest = fuzzExpansionRequestFromSeed(expansionRequestSeed);
-    expansionRequest.base.totalPeriods = invalidPeriods;
+    expansionRequest.base.totalPeriods = invalidTotalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
     mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
@@ -1343,6 +1344,7 @@ contract GeneralManagerTest is BaseTest {
     MortgagePosition memory mortgagePosition;
     mortgagePosition.collateral = address(wbtc);
     mortgagePosition.subConsol = address(subConsol);
+    mortgagePosition.totalPeriods = invalidTotalPeriods; // There is no mismatch here, but it's no longer supported
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),
@@ -1354,6 +1356,44 @@ contract GeneralManagerTest is BaseTest {
     vm.expectRevert(
       abi.encodeWithSelector(
         IGeneralManagerErrors.InvalidTotalPeriods.selector, address(wbtc), expansionRequest.base.totalPeriods
+      )
+    );
+    generalManager.requestBalanceSheetExpansion(expansionRequest);
+    vm.stopPrank();
+  }
+
+  function test_requestBalanceSheetExpansion_shouldRevertIfExpansionTotalPeriodsMismatch(
+    ExpansionRequest memory expansionRequestSeed,
+    uint8 creationTotalPeriods,
+    uint8 expansionTotalPeriods
+  ) public {
+    // Ensure that the creationTotalPeriods != expansionTotalPeriods
+    vm.assume(creationTotalPeriods != expansionTotalPeriods);
+
+    // Fuzz the expansion request
+    ExpansionRequest memory expansionRequest = fuzzExpansionRequestFromSeed(expansionRequestSeed);
+    expansionRequest.base.totalPeriods = expansionTotalPeriods;
+
+    // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
+    // Mock the loan manager to return a blank mortgage position (with wbtc as the collateral)
+    MortgagePosition memory mortgagePosition;
+    mortgagePosition.collateral = address(wbtc);
+    mortgagePosition.subConsol = address(subConsol);
+    mortgagePosition.totalPeriods = creationTotalPeriods;
+    vm.mockCall(
+      address(loanManager),
+      abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),
+      abi.encode(mortgagePosition)
+    );
+
+    // Attempt to request a balance sheet expansion with unsupported total periods
+    vm.startPrank(balanceSheetExpander);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IGeneralManagerErrors.ExpansionTotalPeriodsMismatch.selector, expansionTotalPeriods, creationTotalPeriods
       )
     );
     generalManager.requestBalanceSheetExpansion(expansionRequest);
@@ -1405,6 +1445,7 @@ contract GeneralManagerTest is BaseTest {
     MortgagePosition memory mortgagePosition;
     mortgagePosition.collateral = address(wbtc);
     mortgagePosition.subConsol = address(subConsol);
+    mortgagePosition.totalPeriods = expansionRequest.base.totalPeriods;
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),
@@ -1523,6 +1564,7 @@ contract GeneralManagerTest is BaseTest {
     MortgagePosition memory mortgagePosition;
     mortgagePosition.collateral = address(wbtc);
     mortgagePosition.subConsol = address(subConsol);
+    mortgagePosition.totalPeriods = expansionRequest.base.totalPeriods;
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),

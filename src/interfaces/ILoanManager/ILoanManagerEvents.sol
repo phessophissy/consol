@@ -92,9 +92,8 @@ interface ILoanManagerEvents {
    * @param amountIn The amount of the principal being added to the mortgage position
    * @param collateralAmountIn The amount of collateral being added to the mortgage position
    * @param newInterestRate The new interest rate of the mortgage position
-   * @param newTotalPeriods The new total number of periods that the mortgage will last
    */
   event ExpandBalanceSheet(
-    uint256 indexed tokenId, uint256 amountIn, uint256 collateralAmountIn, uint16 newInterestRate, uint8 newTotalPeriods
+    uint256 indexed tokenId, uint256 amountIn, uint256 collateralAmountIn, uint16 newInterestRate
   );
 }

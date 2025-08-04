@@ -22,7 +22,7 @@ import {MortgageNode} from "../../src/types/MortgageNode.sol";
 contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_13_ConvertedWithPenaltiesTest).name;
   }
 

@@ -21,7 +21,7 @@ import {IGeneralManager} from "../../src/interfaces/IGeneralManager/IGeneralMana
 contract Integration_3_PayAndPenaltyImposedTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_3_PayAndPenaltyImposedTest).name;
   }
 

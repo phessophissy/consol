@@ -117,13 +117,7 @@ interface ILoanManager is ILoanManagerEvents, ILoanManagerErrors, IConsolFlashSw
    * @param amountIn The amount of the principal being added to the mortgage position
    * @param collateralAmountIn The amount of collateral being added to the mortgage position
    * @param newInterestRate The new interest rate of the mortgage position
-   * @param newTotalPeriods The new total number of periods that the mortgage will last
    */
-  function expandBalanceSheet(
-    uint256 tokenId,
-    uint256 amountIn,
-    uint256 collateralAmountIn,
-    uint16 newInterestRate,
-    uint8 newTotalPeriods
-  ) external;
+  function expandBalanceSheet(uint256 tokenId, uint256 amountIn, uint256 collateralAmountIn, uint16 newInterestRate)
+    external;
 }

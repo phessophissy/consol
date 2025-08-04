@@ -26,7 +26,7 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
 
   address friend = makeAddr("friend");
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_19_EnqueueAfterCreationTest).name;
   }
 

@@ -576,15 +576,13 @@ library MortgageMath {
    * @param amountIn The amount of principal to add to the mortgage position
    * @param collateralAmountIn The amount of collateral to add to the mortgage position
    * @param newInterestRate The new interest rate to set for the mortgage position
-   * @param newTotalPeriods The new total number of periods for the mortgage position
    * @return The updated mortgage position
    */
   function expandBalanceSheet(
     MortgagePosition memory mortgagePosition,
     uint256 amountIn,
     uint256 collateralAmountIn,
-    uint16 newInterestRate,
-    uint8 newTotalPeriods
+    uint16 newInterestRate
   ) internal view returns (MortgagePosition memory) {
     // Revert if there are unpaid penalties
     if (mortgagePosition.penaltyAccrued > mortgagePosition.penaltyPaid) {
@@ -600,7 +598,10 @@ library MortgageMath {
     uint256 principalPaid = mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termPaid);
     // Calculate the new term balance
     mortgagePosition.termBalance = calculateTermBalance(
-      mortgagePosition.amountOutstanding() + amountIn, averageInterestRate, newTotalPeriods, newTotalPeriods
+      mortgagePosition.amountOutstanding() + amountIn,
+      averageInterestRate,
+      mortgagePosition.totalPeriods,
+      mortgagePosition.totalPeriods
     );
     // Update the mortgagePosition details
     mortgagePosition.interestRate = averageInterestRate;
@@ -609,7 +610,6 @@ library MortgageMath {
     mortgagePosition.amountBorrowed += amountIn;
     mortgagePosition.amountPrior += principalPaid;
     mortgagePosition.termPaid = 0;
-    mortgagePosition.totalPeriods = newTotalPeriods;
 
     // Return the updated mortgage position
     return mortgagePosition;

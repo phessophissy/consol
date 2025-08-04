@@ -64,6 +64,13 @@ interface IGeneralManagerErrors {
   error NonCompoundingMustHavePaymentPlan(CreationRequest creationRequest);
 
   /**
+   * @notice Thrown when the total periods of the expansion request does not match the existing mortgage position
+   * @param totalPeriods The total periods of the expansion request
+   * @param existingTotalPeriods The total periods of the existing mortgage position
+   */
+  error ExpansionTotalPeriodsMismatch(uint8 totalPeriods, uint8 existingTotalPeriods);
+
+  /**
    * @notice Thrown when the amount borrowed is below the minimum cap for the collateral
    * @param amountBorrowed The amount borrowed
    * @param minimumCap The minimum cap

@@ -1468,7 +1468,6 @@ contract MortgageMathTest is Test {
     uint256 amountIn,
     uint256 collateralAmountIn,
     uint16 newInterestRate,
-    uint8 newTotalPeriods,
     uint256 penaltyAccrued,
     uint256 penaltyPaid,
     uint256 latePaymentWindow
@@ -1486,8 +1485,7 @@ contract MortgageMathTest is Test {
 
     // Attempt to expand the balance sheet of the mortgage without paying the penalties and expect a revert
     vm.expectRevert(abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, mortgagePosition));
-    mortgagePosition =
-      mortgagePosition.expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate, newTotalPeriods);
+    mortgagePosition = mortgagePosition.expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate);
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
@@ -1496,7 +1494,6 @@ contract MortgageMathTest is Test {
     uint256 amountIn,
     uint256 collateralAmountIn,
     uint16 newInterestRate,
-    uint8 newTotalPeriods,
     uint8 paymentsMissed,
     uint256 latePaymentWindow
   ) public validLatePenaltyWindow(latePaymentWindow) {
@@ -1511,8 +1508,7 @@ contract MortgageMathTest is Test {
 
     // Attempt to expand the balance sheet of the mortgage without paying the missed payments and expect a revert
     vm.expectRevert(abi.encodeWithSelector(MortgageMath.MissedPayments.selector, mortgagePosition));
-    mortgagePosition =
-      mortgagePosition.expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate, newTotalPeriods);
+    mortgagePosition = mortgagePosition.expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate);
   }
   /// forge-config: default.allow_internal_expect_revert = true
 
@@ -1521,7 +1517,6 @@ contract MortgageMathTest is Test {
     uint256 amountIn,
     uint256 collateralAmountIn,
     uint16 newInterestRate,
-    uint8 newTotalPeriods,
     uint8 paymentsMadeBeforeExpansion,
     uint256 latePaymentWindow
   ) public view validLatePenaltyWindow(latePaymentWindow) {
@@ -1529,7 +1524,6 @@ contract MortgageMathTest is Test {
     amountIn = bound(amountIn, 1, 100_000_000e18);
     collateralAmountIn = bound(collateralAmountIn, 1, 100e8);
     newInterestRate = uint16(bound(newInterestRate, 1, 10_000));
-    newTotalPeriods = uint8(bound(newTotalPeriods, 1, type(uint8).max));
 
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
@@ -1554,14 +1548,16 @@ contract MortgageMathTest is Test {
     MortgagePosition memory oldMortgagePosition = mortgagePosition.copy();
 
     // Call expandBalanceSheet on the mortgage position
-    mortgagePosition =
-      mortgagePosition.expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate, newTotalPeriods);
+    mortgagePosition = mortgagePosition.expandBalanceSheet(amountIn, collateralAmountIn, newInterestRate);
 
     // Calculate the expected values
     uint16 expectedInterestRate =
       MortgageMath.calculateNewAverageInterestRate(oldMortgagePosition, amountIn, newInterestRate);
     uint256 expectedTermBalance = MortgageMath.calculateTermBalance(
-      oldMortgagePosition.amountOutstanding() + amountIn, expectedInterestRate, newTotalPeriods, newTotalPeriods
+      oldMortgagePosition.amountOutstanding() + amountIn,
+      expectedInterestRate,
+      oldMortgagePosition.totalPeriods,
+      oldMortgagePosition.totalPeriods
     );
     uint256 expectedPurchasePrice = Math.mulDiv(
       oldMortgagePosition.amountBorrowed + amountIn,
@@ -1590,7 +1586,11 @@ contract MortgageMathTest is Test {
       "amountPrior should match oldMortgagePosition.amountPrior + principalPayment"
     );
     assertEq(mortgagePosition.termPaid, 0, "termPaid should be 0");
-    assertEq(mortgagePosition.totalPeriods, newTotalPeriods, "totalPeriods should match newTotalPeriods");
+    assertEq(
+      mortgagePosition.totalPeriods,
+      oldMortgagePosition.totalPeriods,
+      "totalPeriods should match oldMortgagePosition.totalPeriods"
+    );
 
     // Validate the rest of the fields are unchanged
     assertEq(mortgagePosition.tokenId, oldMortgagePosition.tokenId, "tokenId should be the same");
@@ -1625,7 +1625,7 @@ contract MortgageMathTest is Test {
     );
     assertEq(
       mortgagePosition.monthlyPayment(),
-      oldMortgagePosition.hasPaymentPlan ? expectedTermBalance / newTotalPeriods : 0,
+      oldMortgagePosition.hasPaymentPlan ? expectedTermBalance / oldMortgagePosition.totalPeriods : 0,
       "monthlyPayment should match expectedTermBalance / newTotalPeriods if hasPaymentPlan, otherwise 0"
     );
     assertEq(mortgagePosition.periodsPaid(), 0, "periodsPaid should be reset to 0");

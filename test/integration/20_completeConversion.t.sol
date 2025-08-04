@@ -24,7 +24,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 contract Integration_20_CompleteConversionTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
-  function integrationTestId() public view override returns (string memory) {
+  function integrationTestId() public pure override returns (string memory) {
     return type(Integration_20_CompleteConversionTest).name;
   }
 

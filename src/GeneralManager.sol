@@ -706,6 +706,11 @@ contract GeneralManager is
     // Fetch the mortgagePosition from the loan manager
     MortgagePosition memory mortgagePosition = ILoanManager(loanManager()).getMortgagePosition(expansionRequest.tokenId);
 
+    // Require that the totalPeriod durations match the existing mortgage position
+    if (expansionRequest.base.totalPeriods != mortgagePosition.totalPeriods) {
+      revert ExpansionTotalPeriodsMismatch(expansionRequest.base.totalPeriods, mortgagePosition.totalPeriods);
+    }
+
     // Send the expansion request to the order pool
     _sendRequest(
       expansionRequest.base,
@@ -785,8 +790,7 @@ contract GeneralManager is
         originationParameters.mortgageParams.tokenId,
         originationParameters.mortgageParams.amountBorrowed,
         originationParameters.mortgageParams.collateralAmount,
-        originationParameters.mortgageParams.interestRate,
-        originationParameters.mortgageParams.totalPeriods
+        originationParameters.mortgageParams.interestRate
       );
     } else {
       // Create a new mortgage position
