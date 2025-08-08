@@ -144,6 +144,33 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.stopPrank();
   }
 
+  function test_sendOrder_revertsWhenInvalidExpiration(
+    OrderAmounts memory orderAmounts,
+    MortgageParams memory mortgageParams,
+    uint256 expiration,
+    uint256 orderPoolGasFee,
+    bool expansion
+  ) public {
+    // Ensure the expiration is in the past
+    vm.assume(expiration < block.timestamp);
+
+    // Have the admin set the gas fee
+    vm.startPrank(admin);
+    orderPool.setGasFee(orderPoolGasFee);
+    vm.stopPrank();
+
+    // Deal the general manager the gas fee
+    vm.deal(address(generalManager), orderPoolGasFee);
+
+    // Attempt to send an order from the general manager without sufficient gas
+    vm.startPrank(address(generalManager));
+    vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.InvalidExpiration.selector, expiration, block.timestamp));
+    orderPool.sendOrder{value: orderPoolGasFee}(
+      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+    );
+    vm.stopPrank();
+  }
+
   function test_sendOrder_isCompoundingWithPaymentPlan(
     uint256 tokenId,
     uint256 collateralAmount,
@@ -155,6 +182,9 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 orderPoolGasFee,
     bool expansion
   ) public {
+    // Ensure the expiration is in the future
+    expiration = bound(expiration, block.timestamp + 1, type(uint256).max);
+
     // Ensure collateralAmount is something reasonable to prevent overflows in the math
     collateralAmount = bound(collateralAmount, 0, uint256(type(uint128).max));
 
@@ -241,6 +271,9 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 orderPoolGasFee,
     bool expansion
   ) public {
+    // Ensure the expiration is in the future
+    expiration = bound(expiration, block.timestamp + 1, type(uint256).max);
+
     // Ensure amountBorrowed is something reasonable to prevent overflows in the math
     amountBorrowed = bound(amountBorrowed, 0, uint256(type(uint128).max));
 
@@ -342,6 +375,9 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 orderPoolGasFee,
     bool expansion
   ) public {
+    // Ensure the expiration is in the future
+    expiration = bound(expiration, block.timestamp + 1, type(uint256).max);
+
     // Ensure collateralAmount is something reasonable to prevent overflows in the math
     collateralAmount = bound(collateralAmount, 0, uint256(type(uint128).max));
 
