@@ -43,7 +43,7 @@ struct MortgagePosition {
   uint256 amountPrior; // This one is cumulative amounts of principal paid off in prior terms
   uint256 termPaid; // This one is only for the current term
   uint256 termConverted; // This is only for the current term
-  uint256 amountConverted;
+  uint256 amountConverted; // This one is cumulative amounts of principal converted in previous terms
   uint256 penaltyAccrued;
   uint256 penaltyPaid;
   uint8 paymentsMissed;
