@@ -166,6 +166,11 @@ contract LoanManager is ILoanManager, ERC165, Context {
     _;
   }
 
+  /**
+   * @dev Withdraws the SubConsol from the Consol contract
+   * @param subConsol The address of the subConsol contract
+   * @param amount The amount of SubConsol to withdraw
+   */
   function _withdrawSubConsol(address subConsol, uint256 amount) internal {
     // Withdraw the amount of SubConsol from the Consol contract
     if (amount > 0) {
@@ -173,6 +178,14 @@ contract LoanManager is ILoanManager, ERC165, Context {
     }
   }
 
+  /**
+   * @dev Withdraws the collateral from the subConsol
+   * @param subConsol The address of the subConsol contract
+   * @param receiver The address of the receiver
+   * @param collateralAmount The amount of collateral to withdraw
+   * @param amount The amount of SubConsol to burn
+   * @param async Whether to withdraw the collateral asynchronously
+   */
   function _subConsolWithdrawCollateral(
     address subConsol,
     address receiver,
@@ -187,6 +200,12 @@ contract LoanManager is ILoanManager, ERC165, Context {
     }
   }
 
+  /**
+   * @dev Transfers Consol from one address to another
+   * @param from The address of the sender
+   * @param to The address of the recipient
+   * @param amount The amount of Consol to transfer
+   */
   function _consolTransferFrom(address from, address to, uint256 amount) internal {
     IConsol(consol).safeTransferFrom(from, to, amount);
   }

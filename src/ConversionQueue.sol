@@ -10,7 +10,6 @@ import {WithdrawalRequest} from "./types/WithdrawalRequest.sol";
 import {IConsol} from "./interfaces/IConsol/IConsol.sol";
 import {IRebasingERC20} from "./RebasingERC20.sol";
 import {MortgageMath} from "./libraries/MortgageMath.sol";
-import {ISubConsol} from "./interfaces/ISubConsol/ISubConsol.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IConversionQueue, ILenderQueue} from "./interfaces/IConversionQueue/IConversionQueue.sol";
 import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
