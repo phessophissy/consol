@@ -148,7 +148,10 @@ contract ForfeitedAssetsPool is IForfeitedAssetsPool, ERC165, AccessControl, ERC
     // Calculate the amount of each asset to redeem and transfer it to the caller
     for (uint256 i = 0; i < assets.length(); i++) {
       redeemedAmounts[i] = Math.mulDiv(liability, IERC20(redeemedAssets[i]).balanceOf(address(this)), totalSupply());
-      IERC20(redeemedAssets[i]).safeTransfer(receiver, redeemedAmounts[i]);
+      // Only transfer the asset if the amount is greater than 0
+      if (redeemedAmounts[i] > 0) {
+        IERC20(redeemedAssets[i]).safeTransfer(receiver, redeemedAmounts[i]);
+      }
     }
 
     // Burn the amount of liabilities
