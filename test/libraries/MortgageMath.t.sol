@@ -76,7 +76,7 @@ contract MortgageMathTest is Test {
     _;
   }
 
-  modifier nonZeroPayment(uint256 amount) {
+  modifier nonZeroAmount(uint256 amount) {
     vm.assume(amount > 0);
     _;
   }
@@ -200,7 +200,7 @@ contract MortgageMathTest is Test {
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
     // Attempt to make a partial prepayment on the mortgage and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroPayment.selector, mortgagePosition));
+    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroAmount.selector, mortgagePosition));
     (mortgagePosition,,) = mortgagePosition.periodPay(0, latePaymentWindow);
   }
 
@@ -209,7 +209,7 @@ contract MortgageMathTest is Test {
     MortgagePositionSeed memory mortgagePositionSeed,
     uint256 latePaymentWindow,
     uint256 amount
-  ) public validLatePenaltyWindow(latePaymentWindow) nonZeroPayment(amount) {
+  ) public validLatePenaltyWindow(latePaymentWindow) nonZeroAmount(amount) {
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
     mortgagePosition.hasPaymentPlan = false;
@@ -229,7 +229,7 @@ contract MortgageMathTest is Test {
     uint256 penaltyPaid,
     uint256 latePaymentWindow,
     uint256 amount
-  ) public validLatePenaltyWindow(latePaymentWindow) nonZeroPayment(amount) {
+  ) public validLatePenaltyWindow(latePaymentWindow) nonZeroAmount(amount) {
     // Set penaltyAccrued to be greater than penaltyPaid
     penaltyAccrued = bound(penaltyAccrued, 1, type(uint256).max);
     penaltyPaid = bound(penaltyPaid, 0, penaltyAccrued - 1);
@@ -862,7 +862,7 @@ contract MortgageMathTest is Test {
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
     // Attempt to pay a penalty of 0 and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroPayment.selector, mortgagePosition));
+    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroAmount.selector, mortgagePosition));
     (mortgagePosition,) = mortgagePosition.penaltyPay(0);
   }
 
@@ -1183,13 +1183,14 @@ contract MortgageMathTest is Test {
     (mortgagePosition,) = mortgagePosition.refinance(refinanceRate, newInterestRate, newTotalPeriods);
   }
 
-  function test_refinance_entirelyPaidOff(
+  /// forge-config: default.allow_internal_expect_revert = true
+  function test_refinance_revertsIfMortgageEntirelyPaidOff(
     MortgagePositionSeed memory mortgagePositionSeed,
     uint16 refinanceRate,
     uint16 newInterestRate,
     uint8 newTotalPeriods,
     uint256 latePaymentWindow
-  ) public view validLatePenaltyWindow(latePaymentWindow) validRefinanceRate(refinanceRate) {
+  ) public validLatePenaltyWindow(latePaymentWindow) validRefinanceRate(refinanceRate) {
     // Make sure new interestRate and newTotalPeriods are valid
     newInterestRate = uint16(bound(newInterestRate, 0, 10_000));
     newTotalPeriods = uint8(bound(newTotalPeriods, 1, type(uint8).max));
@@ -1200,21 +1201,9 @@ contract MortgageMathTest is Test {
     // Pay the mortgage in full
     (mortgagePosition,,) = mortgagePosition.periodPay(mortgagePosition.termBalance, latePaymentWindow);
 
-    // Call refinance on the mortgage position
+    // Attempt to refinance the already paid off mortgage and expect a revert
+    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroAmount.selector, mortgagePosition));
     (mortgagePosition,) = mortgagePosition.refinance(refinanceRate, newInterestRate, newTotalPeriods);
-
-    // Validate that the mortgage is fully paid off
-    assertEq(mortgagePosition.principalRemaining(), 0, "principalRemaining should be 0");
-    assertEq(mortgagePosition.monthlyPayment(), 0, "monthlyPayment should be 0");
-    assertEq(mortgagePosition.termBalance, 0, "termBalance should be 0");
-    assertEq(mortgagePosition.termPaid, mortgagePosition.termBalance, "termPaid should be the same as termBalance");
-    assertEq(
-      mortgagePosition.periodsPaid(), mortgagePosition.totalPeriods, "periodsPaid should be the same as totalPeriods"
-    );
-    assertEq(
-      mortgagePosition.penaltyAccrued, mortgagePosition.penaltyPaid, "penaltyAccrued should be the same as penaltyPaid"
-    );
-    assertEq(mortgagePosition.paymentsMissed, 0, "paymentsMissed should be 0");
   }
 
   function test_refinance(

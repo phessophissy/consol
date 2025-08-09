@@ -211,6 +211,30 @@ contract LoanManager is ILoanManager, ERC165, Context {
   }
 
   /**
+   * @dev Deposits the collateral -> subConsol -> Consol into the general manager
+   * @param collateral The address of the collateral
+   * @param subConsol The address of the subConsol
+   * @param collateralAmount The amount of collateral to deposit
+   * @param amount The amount of subConsol to deposit
+   */
+  function _depositCollateralToConsolForGeneralManager(address collateral, address subConsol, uint256 collateralAmount, uint256 amount) internal {
+    // Approve the SubConsol contract to spend the collateral
+    IERC20(collateral).approve(subConsol, collateralAmount);
+
+    // Deposit the collateral into the SubConsol contract
+    ISubConsol(subConsol).depositCollateral(collateralAmount, amount);
+
+    // Approve the Consol contract to spend the subConsol
+    IERC20(subConsol).approve(consol, amount);
+
+    // Deposit the subConsol into the Consol contract
+    IConsol(consol).deposit(subConsol, amount);
+
+    // Send all minted Consol to the general manager
+    IConsol(consol).safeTransfer(generalManager, IConsol(consol).balanceOf(address(this)));
+  }
+
+  /**
    * @inheritdoc ERC165
    */
   function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
@@ -250,20 +274,8 @@ contract LoanManager is ILoanManager, ERC165, Context {
       hasPaymentPlan
     );
 
-    // Approve the SubConsol contract to spend the collateral
-    IERC20(collateral).approve(subConsol, collateralAmount);
-
-    // Deposit the collateral into the SubConsol contract
-    ISubConsol(subConsol).depositCollateral(collateralAmount, amountBorrowed);
-
-    // Approve the Consol contract to spend the subConsol
-    IERC20(subConsol).approve(consol, amountBorrowed);
-
-    // Deposit the subConsol into the Consol contract
-    IConsol(consol).deposit(subConsol, amountBorrowed);
-
-    // Send all minted Consol to the caller (general manager)
-    IConsol(consol).safeTransfer(generalManager, IConsol(consol).balanceOf(address(this)));
+    // Deposit the collateral -> subConsol -> Consol into the general manager
+    _depositCollateralToConsolForGeneralManager(collateral, subConsol, collateralAmount, amountBorrowed);
 
     // Emit a create mortgage event
     emit CreateMortgage(tokenId, owner, collateral, collateralAmount, amountBorrowed);
@@ -535,19 +547,7 @@ contract LoanManager is ILoanManager, ERC165, Context {
     // Emit a expand balance sheet event
     emit ExpandBalanceSheet(tokenId, amountIn, collateralAmountIn, newInterestRate);
 
-    // Approve the SubConsol contract to spend the collateral
-    IERC20(mortgagePosition.collateral).approve(mortgagePosition.subConsol, collateralAmountIn);
-
-    // Deposit the collateral into the SubConsol contract
-    ISubConsol(mortgagePosition.subConsol).depositCollateral(collateralAmountIn, amountIn);
-
-    // Approve the Consol contract to spend the subConsol
-    IERC20(mortgagePosition.subConsol).approve(consol, amountIn);
-
-    // Deposit the subConsol into the Consol contract
-    IConsol(consol).deposit(mortgagePosition.subConsol, amountIn);
-
-    // Send all minted Consol to the caller (general manager)
-    IConsol(consol).safeTransfer(generalManager, IConsol(consol).balanceOf(address(this)));
+    // Deposit the collateral -> subConsol -> Consol into the general manager
+    _depositCollateralToConsolForGeneralManager(mortgagePosition.collateral, mortgagePosition.subConsol, collateralAmountIn, amountIn);
   }
 }

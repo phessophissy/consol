@@ -14,10 +14,10 @@ library MortgageMath {
   using MortgageMath for MortgagePosition;
 
   /**
-   * @notice Thrown when a payment amount is zero
+   * @notice Thrown when a periodPay, penaltyPay, or refinance amount is zero
    * @param mortgage The mortgage position
    */
-  error ZeroPayment(MortgagePosition mortgage);
+  error ZeroAmount(MortgagePosition mortgage);
   /**
    * @notice Thrown when a payment is greater than the termBalance
    * @param mortgage The mortgage position
@@ -94,6 +94,31 @@ library MortgageMath {
       status: mortgagePosition.status,
       hasPaymentPlan: mortgagePosition.hasPaymentPlan
     });
+  }
+
+  /**
+   * @dev Evaluates if two mortgage positions are equal
+   * @param mortgagePosition The mortgage position to evaluate
+   * @param other The other mortgage position to evaluate
+   * @return True if the mortgage positions are equal, false otherwise
+   */
+  function equals(MortgagePosition memory mortgagePosition, MortgagePosition memory other) internal pure returns (bool) {
+    return (
+      mortgagePosition.tokenId == other.tokenId && mortgagePosition.collateral == other.collateral
+        && mortgagePosition.collateralDecimals == other.collateralDecimals
+        && mortgagePosition.collateralAmount == other.collateralAmount
+        && mortgagePosition.collateralConverted == other.collateralConverted
+        && mortgagePosition.subConsol == other.subConsol && mortgagePosition.interestRate == other.interestRate
+        && mortgagePosition.dateOriginated == other.dateOriginated
+        && mortgagePosition.termOriginated == other.termOriginated && mortgagePosition.termBalance == other.termBalance
+        && mortgagePosition.amountBorrowed == other.amountBorrowed && mortgagePosition.amountPrior == other.amountPrior
+        && mortgagePosition.termPaid == other.termPaid && mortgagePosition.termConverted == other.termConverted
+        && mortgagePosition.amountConverted == other.amountConverted
+        && mortgagePosition.penaltyAccrued == other.penaltyAccrued && mortgagePosition.penaltyPaid == other.penaltyPaid
+        && mortgagePosition.paymentsMissed == other.paymentsMissed
+        && mortgagePosition.periodDuration == other.periodDuration && mortgagePosition.totalPeriods == other.totalPeriods
+        && mortgagePosition.status == other.status && mortgagePosition.hasPaymentPlan == other.hasPaymentPlan
+    );
   }
 
   /**
@@ -329,7 +354,7 @@ library MortgageMath {
   {
     // Revert if the amount is zero
     if (amount == 0) {
-      revert ZeroPayment(mortgagePosition);
+      revert ZeroAmount(mortgagePosition);
     }
     // Revert if there are unpaid penalties
     if (mortgagePosition.penaltyAccrued > mortgagePosition.penaltyPaid) {
@@ -462,7 +487,7 @@ library MortgageMath {
   {
     // Revert if the amount is zero
     if (amount == 0) {
-      revert ZeroPayment(mortgagePosition);
+      revert ZeroAmount(mortgagePosition);
     }
     // Ensure that the amount is not greater than the penaltyAccrued. Refund the surplus.
     uint256 penaltyRemaining = mortgagePosition.penaltyAccrued - mortgagePosition.penaltyPaid;
@@ -513,6 +538,10 @@ library MortgageMath {
     uint16 newInterestRate,
     uint8 newTotalPeriods
   ) internal view returns (MortgagePosition memory, uint256 refinanceFee) {
+    // Revert if the termRemaining is 0 (i.e. the mortgage is already paid in full)
+    if (mortgagePosition.termRemaining() == 0) {
+      revert ZeroAmount(mortgagePosition);
+    }
     // Revert if there are unpaid penalties
     if (mortgagePosition.penaltyAccrued > mortgagePosition.penaltyPaid) {
       revert UnpaidPenalties(mortgagePosition);
