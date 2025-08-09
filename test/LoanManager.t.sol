@@ -378,6 +378,9 @@ contract LoanManagerTest is BaseTest {
     // Ensure that the penalty rate is greater than 0
     penaltyRate = uint16(bound(penaltyRate, 1, type(uint16).max));
 
+    // Ensure that the payment amount is greater than 0
+    amount = uint256(bound(amount, 1, type(uint256).max));
+
     // Set the penalty rate in the generalManager
     vm.startPrank(admin);
     generalManager.setPenaltyRate(penaltyRate);
