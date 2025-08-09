@@ -200,7 +200,7 @@ contract MortgageMathTest is Test {
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
     // Attempt to make a partial prepayment on the mortgage and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroPayment.selector, 0));
+    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroPayment.selector, mortgagePosition));
     (mortgagePosition,,) = mortgagePosition.periodPay(0, latePaymentWindow);
   }
 
@@ -862,7 +862,7 @@ contract MortgageMathTest is Test {
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
 
     // Attempt to pay a penalty of 0 and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroPayment.selector, 0));
+    vm.expectRevert(abi.encodeWithSelector(MortgageMath.ZeroPayment.selector, mortgagePosition));
     (mortgagePosition,) = mortgagePosition.penaltyPay(0);
   }
 

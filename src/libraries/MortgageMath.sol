@@ -15,8 +15,9 @@ library MortgageMath {
 
   /**
    * @notice Thrown when a payment amount is zero
+   * @param mortgage The mortgage position
    */
-  error ZeroPayment(uint256 amount);
+  error ZeroPayment(MortgagePosition mortgage);
   /**
    * @notice Thrown when a payment is greater than the termBalance
    * @param mortgage The mortgage position
@@ -328,7 +329,7 @@ library MortgageMath {
   {
     // Revert if the amount is zero
     if (amount == 0) {
-      revert ZeroPayment(amount);
+      revert ZeroPayment(mortgagePosition);
     }
     // Revert if there are unpaid penalties
     if (mortgagePosition.penaltyAccrued > mortgagePosition.penaltyPaid) {
@@ -461,7 +462,7 @@ library MortgageMath {
   {
     // Revert if the amount is zero
     if (amount == 0) {
-      revert ZeroPayment(amount);
+      revert ZeroPayment(mortgagePosition);
     }
     // Ensure that the amount is not greater than the penaltyAccrued. Refund the surplus.
     uint256 penaltyRemaining = mortgagePosition.penaltyAccrued - mortgagePosition.penaltyPaid;
