@@ -106,9 +106,17 @@ contract MortgageQueue is Context, ERC165, AccessControl, IMortgageQueue {
     if (mortgageHead == 0) {
       mortgageHead = tokenId;
       mortgageTail = tokenId;
-    } else if (_mortgageNodes[mortgageHead].triggerPrice <= triggerPrice) {
-      // Set hintPrevId to head
-      hintPrevId = mortgageHead;
+    } else if (_mortgageNodes[mortgageHead].triggerPrice > triggerPrice) {
+      // Insert at head - new node has lower trigger price than current head
+      hintPrevId = 0;
+      nextId = mortgageHead;
+    } else {
+      // Find the correct position in the sorted list
+      // If no hint provided, start from head.
+      // Otherwise, we start from there (hint validation already ensures it's valid)
+      if (hintPrevId == 0) {
+        hintPrevId = mortgageHead;
+      }
 
       // Keep iterating through the queue until the node after hintPrevId has a trigger price GT triggerPrice or the end of the queue is reached
       while (
