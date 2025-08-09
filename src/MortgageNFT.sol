@@ -90,6 +90,14 @@ contract MortgageNFT is IMortgageNFT, ERC721 {
    * @param tokenId The ID of the mortgage position to burn
    */
   function burn(uint256 tokenId) external onlyGeneralManager {
+    // Delete the mortgageId and tokenId mappings
+    delete getTokenId[getMortgageId[tokenId]];
+    delete getMortgageId[tokenId];
+
+    // Emit update event to signal that mortgageId is now free
+    emit MortgageIdUpdate(tokenId, "");
+
+    // Burn the NFT
     _burn(tokenId);
   }
 

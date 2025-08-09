@@ -55,6 +55,40 @@ contract MortgageNFTTest is BaseTest {
     vm.stopPrank();
   }
 
+  function test_burn(address owner, string memory mortgageId, uint8 numOtherMortgageIds) public {
+    // Make sure the owner is not the zero address
+    vm.assume(owner != address(0));
+
+    // Make sure the mortgageId is longer than 3 characters to avoid any collisions
+    vm.assume(bytes(mortgageId).length > 3);
+
+    // Make a bunch of random NFTs with the other mortgageIds
+    vm.startPrank(address(generalManager));
+    for (uint8 i = 0; i < numOtherMortgageIds; i++) {
+      string memory otherMortgageId = vm.toString(i);
+      mortgageNFT.mint(owner, otherMortgageId);
+    }
+    vm.stopPrank();
+
+    // Mint an NFT to the owner with the mortgageId
+    vm.startPrank(address(generalManager));
+    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    vm.stopPrank();
+
+    // Validate that the tokenId and mortgageId map to each other
+    assertEq(mortgageNFT.getMortgageId(tokenId), mortgageId, "MortgageId should be correct");
+    assertEq(mortgageNFT.getTokenId(mortgageId), tokenId, "TokenId should be correct");
+
+    // Burn the NFT
+    vm.startPrank(address(generalManager));
+    mortgageNFT.burn(tokenId);
+    vm.stopPrank();
+
+    // Validate that the tokenId and mortgageId are no longer mapped to each other
+    assertEq(mortgageNFT.getMortgageId(tokenId), "", "MortgageId should be empty");
+    assertEq(mortgageNFT.getTokenId(mortgageId), 0, "TokenId should be 0");
+  }
+
   function test_ownerOf_mortgageId(address owner, string memory mortgageId) public {
     // Make sure the owner is not the zero address
     vm.assume(owner != address(0));
