@@ -24,6 +24,13 @@ interface IGeneralManagerErrors {
   error InvalidSubConsol(address collateral, address subConsol, address consol);
 
   /**
+   * @notice The total periods exceed the maximum possible number of periods
+   * @param totalPeriods The total periods
+   * @param maxTotalPeriods The maximum possible number of periods
+   */
+  error TotalPeriodsExceedsMaximum(uint8 totalPeriods, uint8 maxTotalPeriods);
+
+  /**
    * @notice The total periods are invalid
    * @param collateral The address of the collateral
    * @param totalPeriods The total periods

@@ -52,4 +52,10 @@ library Constants {
    * @return MINIMUM_ORIGINATION_DEPOSIT The minimum permitted USDX deposit for an origination pool
    */
   uint256 public constant MINIMUM_ORIGINATION_DEPOSIT = 1e18;
+
+  /**
+   * @notice The maximum possible number of periods for a mortgage
+   * @return MAX_TOTAL_PERIODS The maximum number of periods for a mortgage
+   */
+  uint8 public constant MAX_TOTAL_PERIODS = 244;
 }

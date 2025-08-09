@@ -36,6 +36,7 @@ import {OriginationParameters} from "../src/types/orders/OriginationParameters.s
 import {Constants} from "../src/libraries/Constants.sol";
 import {MortgageMath} from "../src/libraries/MortgageMath.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {Constants} from "../src/libraries/Constants.sol";
 
 contract GeneralManagerTest is BaseTest {
   using MortgageMath for MortgagePosition;
@@ -328,7 +329,7 @@ contract GeneralManagerTest is BaseTest {
 
   function test_updateSupportedMortgagePeriodTerms_shouldRevertIfNotAdmin(
     address caller,
-    uint8 mortgagePeriod,
+    uint8 mortgagePeriods,
     bool isSupported
   ) public {
     // Ensure the caller doesn't have the admin role
@@ -339,21 +340,41 @@ contract GeneralManagerTest is BaseTest {
     vm.expectRevert(
       abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.DEFAULT_ADMIN_ROLE)
     );
-    generalManager.updateSupportedMortgagePeriodTerms(address(wbtc), mortgagePeriod, isSupported);
+    generalManager.updateSupportedMortgagePeriodTerms(address(wbtc), mortgagePeriods, isSupported);
     vm.stopPrank();
   }
 
-  function test_updateSupportedMortgagePeriodTerms(uint8 mortgagePeriod, bool isSupported) public {
+  function test_updateSupportedMortgagePeriodTerms_shouldRevertIfSupportedTotalPeriodsExceedsMaximum(
+    uint8 invalidMortgagePeriods
+  ) public {
+    // Make sure the invalid mortgage periods exceeds the maximum
+    invalidMortgagePeriods = uint8(bound(invalidMortgagePeriods, Constants.MAX_TOTAL_PERIODS + 1, type(uint8).max));
+
+    // Admin attempts to change the supported mortgage period term to an invalid value
+    vm.startPrank(admin);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IGeneralManagerErrors.TotalPeriodsExceedsMaximum.selector, invalidMortgagePeriods, Constants.MAX_TOTAL_PERIODS
+      )
+    );
+    generalManager.updateSupportedMortgagePeriodTerms(address(wbtc), invalidMortgagePeriods, true);
+    vm.stopPrank();
+  }
+
+  function test_updateSupportedMortgagePeriodTerms(uint8 mortgagePeriods, bool isSupported) public {
+    // Make sure mortgagePeriods does not exceed the maximum
+    mortgagePeriods = uint8(bound(mortgagePeriods, 0, Constants.MAX_TOTAL_PERIODS));
+
     // Change the supported mortgage period term as the admin
     vm.startPrank(admin);
     vm.expectEmit(true, true, true, true);
-    emit IGeneralManagerEvents.SupportedMortgagePeriodTermsUpdated(address(wbtc), mortgagePeriod, isSupported);
-    generalManager.updateSupportedMortgagePeriodTerms(address(wbtc), mortgagePeriod, isSupported);
+    emit IGeneralManagerEvents.SupportedMortgagePeriodTermsUpdated(address(wbtc), mortgagePeriods, isSupported);
+    generalManager.updateSupportedMortgagePeriodTerms(address(wbtc), mortgagePeriods, isSupported);
     vm.stopPrank();
 
     // Validate the supported mortgage period term was set correctly
     assertEq(
-      generalManager.isSupportedMortgagePeriodTerms(address(wbtc), mortgagePeriod),
+      generalManager.isSupportedMortgagePeriodTerms(address(wbtc), mortgagePeriods),
       isSupported,
       "Supported mortgage period should be set correctly"
     );

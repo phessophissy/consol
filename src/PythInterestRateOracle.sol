@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {IInterestRateOracle} from "./interfaces/IInterestRateOracle.sol";
 import {IPyth} from "@pythnetwork/IPyth.sol";
 import {PythStructs} from "@pythnetwork/PythStructs.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /**
  * @title PythInterestRateOracle
@@ -11,10 +12,13 @@ import {PythStructs} from "@pythnetwork/PythStructs.sol";
  * @notice The PythInterestRateOracle contract is a contract that tracks the interest rate of US treasuries to determine the interest rate for new Mortgages being originated.
  */
 contract PythInterestRateOracle is IInterestRateOracle {
+  using SafeCast for int64;
+  using SafeCast for uint256;
   /**
    * @notice The number of decimals for percentages
    * @return PERCENT_DECIMALS The number of decimals for percentages
    */
+
   int8 public constant PERCENT_DECIMALS = 2;
   /**
    * @notice The number of decimals for basis points
@@ -114,13 +118,13 @@ contract PythInterestRateOracle is IInterestRateOracle {
 
     // Calculate the interest rate
     int8 decimalPadding = int8(price.expo - PERCENT_DECIMALS + BPS_DECIMALS);
-    uint64 confidenceValue;
+    uint256 confidenceValue;
     if (decimalPadding > 0) {
-      rate = uint16(uint64(2 * price.price) * (10 ** uint8(decimalPadding))) + spread;
-      confidenceValue = uint64(price.conf * (10 ** uint8(decimalPadding)));
+      rate = ((2 * price.price.toUint256()) * (10 ** uint8(decimalPadding))).toUint16() + spread;
+      confidenceValue = price.conf * (10 ** uint8(decimalPadding));
     } else {
-      rate = uint16(uint64(2 * price.price) / (10 ** uint8(-decimalPadding))) + spread;
-      confidenceValue = uint64(price.conf / (10 ** uint8(-decimalPadding)));
+      rate = ((2 * price.price.toUint256()) / (10 ** uint8(-decimalPadding))).toUint16() + spread;
+      confidenceValue = price.conf / (10 ** uint8(-decimalPadding));
     }
 
     // Validate the price is accurate

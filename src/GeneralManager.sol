@@ -29,6 +29,7 @@ import {IPausable} from "./interfaces/IPausable/IPausable.sol";
 import {IOriginationPoolDeployCallback} from "./interfaces/IOriginationPoolDeployCallback.sol";
 import {ISubConsol} from "./interfaces/ISubConsol/ISubConsol.sol";
 import {Roles} from "./libraries/Roles.sol";
+import {Constants} from "./libraries/Constants.sol";
 
 /**
  * @title GeneralManager
@@ -487,8 +488,14 @@ contract GeneralManager is
     onlyRole(Roles.DEFAULT_ADMIN_ROLE)
   {
     if (isSupported) {
+      // Validate that the total periods is not greater than the maximum possible number of periods
+      if (mortgagePeriods > Constants.MAX_TOTAL_PERIODS) {
+        revert TotalPeriodsExceedsMaximum(mortgagePeriods, Constants.MAX_TOTAL_PERIODS);
+      }
+      // Set the supported mortgage period terms
       _getGeneralManagerStorage()._supportedMortgagePeriodTerms[collateral][mortgagePeriods] = true;
     } else {
+      // Delete the supported mortgage period terms
       delete _getGeneralManagerStorage()._supportedMortgagePeriodTerms[collateral][mortgagePeriods];
     }
     emit SupportedMortgagePeriodTermsUpdated(collateral, mortgagePeriods, isSupported);
@@ -497,7 +504,7 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function isSupportedMortgagePeriodTerms(address collateral, uint8 mortgagePeriods) public view returns (bool) {
+  function isSupportedMortgagePeriodTerms(address collateral, uint8 mortgagePeriods) external view returns (bool) {
     return _getGeneralManagerStorage()._supportedMortgagePeriodTerms[collateral][mortgagePeriods];
   }
 

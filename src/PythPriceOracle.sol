@@ -5,6 +5,7 @@ import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 import {IPyth} from "@pythnetwork/IPyth.sol";
 import {PythStructs} from "@pythnetwork/PythStructs.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 /**
  * @title PythPriceOracle
  * @author SocksNFlops
@@ -12,6 +13,8 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
  */
 
 contract PythPriceOracle is IPriceOracle {
+  using SafeCast for int64;
+
   /**
    * @notice The number of decimals for USD
    * @return USD_DECIMALS The number of decimals for USD
@@ -85,10 +88,10 @@ contract PythPriceOracle is IPriceOracle {
     int8 decimalPadding = int8(pythPrice.expo + USD_DECIMALS);
     uint256 confidenceValue;
     if (decimalPadding > 0) {
-      assetPrice = uint64(pythPrice.price) * (10 ** uint8(decimalPadding));
+      assetPrice = pythPrice.price.toUint256() * (10 ** uint8(decimalPadding));
       confidenceValue = pythPrice.conf * (10 ** uint8(decimalPadding));
     } else {
-      assetPrice = uint64(pythPrice.price) / (10 ** uint8(-decimalPadding));
+      assetPrice = pythPrice.price.toUint256() / (10 ** uint8(-decimalPadding));
       confidenceValue = pythPrice.conf / (10 ** uint8(-decimalPadding));
     }
 
