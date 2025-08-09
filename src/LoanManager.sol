@@ -217,7 +217,12 @@ contract LoanManager is ILoanManager, ERC165, Context {
    * @param collateralAmount The amount of collateral to deposit
    * @param amount The amount of subConsol to deposit
    */
-  function _depositCollateralToConsolForGeneralManager(address collateral, address subConsol, uint256 collateralAmount, uint256 amount) internal {
+  function _depositCollateralToConsolForGeneralManager(
+    address collateral,
+    address subConsol,
+    uint256 collateralAmount,
+    uint256 amount
+  ) internal {
     // Approve the SubConsol contract to spend the collateral
     IERC20(collateral).approve(subConsol, collateralAmount);
 
@@ -548,6 +553,8 @@ contract LoanManager is ILoanManager, ERC165, Context {
     emit ExpandBalanceSheet(tokenId, amountIn, collateralAmountIn, newInterestRate);
 
     // Deposit the collateral -> subConsol -> Consol into the general manager
-    _depositCollateralToConsolForGeneralManager(mortgagePosition.collateral, mortgagePosition.subConsol, collateralAmountIn, amountIn);
+    _depositCollateralToConsolForGeneralManager(
+      mortgagePosition.collateral, mortgagePosition.subConsol, collateralAmountIn, amountIn
+    );
   }
 }
