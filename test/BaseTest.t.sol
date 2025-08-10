@@ -81,6 +81,7 @@ contract BaseTest is Test {
   uint8 public constant DEFAULT_MORTGAGE_PERIODS = 36; // 36 Month mortage
   OriginationPoolConfig public originationPoolConfig;
   uint256 public conversionPriceMultiplierBps = 5000; // 50%
+  uint256 public orderPoolMaximumOrderDuration = 5 minutes;
 
   function _createGeneralManager() internal {
     GeneralManager generalManagerImplementation = new GeneralManager();
@@ -163,6 +164,16 @@ contract BaseTest is Test {
     // Have GeneralManager grant the CONVERSION_ROLE to the conversion queue
     vm.startPrank(admin);
     IAccessControl(address(generalManager)).grantRole(Roles.CONVERSION_ROLE, address(conversionQueue));
+    vm.stopPrank();
+  }
+
+  function _createOrderPool() internal {
+    orderPool = new OrderPool(address(generalManager), admin);
+    vm.startPrank(admin);
+    // Grant the orderPool's fulfillment role to the fulfiller
+    orderPool.grantRole(Roles.FULFILLMENT_ROLE, fulfiller);
+    // Set the maximum order duration
+    orderPool.setMaximumOrderDuration(orderPoolMaximumOrderDuration);
     vm.stopPrank();
   }
 
@@ -317,7 +328,11 @@ contract BaseTest is Test {
     loanManager = new LoanManager(
       MORTGAGE_NFT_NAME, MORTGAGE_NFT_SYMBOL, address(nftMetadataGenerator), address(consol), address(generalManager)
     );
-    orderPool = new OrderPool(address(generalManager), admin);
+
+    // Create the order pool
+    _createOrderPool();
+
+    // Create the mortgage nft
     mortgageNFT = MortgageNFT(loanManager.nft());
 
     vm.startPrank(admin);
@@ -337,8 +352,6 @@ contract BaseTest is Test {
     generalManager.setMaximumCap(address(wbtc), type(uint256).max);
     // Grant the general manager's EXPANSION role to the balanceSheetExpander
     IAccessControl(address(generalManager)).grantRole(Roles.EXPANSION_ROLE, balanceSheetExpander);
-    // Grant the orderPool's fulfillment role to the fulfiller
-    orderPool.grantRole(Roles.FULFILLMENT_ROLE, fulfiller);
     // Add the supported tokens to the consol
     Consol(address(consol)).grantRole(Roles.SUPPORTED_TOKEN_ROLE, admin);
     consol.addSupportedToken(address(subConsol));

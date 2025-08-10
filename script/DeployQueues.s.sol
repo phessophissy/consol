@@ -28,6 +28,7 @@ contract DeployQueues is DeployGeneralManager {
   }
 
   function deployUsdxQueue() public {
+    uint256 usdxWithdrawalGasFee = vm.envUint("USDX_WITHDRAWAL_GAS_FEE");
     usdxQueue = new UsdxQueue(address(usdx), address(consol), deployerAddress);
 
     // Grant admin role to admins
@@ -35,11 +36,15 @@ contract DeployQueues is DeployGeneralManager {
       UsdxQueue(address(usdxQueue)).grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[i]);
     }
 
+    // Set the withdrawal gas fee
+    UsdxQueue(address(usdxQueue)).setWithdrawalGasFee(usdxWithdrawalGasFee);
+
     // Renounce admin role
     UsdxQueue(address(usdxQueue)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 
   function deployForfeitedAssetsQueue() public {
+    uint256 forfeitedAssetsWithdrawalGasFee = vm.envUint("FORFEITED_ASSETS_WITHDRAWAL_GAS_FEE");
     forfeitedAssetsQueue = new ForfeitedAssetsQueue(address(forfeitedAssetsPool), address(consol), deployerAddress);
 
     // Grant admin role to admins
@@ -47,12 +52,18 @@ contract DeployQueues is DeployGeneralManager {
       ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[i]);
     }
 
+    // Set the withdrawal gas fee
+    ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).setWithdrawalGasFee(forfeitedAssetsWithdrawalGasFee);
+
     // Renounce admin role
     ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 
   function deployConversionQueues() public {
     uint16 priceMultiplierBps = uint16(vm.envUint("CONVERSION_PRICE_MULTIPLIER_BPS"));
+    uint256 conversionMortgageGasFee = vm.envUint("CONVERSION_MORTGAGE_GAS_FEE");
+    uint256 conversionWithdrawalGasFee = vm.envUint("CONVERSION_WITHDRAWAL_GAS_FEE");
+
     for (uint256 i = 0; i < collateralTokens.length; i++) {
       // Create conversionQueue for the ith collateral
       ConversionQueue conversionQueue = new ConversionQueue(
@@ -69,6 +80,10 @@ contract DeployQueues is DeployGeneralManager {
       for (uint256 j = 0; j < admins.length; j++) {
         conversionQueue.grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[j]);
       }
+
+      // Set the mortgage and withdrawal gas fees
+      conversionQueue.setMortgageGasFee(conversionMortgageGasFee);
+      conversionQueue.setWithdrawalGasFee(conversionWithdrawalGasFee);
 
       // Renounce admin role
       conversionQueue.renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);

@@ -28,9 +28,17 @@ interface IOrderPoolErrors {
   error InsufficientGasFee(uint256 gasFee, uint256 gasPaid);
 
   /**
-   * @notice Invalid expiration.
+   * @notice Thrown when the expiration is already in the past.
    * @param expiration The expiration timestamp
    * @param blockTimestamp The current block timestamp
    */
-  error InvalidExpiration(uint256 expiration, uint256 blockTimestamp);
+  error AlreadyExpired(uint256 expiration, uint256 blockTimestamp);
+
+  /**
+   * @notice Thrown when the expiration exceeds the current block timestamp by more than the maximum order duration.
+   * @param expiration The expiration timestamp
+   * @param blockTimestamp The current block timestamp
+   * @param maximumOrderDuration The maximum order duration
+   */
+  error ExpirationTooFar(uint256 expiration, uint256 blockTimestamp, uint256 maximumOrderDuration);
 }

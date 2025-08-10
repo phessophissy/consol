@@ -42,7 +42,7 @@ contract LocalhostSetupPart3 is BaseScript {
 
     // Submit a withdrawal request for 25k Consol -> 25k USDX
     consol.approve(address(usdxQueue), 25_000 * 1e18);
-    usdxQueue.requestWithdrawal(25_000 * 1e18);
+    usdxQueue.requestWithdrawal{value: usdxQueue.withdrawalGasFee()}(25_000 * 1e18);
 
     // Stop broadcasting
     vm.stopBroadcast();

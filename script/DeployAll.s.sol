@@ -77,15 +77,19 @@ contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanMan
     logAddresses();
   }
 
-  function logAddresses() public {
+  function getPath() public view returns (string memory path) {
     uint256 chainId = block.chainid;
     string memory root = vm.projectRoot();
-    string memory path;
-    if (isTest) {
+    // Explicitly excluding the localHost test to keep it in sync with local anvil deploys
+    if (isTest && keccak256(bytes(testAddressesFileSuffix)) != keccak256(bytes("LocalhostSetupTest"))) {
       path = string.concat(root, "/addresses/tests/addresses-", testAddressesFileSuffix, ".json");
     } else {
       path = string.concat(root, "/addresses/addresses-", vm.toString(chainId), ".json");
     }
+  }
+
+  function logAddresses() public {
+    string memory path = getPath();
     string memory obj = "key";
     string memory json;
     // Remove the file if it exists
