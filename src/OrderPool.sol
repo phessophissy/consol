@@ -42,6 +42,10 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
    */
   uint256 public override gasFee;
   /**
+   * @inheritdoc IOrderPool
+   */
+  uint256 public override maximumOrderDuration;
+  /**
    * @dev Internal mapping of purchase orders
    */
   mapping(uint256 => PurchaseOrder) private _orders;
@@ -90,6 +94,14 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
   /**
    * @inheritdoc IOrderPool
    */
+  function setMaximumOrderDuration(uint256 maximumOrderDuration_) external onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
+    maximumOrderDuration = maximumOrderDuration_;
+    emit MaximumOrderDurationUpdated(maximumOrderDuration_);
+  }
+
+  /**
+   * @inheritdoc IOrderPool
+   */
   function orders(uint256 index) external view returns (PurchaseOrder memory) {
     return _orders[index];
   }
@@ -112,7 +124,12 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
 
     // Validate that the expiration is in the future
     if (expiration < block.timestamp) {
-      revert InvalidExpiration(expiration, block.timestamp);
+      revert AlreadyExpired(expiration, block.timestamp);
+    }
+
+    // Validate that the expiration is not too far in the future
+    if (expiration > block.timestamp + maximumOrderDuration) {
+      revert ExpirationTooFar(expiration, block.timestamp, maximumOrderDuration);
     }
 
     // Set the index of the PurchaseOrder

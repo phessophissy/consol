@@ -94,6 +94,31 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     assertEq(orderPool.gasFee(), newGasFee, "Gas fee mismatch");
   }
 
+  function test_setMaximumOrderDuration_revertsWhenNotAdmin(address caller, uint256 newMaximumOrderDuration) public {
+    // Ensure the caller does not have the admin role
+    vm.assume(!IAccessControl(address(orderPool)).hasRole(Roles.DEFAULT_ADMIN_ROLE, caller));
+
+    // Attempt to set the maximum order duration as a non-admin
+    vm.startPrank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.DEFAULT_ADMIN_ROLE)
+    );
+    orderPool.setMaximumOrderDuration(newMaximumOrderDuration);
+    vm.stopPrank();
+  }
+
+  function test_setMaximumOrderDuration(uint256 newMaximumOrderDuration) public {
+    // Set the maximum order duration as admin
+    vm.startPrank(admin);
+    vm.expectEmit(true, true, true, true);
+    emit IOrderPoolEvents.MaximumOrderDurationUpdated(newMaximumOrderDuration);
+    orderPool.setMaximumOrderDuration(newMaximumOrderDuration);
+    vm.stopPrank();
+
+    // Assert that the maximum order duration was set correctly
+    assertEq(orderPool.maximumOrderDuration(), newMaximumOrderDuration, "Maximum order duration mismatch");
+  }
+
   function test_sendOrder_revertsWhenNotGeneralManager(
     address caller,
     OrderAmounts memory orderAmounts,
@@ -144,7 +169,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.stopPrank();
   }
 
-  function test_sendOrder_revertsWhenInvalidExpiration(
+  function test_sendOrder_revertsWhenAlreadyExpired(
     OrderAmounts memory orderAmounts,
     MortgageParams memory mortgageParams,
     uint256 expiration,
@@ -164,7 +189,42 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Attempt to send an order from the general manager without sufficient gas
     vm.startPrank(address(generalManager));
-    vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.InvalidExpiration.selector, expiration, block.timestamp));
+    vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.AlreadyExpired.selector, expiration, block.timestamp));
+    orderPool.sendOrder{value: orderPoolGasFee}(
+      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+    );
+    vm.stopPrank();
+  }
+
+  function test_sendOrder_revertsWhenExpirationTooFar(
+    OrderAmounts memory orderAmounts,
+    MortgageParams memory mortgageParams,
+    uint256 expiration,
+    uint256 maximumOrderDuration,
+    uint256 orderPoolGasFee,
+    bool expansion
+  ) public {
+    // Ensure the maximum order duration doesn't throw an error
+    maximumOrderDuration = bound(maximumOrderDuration, 1, type(uint256).max - block.timestamp);
+    // Ensure the expiration exceeds the block timestamp by more than the maximum order duration
+    vm.assume(expiration > block.timestamp + maximumOrderDuration);
+
+    // Have the admin set the gas fee
+    vm.startPrank(admin);
+    orderPool.setGasFee(orderPoolGasFee);
+    vm.stopPrank();
+
+    // Have the admin set the maximum order duration
+    vm.startPrank(admin);
+    orderPool.setMaximumOrderDuration(maximumOrderDuration);
+    vm.stopPrank();
+
+    // Deal the general manager the gas fee
+    vm.deal(address(generalManager), orderPoolGasFee);
+
+    // Attempt to send an order from the general manager without sufficient gas
+    vm.startPrank(address(generalManager));
+    vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.ExpirationTooFar.selector, expiration, block.timestamp, maximumOrderDuration));
     orderPool.sendOrder{value: orderPoolGasFee}(
       address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
@@ -183,7 +243,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     bool expansion
   ) public {
     // Ensure the expiration is in the future
-    expiration = bound(expiration, block.timestamp + 1, type(uint256).max);
+    expiration = bound(expiration, block.timestamp + 1, block.timestamp + orderPool.maximumOrderDuration());
 
     // Ensure collateralAmount is something reasonable to prevent overflows in the math
     collateralAmount = bound(collateralAmount, 0, uint256(type(uint128).max));
@@ -272,7 +332,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     bool expansion
   ) public {
     // Ensure the expiration is in the future
-    expiration = bound(expiration, block.timestamp + 1, type(uint256).max);
+    expiration = bound(expiration, block.timestamp + 1, block.timestamp + orderPool.maximumOrderDuration());
 
     // Ensure amountBorrowed is something reasonable to prevent overflows in the math
     amountBorrowed = bound(amountBorrowed, 0, uint256(type(uint128).max));
@@ -376,7 +436,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     bool expansion
   ) public {
     // Ensure the expiration is in the future
-    expiration = bound(expiration, block.timestamp + 1, type(uint256).max);
+    expiration = bound(expiration, block.timestamp + 1, block.timestamp + orderPool.maximumOrderDuration());
 
     // Ensure collateralAmount is something reasonable to prevent overflows in the math
     collateralAmount = bound(collateralAmount, 0, uint256(type(uint128).max));
@@ -503,7 +563,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderAmounts.purchaseAmount = bound(orderAmounts.purchaseAmount, 1, amountBorrowed);
 
     // Ensure that the Purchase Order's expiration timestamp is after the origination pool's deploy phase (when the process call will be made)
-    expiration = bound(expiration, originationPool.deployPhaseTimestamp() + 1, type(uint256).max);
+    expiration = bound(expiration, originationPool.deployPhaseTimestamp() + 1, originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
 
     // Ensure collateralAmount is something reasonable to prevent overflows in the math (must be greater than 1 to prevent division by 0 when calculating the purchase price)
     collateralAmount = bound(collateralAmount, 1, uint256(type(uint128).max));
@@ -638,7 +698,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderAmounts.purchaseAmount = bound(orderAmounts.purchaseAmount, 1, amountBorrowed);
 
     // Ensure that the Purchase Order's expiration timestamp is after the origination pool's deploy phase (when the process call will be made)
-    expiration = bound(expiration, originationPool.deployPhaseTimestamp() + 1, type(uint256).max);
+    expiration = bound(expiration, originationPool.deployPhaseTimestamp() + 1, originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
 
     // Ensure collateralAmount is something reasonable to prevent overflows in the math (must be greater than 1 to prevent division by 0 when calculating the purchase price)
     collateralAmount = bound(collateralAmount, 1, uint256(type(uint128).max));

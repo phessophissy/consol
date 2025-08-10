@@ -16,6 +16,12 @@ interface IOrderPoolEvents {
   event GasFeeUpdated(uint256 gasFee);
 
   /**
+   * @notice Emitted when the maximum order duration is updated
+   * @param maximumOrderDuration The new maximum order duration
+   */
+  event MaximumOrderDurationUpdated(uint256 maximumOrderDuration);
+
+  /**
    * @notice Emitted when a purchase order is added
    * @param index The index of the purchase order
    * @param owner The owner of the mortgage being created

@@ -55,7 +55,7 @@ contract GeneralManagerTest is BaseTest {
     createRequestSeed.base.originationPool = address(originationPool);
     createRequestSeed.base.conversionQueue = address(conversionQueue);
     createRequestSeed.base.expiration =
-      uint32(bound(createRequestSeed.base.expiration, block.timestamp, block.timestamp + 3 days));
+      uint32(bound(createRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration()));
     createRequestSeed.collateral = address(wbtc);
     createRequestSeed.subConsol = address(subConsol);
 
@@ -77,7 +77,7 @@ contract GeneralManagerTest is BaseTest {
     expansionRequestSeed.base.originationPool = address(originationPool);
     expansionRequestSeed.base.conversionQueue = address(conversionQueue);
     expansionRequestSeed.base.expiration =
-      uint32(bound(expansionRequestSeed.base.expiration, block.timestamp, block.timestamp + 3 days));
+      uint32(bound(expansionRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration()));
     return expansionRequestSeed;
   }
 
@@ -759,7 +759,7 @@ contract GeneralManagerTest is BaseTest {
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
     expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.redemptionPhaseTimestamp() - 1);
+      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
 
     // Fuzz the create request
     CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
@@ -782,10 +782,6 @@ contract GeneralManagerTest is BaseTest {
     // Deal the borrower both the gas fees
     vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
 
-    // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount =
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
@@ -801,19 +797,23 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountBorrowed);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting collateral to the borrower and approving the generalManager to spend it
     vm.startPrank(borrower);
     ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
     ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
     vm.stopPrank();
 
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
     generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
     vm.stopPrank();
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
@@ -849,7 +849,7 @@ contract GeneralManagerTest is BaseTest {
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
     expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.redemptionPhaseTimestamp() - 1);
+      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
 
     // Ensuring the gas fees don't overflow
     orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
@@ -872,10 +872,6 @@ contract GeneralManagerTest is BaseTest {
     // Deal the borrower both the gas fees
     vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
 
-    // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount =
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
@@ -891,19 +887,23 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountBorrowed);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting collateral to the borrower and approving the generalManager to spend it
     vm.startPrank(borrower);
     ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
     ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
     vm.stopPrank();
 
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
     generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
     vm.stopPrank();
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
@@ -941,7 +941,7 @@ contract GeneralManagerTest is BaseTest {
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
     expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.redemptionPhaseTimestamp() - 1);
+      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
 
     // Ensuring the gas fees don't overflow
     orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
@@ -965,10 +965,6 @@ contract GeneralManagerTest is BaseTest {
     // Deal the borrower both the gas fees
     vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
 
-    // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount =
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
@@ -984,19 +980,23 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountBorrowed);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting collateral to the borrower and approving the generalManager to spend it
     vm.startPrank(borrower);
     ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
     ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
     vm.stopPrank();
 
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
     generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
     vm.stopPrank();
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
@@ -1058,7 +1058,7 @@ contract GeneralManagerTest is BaseTest {
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
     expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.redemptionPhaseTimestamp() - 1);
+      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
 
     // Ensuring the gas fees don't overflow
     orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
@@ -1082,10 +1082,6 @@ contract GeneralManagerTest is BaseTest {
     // Deal the borrower both the gas fees
     vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
 
-    // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmount, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
     uint256 amountBorrowed = purchaseAmount / 2;
@@ -1104,19 +1100,23 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountBorrowed);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting USDX to the borrower and approving the generalManager to spend it
     _mintUsdx(borrower, requiredUsdxAmount);
     vm.startPrank(borrower);
     usdx.approve(address(generalManager), requiredUsdxAmount);
     vm.stopPrank();
 
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
     // Request a non-compounding mortgage with a payment plan
     vm.startPrank(borrower);
     generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
     vm.stopPrank();
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
@@ -1229,10 +1229,6 @@ contract GeneralManagerTest is BaseTest {
     // Make sure the collateral conversion amount is less than the collateral amount
     collateralConversionAmount = bound(collateralConversionAmount, 1, creationRequest.base.collateralAmount);
 
-    // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 3_84700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 107537_17500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount =
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
@@ -1248,19 +1244,23 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountBorrowed);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting collateral to the borrower and approving the generalManager to spend it
     vm.startPrank(borrower);
     ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
     ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
     vm.stopPrank();
 
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 3_84700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 107537_17500000, 4349253107, -8, block.timestamp);
+
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
     generalManager.requestMortgageCreation{value: 0}(creationRequest);
     vm.stopPrank();
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
@@ -1752,10 +1752,6 @@ contract GeneralManagerTest is BaseTest {
     // Deal the balanceSheetExpander all of the gas fees
     vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee);
 
-    // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount =
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
@@ -1771,19 +1767,23 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountBorrowed);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting collateral to the balanceSheetExpander and approving the generalManager to spend it
     vm.startPrank(balanceSheetExpander);
     ERC20Mock(address(wbtc)).mint(balanceSheetExpander, requiredCollateralAmount);
     ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
     vm.stopPrank();
 
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
     // Request a compounding mortgage without a payment plan
     vm.startPrank(balanceSheetExpander);
     generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
     vm.stopPrank();
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
@@ -1814,10 +1814,6 @@ contract GeneralManagerTest is BaseTest {
     // Deal the balanceSheetExpander both the gas fees
     vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee);
 
-    // Update the oracle values (keep the same ones for simplicity)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
-
     // Calculating the required collateral deposit amount again but this time for expanding the balance sheet
     requiredCollateralAmount =
       Math.mulDiv((expansionRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
@@ -1833,11 +1829,18 @@ contract GeneralManagerTest is BaseTest {
     originationPool.deposit(amountIn);
     vm.stopPrank();
 
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
     // Minting collateral to the balanceSheetExpander and approving the generalManager to spend it
     vm.startPrank(balanceSheetExpander);
     ERC20Mock(address(wbtc)).mint(balanceSheetExpander, requiredCollateralAmount);
     ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
     vm.stopPrank();
+
+    // Update the oracle values (keep the same ones for simplicity)
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding balance sheet expansion of the previous mortgage (tokenId should be 1 since it was the first mortgage)
     vm.startPrank(balanceSheetExpander);
@@ -1846,9 +1849,6 @@ contract GeneralManagerTest is BaseTest {
 
     // Calculate the creation return amount (this is the amount of consol that the origination pool will receive after deployment)
     uint256 creationReturnAmount = originationPool.calculateReturnAmount(amountBorrowed);
-
-    // Skip ahead to the deploy phase of the origination pool
-    vm.warp(originationPool.deployPhaseTimestamp());
 
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);

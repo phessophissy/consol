@@ -22,8 +22,15 @@ contract DeployOrderPool is DeployGeneralManager {
   }
 
   function deployOrderPool() public {
+    uint256 gasFee = vm.envUint("ORDER_POOL_GAS_FEE");
+    uint256 maximumOrderDuration = vm.envUint("ORDER_POOL_MAXIMUM_ORDER_DURATION");
+
     // Deploy the origination pool scheduler
     orderPool = new OrderPool(address(generalManager), deployerAddress);
+
+    // Set the gas fee and the maximum order duration
+    orderPool.setGasFee(gasFee);
+    orderPool.setMaximumOrderDuration(maximumOrderDuration);
 
     // Grant admin and fulfillment role to admins
     for (uint256 i = 0; i < admins.length; i++) {

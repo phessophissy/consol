@@ -42,6 +42,18 @@ interface IOrderPool is IOrderPoolEvents, IOrderPoolErrors {
   function setGasFee(uint256 gasFee_) external;
 
   /**
+   * @notice Returns the maximum duration for a PurchaseOrder
+   * @return The maximum duration
+   */
+  function maximumOrderDuration() external view returns (uint256);
+
+  /**
+   * @notice Sets the maximum duration for a PurchaseOrder. Only callable by the admin role.
+   * @param maximumOrderDuration_ The new value of the maximum duration
+   */
+  function setMaximumOrderDuration(uint256 maximumOrderDuration_) external;
+
+  /**
    * @notice Returns the purchase order at the given index
    * @param index The index of the purchase order
    * @return The purchase order

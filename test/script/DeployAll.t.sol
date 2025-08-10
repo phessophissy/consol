@@ -96,6 +96,10 @@ contract DeployAllTest is Test {
     vm.setEnv("PYTH_PRICE_MAX_CONFIDENCE_0", "100000000000000000");
     vm.setEnv("PYTH_PRICE_MAX_CONFIDENCE_1", "100000000000000000000");
     vm.setEnv("CONVERSION_PRICE_MULTIPLIER_BPS", "5000");
+    vm.setEnv("ORDER_POOL_GAS_FEE", "10000000000000000");
+    vm.setEnv("ORDER_POOL_MAXIMUM_ORDER_DURATION", "300");
+    vm.setEnv("CONVERSION_MORTGAGE_GAS_FEE", "10000000000000000");
+    vm.setEnv("CONVERSION_WITHDRAWAL_GAS_FEE", "10000000000000000");
     deployAll = new DeployAll();
     deployAll.setTestAddressesFileSuffix(testId());
     deployAll.setUp();
@@ -110,8 +114,7 @@ contract DeployAllTest is Test {
     run();
 
     // Remove the file that was created by the deployAll script
-    string memory root = vm.projectRoot();
-    string memory path = string.concat(root, "/addresses/tests/addresses-", testId(), ".json");
+    string memory path = deployAll.getPath();
     vm.removeFile(path);
   }
 }

@@ -53,6 +53,9 @@ contract DeployQueues is DeployGeneralManager {
 
   function deployConversionQueues() public {
     uint16 priceMultiplierBps = uint16(vm.envUint("CONVERSION_PRICE_MULTIPLIER_BPS"));
+    uint256 conversionMortgageGasFee = vm.envUint("CONVERSION_MORTGAGE_GAS_FEE");
+    uint256 conversionWithdrawalGasFee = vm.envUint("CONVERSION_WITHDRAWAL_GAS_FEE");
+
     for (uint256 i = 0; i < collateralTokens.length; i++) {
       // Create conversionQueue for the ith collateral
       ConversionQueue conversionQueue = new ConversionQueue(
@@ -69,6 +72,10 @@ contract DeployQueues is DeployGeneralManager {
       for (uint256 j = 0; j < admins.length; j++) {
         conversionQueue.grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[j]);
       }
+
+      // Set the mortgage and withdrawal gas fees
+      conversionQueue.setMortgageGasFee(conversionMortgageGasFee);
+      conversionQueue.setWithdrawalGasFee(conversionWithdrawalGasFee);
 
       // Renounce admin role
       conversionQueue.renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);

@@ -13,6 +13,10 @@ contract LocalhostSetupTest is DeployAllTest {
   LocalhostSetupPart2 public localhostSetupPart2;
   LocalhostSetupPart3 public localhostSetupPart3;
 
+  function testId() public pure override(DeployAllTest) returns (string memory) {
+    return type(LocalhostSetupTest).name;
+  }
+
   function setUp() public override(DeployAllTest) {
     DeployAllTest.setUp();
     deployAll.run();
@@ -20,6 +24,7 @@ contract LocalhostSetupTest is DeployAllTest {
     localhostSetupPart1.setUp();
     localhostSetupPart2 = new LocalhostSetupPart2();
     localhostSetupPart3 = new LocalhostSetupPart3();
+    vm.deal(deployerAddress, deployAll.orderPool().gasFee() + deployAll.conversionQueues(1).mortgageGasFee());
   }
 
   function run() public override(DeployAllTest) {

@@ -13,6 +13,7 @@ import {MockPyth} from "../test/mocks/MockPyth.sol";
 import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 import {IOrderPool} from "../src/interfaces/IOrderPool/IOrderPool.sol";
 import {CreationRequest, BaseRequest} from "../src/types/orders/OrderRequests.sol";
+import {IConversionQueue} from "../src/interfaces/IConversionQueue/IConversionQueue.sol";
 
 contract LocalhostSetupPart2 is BaseScript {
   MockERC20 public usdToken0;
@@ -25,6 +26,7 @@ contract LocalhostSetupPart2 is BaseScript {
   IGeneralManager public generalManager;
   IOriginationPool public originationPool2;
   IOrderPool public orderPool;
+  IConversionQueue public conversionQueue;
   MockPyth public pyth;
 
   // Mortgage Parameters
@@ -51,6 +53,7 @@ contract LocalhostSetupPart2 is BaseScript {
     loanManager = ILoanManager(contractAddresses.loanManagerAddress);
     generalManager = IGeneralManager(contractAddresses.generalManagerAddress);
     orderPool = IOrderPool(contractAddresses.orderPoolAddress);
+    conversionQueue = IConversionQueue(contractAddresses.conversionQueues[1]);
     pyth = MockPyth(contractAddresses.pythAddress);
     originationPool2 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(2).deploymentAddress);
   }
@@ -75,13 +78,13 @@ contract LocalhostSetupPart2 is BaseScript {
     collateral1.approve(address(orderPool), collateralAmount);
 
     // Request a non-compounding mortgage via the generalManager
-    generalManager.requestMortgageCreation(
+    generalManager.requestMortgageCreation{value: orderPool.gasFee() + conversionQueue.mortgageGasFee()}(
       CreationRequest({
         base: BaseRequest({
           collateralAmount: collateralAmount,
           totalPeriods: 36,
           originationPool: address(originationPool2),
-          conversionQueue: address(0),
+          conversionQueue: address(conversionQueue),
           isCompounding: false,
           expiration: block.timestamp + 60
         }),
