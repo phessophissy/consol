@@ -328,7 +328,7 @@ contract BaseTest is Test {
     loanManager = new LoanManager(
       MORTGAGE_NFT_NAME, MORTGAGE_NFT_SYMBOL, address(nftMetadataGenerator), address(consol), address(generalManager)
     );
-    
+
     // Create the order pool
     _createOrderPool();
 

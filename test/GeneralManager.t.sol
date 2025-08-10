@@ -54,8 +54,9 @@ contract GeneralManagerTest is BaseTest {
     createRequestSeed.base.totalPeriods = DEFAULT_MORTGAGE_PERIODS;
     createRequestSeed.base.originationPool = address(originationPool);
     createRequestSeed.base.conversionQueue = address(conversionQueue);
-    createRequestSeed.base.expiration =
-      uint32(bound(createRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration()));
+    createRequestSeed.base.expiration = uint32(
+      bound(createRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration())
+    );
     createRequestSeed.collateral = address(wbtc);
     createRequestSeed.subConsol = address(subConsol);
 
@@ -76,8 +77,9 @@ contract GeneralManagerTest is BaseTest {
     expansionRequestSeed.base.totalPeriods = DEFAULT_MORTGAGE_PERIODS;
     expansionRequestSeed.base.originationPool = address(originationPool);
     expansionRequestSeed.base.conversionQueue = address(conversionQueue);
-    expansionRequestSeed.base.expiration =
-      uint32(bound(expansionRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration()));
+    expansionRequestSeed.base.expiration = uint32(
+      bound(expansionRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration())
+    );
     return expansionRequestSeed;
   }
 
@@ -758,8 +760,11 @@ contract GeneralManagerTest is BaseTest {
     uint256 mortgageGasFee
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
-    expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp(),
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
 
     // Fuzz the create request
     CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
@@ -848,8 +853,11 @@ contract GeneralManagerTest is BaseTest {
     uint256 mortgageGasFee
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
-    expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp(),
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
 
     // Ensuring the gas fees don't overflow
     orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
@@ -940,8 +948,11 @@ contract GeneralManagerTest is BaseTest {
     uint256 mortgageGasFee
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
-    expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp(),
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
 
     // Ensuring the gas fees don't overflow
     orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
@@ -1057,8 +1068,11 @@ contract GeneralManagerTest is BaseTest {
     uint256 mortgageGasFee
   ) public {
     // Set the expiration to be between the deploy and redemption phase of the origination pool
-    expiration =
-      bound(expiration, originationPool.deployPhaseTimestamp(), originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp(),
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
 
     // Ensuring the gas fees don't overflow
     orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);

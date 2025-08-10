@@ -224,7 +224,11 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Attempt to send an order from the general manager without sufficient gas
     vm.startPrank(address(generalManager));
-    vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.ExpirationTooFar.selector, expiration, block.timestamp, maximumOrderDuration));
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IOrderPoolErrors.ExpirationTooFar.selector, expiration, block.timestamp, maximumOrderDuration
+      )
+    );
     orderPool.sendOrder{value: orderPoolGasFee}(
       address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
@@ -563,7 +567,11 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderAmounts.purchaseAmount = bound(orderAmounts.purchaseAmount, 1, amountBorrowed);
 
     // Ensure that the Purchase Order's expiration timestamp is after the origination pool's deploy phase (when the process call will be made)
-    expiration = bound(expiration, originationPool.deployPhaseTimestamp() + 1, originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp() + 1,
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
 
     // Ensure collateralAmount is something reasonable to prevent overflows in the math (must be greater than 1 to prevent division by 0 when calculating the purchase price)
     collateralAmount = bound(collateralAmount, 1, uint256(type(uint128).max));
@@ -698,7 +706,11 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderAmounts.purchaseAmount = bound(orderAmounts.purchaseAmount, 1, amountBorrowed);
 
     // Ensure that the Purchase Order's expiration timestamp is after the origination pool's deploy phase (when the process call will be made)
-    expiration = bound(expiration, originationPool.deployPhaseTimestamp() + 1, originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration());
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp() + 1,
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
 
     // Ensure collateralAmount is something reasonable to prevent overflows in the math (must be greater than 1 to prevent division by 0 when calculating the purchase price)
     collateralAmount = bound(collateralAmount, 1, uint256(type(uint128).max));
