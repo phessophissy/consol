@@ -117,27 +117,61 @@ contract ForfeitedAssetsPoolTest is BaseTest {
     vm.stopPrank();
   }
 
-  function test_removeAsset(address asset) public {
-    // Ensure that the asset is not equal to wbtc
-    vm.assume(asset != address(wbtc));
+  function test_removeAsset_noBalance(bytes32 salt) public {
+    // Make a new MockERC20 token
+    IERC20 asset = new ERC20Mock{salt: salt}();
 
     // Check that the forfeited assets pool already have 1 asset
     assertEq(forfeitedAssetsPool.totalAssets(), 1, "totalAssets should equal 1");
 
     // Add the asset to the forfeited assets pool
     vm.startPrank(admin);
-    forfeitedAssetsPool.addAsset(asset);
+    forfeitedAssetsPool.addAsset(address(asset));
     vm.stopPrank();
 
     // Remove the asset from the forfeited assets pool
     vm.startPrank(admin);
     vm.expectEmit(true, true, true, true);
-    emit IForfeitedAssetsPoolEvents.AssetRemoved(asset);
-    forfeitedAssetsPool.removeAsset(asset);
+    emit IForfeitedAssetsPoolEvents.AssetRemoved(address(asset));
+    forfeitedAssetsPool.removeAsset(address(asset));
     vm.stopPrank();
 
     // Validate that the asset was removed
     assertEq(forfeitedAssetsPool.totalAssets(), 1, "totalAssets should've decreased by 1");
+  }
+
+  function test_removeAsset_transferBalance(bytes32 salt, uint256 balance) public {
+    // Ensure balance is greater than 0
+    balance = bound(balance, 1, type(uint256).max);
+
+    // Make a new MockERC20 token
+    IERC20 asset = new ERC20Mock{salt: salt}();
+
+    // Check that the forfeited assets pool already have 1 asset
+    assertEq(forfeitedAssetsPool.totalAssets(), 1, "totalAssets should equal 1");
+
+    // Add the asset to the forfeited assets pool
+    vm.startPrank(admin);
+    forfeitedAssetsPool.addAsset(address(asset));
+    vm.stopPrank();
+
+    // Mint balance to the forfeited assets pool
+    ERC20Mock(address(asset)).mint(address(forfeitedAssetsPool), balance);
+
+    // Remove the asset from the forfeited assets pool
+    vm.startPrank(admin);
+    vm.expectEmit(true, true, true, true);
+    emit IERC20.Transfer(address(forfeitedAssetsPool), admin, asset.balanceOf(address(forfeitedAssetsPool)));
+    vm.expectEmit(true, true, true, true);
+    emit IForfeitedAssetsPoolEvents.AssetRemoved(address(asset));
+    forfeitedAssetsPool.removeAsset(address(asset));
+    vm.stopPrank();
+
+    // Validate that the asset was removed
+    assertEq(forfeitedAssetsPool.totalAssets(), 1, "totalAssets should've decreased by 1");
+
+    // Validate that the admin received the balance
+    assertEq(asset.balanceOf(admin), balance, "Admin should have received the balance");
   }
 
   function test_getAsset(uint8 assetCount) public {
