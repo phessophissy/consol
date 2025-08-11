@@ -316,7 +316,8 @@ contract LoanManagerTest is BaseTest {
     uint256 expectedPenaltyAccrued = Math.mulDiv(
       loanManager.getMortgagePosition(tokenId).termBalance,
       uint256(periodsMissed) * penaltyRate,
-      uint256(totalPeriods) * 1e4
+      uint256(totalPeriods) * 1e4,
+      Math.Rounding.Ceil
     );
 
     // Validate that no penalty has been pre-calculated
@@ -646,8 +647,9 @@ contract LoanManagerTest is BaseTest {
     skip(30 days + 72 hours + 1 seconds);
 
     // Calculate the expected penalty amount
-    uint256 penaltyAmount =
-      Math.mulDiv(loanManager.getMortgagePosition(tokenId).termBalance, penaltyRate, uint256(totalPeriods) * 1e4);
+    uint256 penaltyAmount = Math.mulDiv(
+      loanManager.getMortgagePosition(tokenId).termBalance, penaltyRate, uint256(totalPeriods) * 1e4, Math.Rounding.Ceil
+    );
 
     // Ensure that a missed payment has been recorded
     assertEq(loanManager.getMortgagePosition(tokenId).paymentsMissed, 1, "One missed payment should have been recorded");
@@ -1033,7 +1035,8 @@ contract LoanManagerTest is BaseTest {
     uint256 expectedPenaltyAccrued = Math.mulDiv(
       loanManager.getMortgagePosition(1).termBalance * expectedPaymentsMissed,
       penaltyRate,
-      uint256(loanManager.getMortgagePosition(1).totalPeriods) * 1e4
+      uint256(loanManager.getMortgagePosition(1).totalPeriods) * 1e4,
+      Math.Rounding.Ceil
     );
 
     // Validate that there is penalty accrued
@@ -1130,7 +1133,8 @@ contract LoanManagerTest is BaseTest {
 
     // New scope to avoid stack too deep
     {
-      uint256 refinanceFee = Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, 1e4);
+      uint256 refinanceFee =
+        Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, 1e4, Math.Rounding.Ceil);
 
       // Deal consol to the borrower and approve the collateral to the loan manager
       _mintConsolViaUsdx(borrower, refinanceFee);
@@ -1187,12 +1191,12 @@ contract LoanManagerTest is BaseTest {
     assertEq(loanManager.getMortgagePosition(1).termPaid, 0, "Term paid should have been reset to 0");
     assertEq(
       loanManager.getMortgagePosition(1).penaltyAccrued,
-      Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, 1e4),
+      Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, 1e4, Math.Rounding.Ceil),
       "Refinance fee should have been added to the penalty accrued"
     );
     assertEq(
       loanManager.getMortgagePosition(1).penaltyPaid,
-      Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, 1e4),
+      Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, 1e4, Math.Rounding.Ceil),
       "Refinance fee should have been added to the penalty paid"
     );
 

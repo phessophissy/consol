@@ -431,7 +431,7 @@ library MortgageMath {
       mortgagePosition.termBalance,
       uint256(additionalPaymentsMissed) * penaltyRate,
       mortgagePosition.totalPeriods * Constants.BPS,
-      Math.Rounding.Floor
+      Math.Rounding.Ceil
     );
   }
 
@@ -552,7 +552,7 @@ library MortgageMath {
     }
 
     // Calculate the refinance fee as a percentage of the principalRemaining
-    refinanceFee = Math.mulDiv(mortgagePosition.principalRemaining(), refinanceRate, Constants.BPS, Math.Rounding.Floor);
+    refinanceFee = Math.mulDiv(mortgagePosition.principalRemaining(), refinanceRate, Constants.BPS, Math.Rounding.Ceil);
 
     // Add refinance fee into penaltyAccrued and penaltyPaid
     mortgagePosition.penaltyAccrued += refinanceFee;

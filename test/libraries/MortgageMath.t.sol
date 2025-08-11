@@ -432,7 +432,7 @@ contract MortgageMathTest is Test {
       MortgageMath.monthlyPayment(mortgagePosition),
       uint256(expectedPaymentsMissed) * penaltyRate,
       10_000,
-      Math.Rounding.Floor
+      Math.Rounding.Ceil
     );
 
     // Validate that irrelevant fields are not changed
@@ -532,7 +532,7 @@ contract MortgageMathTest is Test {
       MortgageMath.monthlyPayment(mortgagePosition),
       uint256(expectedPeriodsMissed) * penaltyRate,
       10_000,
-      Math.Rounding.Floor
+      Math.Rounding.Ceil
     );
 
     // Validate that paymentsMissed and penaltyAccrued have been updated (penaltyPaid should be 0 since no penalties have been paid)
@@ -671,7 +671,7 @@ contract MortgageMathTest is Test {
 
     // Calculate the expected penaltyAccrued
     uint256 expectedPenaltyAccrued = Math.mulDiv(
-      mortgagePosition.termBalance, penaltyRate, uint256(mortgagePosition.totalPeriods) * 1e4, Math.Rounding.Floor
+      mortgagePosition.termBalance, penaltyRate, uint256(mortgagePosition.totalPeriods) * 1e4, Math.Rounding.Ceil
     );
 
     // Validate that paymentsMissed and penaltyAccrued have been updated (penaltyPaid should be 0 since no penalties have been paid)
@@ -722,7 +722,7 @@ contract MortgageMathTest is Test {
       mortgagePosition.termBalance,
       uint256(expectedPeriodsMissed) * penaltyRate,
       uint256(mortgagePosition.totalPeriods) * 1e4,
-      Math.Rounding.Floor
+      Math.Rounding.Ceil
     );
 
     // Validate that paymentsMissed and penaltyAccrued have been updated (penaltyPaid should be 0 since no penalties have been paid)
@@ -1232,7 +1232,8 @@ contract MortgageMathTest is Test {
     MortgagePosition memory oldMortgagePosition = mortgagePosition.copy();
 
     // Calculate the expected refinanceFee
-    uint256 expectedRefinanceFee = Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, Constants.BPS);
+    uint256 expectedRefinanceFee =
+      Math.mulDiv(oldMortgagePosition.principalRemaining(), refinanceRate, Constants.BPS, Math.Rounding.Ceil);
 
     // Call refinance on the mortgage position
     (mortgagePosition,) = mortgagePosition.refinance(refinanceRate, newInterestRate, newTotalPeriods);

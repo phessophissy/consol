@@ -159,7 +159,7 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
     skip(60 days + 72 hours + 1 seconds);
     mortgagePosition = loanManager.getMortgagePosition(1);
     assertEq(mortgagePosition.paymentsMissed, 2, "paymentsMissed");
-    assertEq(mortgagePosition.penaltyAccrued, 147173333333333333333, "penaltyAccrued");
+    assertEq(mortgagePosition.penaltyAccrued, 147173333333333333334, "penaltyAccrued");
 
     // Arbitrager mints 120k Consol via usdt -> usdx -> consol
     uint256 consolAmount = 120_000e18;

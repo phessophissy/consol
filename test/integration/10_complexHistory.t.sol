@@ -233,9 +233,9 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     mortgagePosition = loanManager.getMortgagePosition(1);
 
     // Validate that the penalty has been paid off
-    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444444, "[1] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 144444444444444444444, "[1] penaltyPaid");
-    assertEq(mortgagePosition.paymentsMissed, 2, "[1] paymentsMissed");
+    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444445, "[2.1] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 144444444444444444445, "[2.1] penaltyPaid");
+    assertEq(mortgagePosition.paymentsMissed, 2, "[2.1] paymentsMissed");
 
     // Borrower makes the 2 missed payments
     vm.startPrank(borrower);
@@ -271,8 +271,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 36111111111111111111120, "[3] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[3] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[3] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444444, "[3] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 144444444444444444444, "[3] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444445, "[3] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 144444444444444444445, "[3] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[3] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[3] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[3] totalPeriods");
@@ -329,8 +329,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 57777777777777777777792, "[4] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[4] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[4] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444444, "[4] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 144444444444444444444, "[4] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444445, "[4] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 144444444444444444445, "[4] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[4] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[4] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[4] totalPeriods");
@@ -397,8 +397,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 57777777777777777777792, "[5] termPaid");
     assertEq(mortgagePosition.termConverted, 32500000000000000000008, "[5] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[5] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444444, "[5] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 144444444444444444444, "[5] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444445, "[5] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 144444444444444444445, "[5] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[5] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[5] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[5] totalPeriods");
@@ -451,8 +451,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 86666666666666666666688, "[6] termPaid");
     assertEq(mortgagePosition.termConverted, 32500000000000000000008, "[6] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[6] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444444, "[6] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 144444444444444444444, "[6] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 144444444444444444445, "[6] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 144444444444444444445, "[6] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[6] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[6] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[6] totalPeriods");
@@ -480,8 +480,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 200000000, 384706, -8, block.timestamp);
     vm.stopPrank();
 
-    // Estimate the refinance fee
-    uint256 refinanceFee = mortgagePosition.principalRemaining() / 10;
+    // Estimate the refinance fee (rounded up)
+    uint256 refinanceFee = (mortgagePosition.principalRemaining() + 9) / 10;
 
     // Borrower refinances
     vm.startPrank(borrower);
@@ -520,8 +520,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 0, "[7] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[7] termConverted");
     assertEq(mortgagePosition.amountConverted, 25_000e18, "[7] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 977777777777777777777, "[7] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 977777777777777777777, "[7] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 977777777777777777779, "[7] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 977777777777777777779, "[7] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[7] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[7] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[7] totalPeriods");
@@ -570,8 +570,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 4791666666666666666672, "[8] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[8] termConverted");
     assertEq(mortgagePosition.amountConverted, 25_000e18, "[8] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 977777777777777777777, "[8] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 977777777777777777777, "[8] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 977777777777777777779, "[8] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 977777777777777777779, "[8] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[8] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[8] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[8] totalPeriods");
@@ -616,8 +616,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 4791666666666666666672, "[9] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[9] termConverted");
     assertEq(mortgagePosition.amountConverted, 25_000e18, "[9] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 988425925925925925925, "[9] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 977777777777777777777, "[9] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 988425925925925925928, "[9] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 977777777777777777779, "[9] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 2, "[9] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[9] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[9] totalPeriods");
@@ -671,8 +671,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 4791666666666666666672, "[10] termPaid");
     assertEq(mortgagePosition.termConverted, 4791666666666666666672, "[10] termConverted");
     assertEq(mortgagePosition.amountConverted, 25_000e18, "[10] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 988425925925925925925, "[10] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 977777777777777777777, "[10] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 988425925925925925928, "[10] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 977777777777777777779, "[10] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[10] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[10] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[10] totalPeriods");
@@ -733,8 +733,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     assertEq(mortgagePosition.termPaid, 4791666666666666666672, "[11] termPaid");
     assertEq(mortgagePosition.termConverted, 4791666666666666666672, "[11] termConverted");
     assertEq(mortgagePosition.amountConverted, 25_000e18, "[10] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 988425925925925925925, "[11] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 988425925925925925925, "[11] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, 988425925925925925928, "[11] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 988425925925925925928, "[11] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[11] paymentsMissed");
     assertEq(mortgagePosition.periodDuration, 30 days, "[11] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[11] totalPeriods");

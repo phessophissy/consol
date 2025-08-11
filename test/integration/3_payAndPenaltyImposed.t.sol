@@ -12,6 +12,7 @@ import {MockPyth} from "../mocks/MockPyth.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
 import {IGeneralManager} from "../../src/interfaces/IGeneralManager/IGeneralManager.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title Integration_3_PayAndPenaltyImposedTest
@@ -197,9 +198,9 @@ contract Integration_3_PayAndPenaltyImposedTest is IntegrationBaseTest {
     assertEq(IGeneralManager(generalManager).penaltyRate(mortgagePosition), 200, "penaltyRate");
 
     // Validate that the penalty accrued is (4% of the monthlyPayment) and none of it has been paid
-    uint256 expectedPenaltyAccrued = (mortgagePosition.monthlyPayment() * 400) / 10000;
-    assertEq(mortgagePosition.penaltyAccrued, expectedPenaltyAccrued, "[1] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 0, "[1] penaltyPaid");
+    uint256 expectedPenaltyAccrued = Math.mulDiv(mortgagePosition.monthlyPayment(), 400, 10000, Math.Rounding.Ceil);
+    assertEq(mortgagePosition.penaltyAccrued, expectedPenaltyAccrued, "[3] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[3] penaltyPaid");
 
     // Set a new penalty rate of 5%
     vm.startPrank(admin1);
@@ -213,9 +214,9 @@ contract Integration_3_PayAndPenaltyImposedTest is IntegrationBaseTest {
     mortgagePosition = loanManager.getMortgagePosition(1);
 
     // Validate that the penalty accrued is now (10% of the monthlyPayment) and none of it has been paid
-    expectedPenaltyAccrued = (mortgagePosition.monthlyPayment() * 1000) / 10000;
-    assertEq(mortgagePosition.penaltyAccrued, expectedPenaltyAccrued, "[2] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 0, "[2] penaltyPaid");
+    expectedPenaltyAccrued = Math.mulDiv(mortgagePosition.monthlyPayment(), 1000, 10000, Math.Rounding.Ceil);
+    assertEq(mortgagePosition.penaltyAccrued, expectedPenaltyAccrued, "[4] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[4] penaltyPaid");
 
     // Rando applies the penalty
     vm.startPrank(rando);
@@ -235,7 +236,7 @@ contract Integration_3_PayAndPenaltyImposedTest is IntegrationBaseTest {
 
     // Validate that the penalty accrued is still 10% of the monthlyPayment and none of it has been paid
     // The penalty accrued is not affected by the penalty rate change since it has already been imposed on the mortgage position
-    assertEq(mortgagePosition.penaltyAccrued, expectedPenaltyAccrued, "[3] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 0, "[3] penaltyPaid");
+    assertEq(mortgagePosition.penaltyAccrued, expectedPenaltyAccrued, "[5] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[5] penaltyPaid");
   }
 }
