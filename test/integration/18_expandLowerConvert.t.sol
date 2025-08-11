@@ -17,6 +17,7 @@ import {WithdrawalRequest} from "../../src/types/WithdrawalRequest.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /**
  * @title Integration_18_ExpandLowerConvertTest
@@ -30,6 +31,36 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
 
   function integrationTestId() public pure override returns (string memory) {
     return type(Integration_18_ExpandLowerConvertTest).name;
+  }
+
+  function _validateBalances(
+    uint256 hyperStrategyBalance,
+    uint256 fulfillerBalance,
+    uint256 conversionQueueBalance,
+    uint256 orderPoolBalance,
+    uint256 index
+  ) internal view {
+    string memory indexStr = string.concat("[", vm.toString(index), "]");
+    assertEq(
+      hyperstrategy.balance,
+      hyperStrategyBalance,
+      string.concat(indexStr, " hyperstrategy should have hyperStrategyBalance native tokens left")
+    );
+    assertEq(
+      fulfiller.balance,
+      fulfillerBalance,
+      string.concat(indexStr, " fulfiller should have fulfillerBalance native tokens left")
+    );
+    assertEq(
+      address(conversionQueue).balance,
+      conversionQueueBalance,
+      string.concat(indexStr, " conversion queue should have conversionQueueBalance native tokens left")
+    );
+    assertEq(
+      address(orderPool).balance,
+      orderPoolBalance,
+      string.concat(indexStr, " order pool should have orderPoolBalance native tokens left")
+    );
   }
 
   function setUp() public virtual override(IntegrationBaseTest) {
@@ -87,6 +118,9 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     // Deal 0.02 native tokens to Hyperstrategy to pay for the gas fees
     vm.deal(address(hyperstrategy), 0.02e18);
 
+    // Validate the balances [1]
+    _validateBalances(0.02e18, 0, 0, 0, 1);
+
     // Hyperstrategy requests a compounding mortgage
     vm.startPrank(hyperstrategy);
     generalManager.requestMortgageCreation{value: 0.02e18}(
@@ -107,6 +141,9 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     );
     vm.stopPrank();
 
+    // Validate the balances [2]
+    _validateBalances(0, 0, 0, 0.02e18, 2);
+
     // Fulfiller approves the order pool to take his 1 btc that he's selling
     vm.startPrank(fulfiller);
     btc.approve(address(orderPool), 1e8);
@@ -116,6 +153,9 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     vm.startPrank(fulfiller);
     orderPool.processOrders(new uint256[](1), new uint256[](1));
     vm.stopPrank();
+
+    // Validate the balances [3]
+    _validateBalances(0, 0.01e18, 0.01e18, 0, 3);
 
     // Validate that Hyperstrategy has the mortgageNFT
     assertEq(mortgageNFT.ownerOf(1), address(hyperstrategy));
@@ -207,6 +247,9 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     // Deal 0.02 native tokens to Hyperstrategy to pay for the gas fees
     vm.deal(address(hyperstrategy), 0.02e18);
 
+    // Validate the balances [4]
+    _validateBalances(0.02e18, 0.01e18, 0.01e18, 0, 4);
+
     // Hyperstrategy requests a balance sheet expansion of their existing mortgage
     vm.startPrank(hyperstrategy);
     generalManager.requestBalanceSheetExpansion{value: 0.02e18}(
@@ -224,6 +267,9 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     );
     vm.stopPrank();
 
+    // Validate the balances [5]
+    _validateBalances(0, 0.01e18, 0.01e18, 0.02e18, 5);
+
     // Fulfiller approves the order pool to take his 1 btc that he's selling
     vm.startPrank(fulfiller);
     btc.approve(address(orderPool), 1e8);
@@ -239,6 +285,9 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
       orderPool.processOrders(indices, hintPrevIds);
     }
     vm.stopPrank();
+
+    // Validate the balances [6]
+    _validateBalances(0.01e18, 0.02e18, 0.01e18, 0, 6);
 
     // Validate the mortgagePosition has been updated correctly
     mortgagePosition = loanManager.getMortgagePosition(1);

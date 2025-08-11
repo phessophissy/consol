@@ -21,6 +21,7 @@ import {IPausable} from "./interfaces/IPausable/IPausable.sol";
 // solhint-disable-next-line no-unused-import
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {MortgageStatus} from "./types/enums/MortgageStatus.sol";
+import {IMortgageNFT} from "./interfaces/IMortgageNFT/IMortgageNFT.sol";
 
 /**
  * @title ConversionQueue
@@ -168,8 +169,20 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
 
     // If the mortgage is being re-enqueued, remove it from the mortgage queue first to re-insert it at the correct position
     if (reenqueue) {
-      // Remove the mortgage from the mortgage queue
-      _removeMortgage(mortgageTokenId);
+      // Remove the mortgage from the mortgage queue and record the gas fee to refund
+      uint256 collectedGasFees = _removeMortgage(mortgageTokenId);
+
+      // Emit gas withdrawn event
+      emit NativeGasWithdrawn(collectedGasFees);
+
+      // Fetch the mortgage owner
+      address mortgageOwner = IMortgageNFT(loanManager.nft()).ownerOf(mortgageTokenId);
+
+      // Send the collected gas fees to the mortgageOwner
+      (bool success,) = mortgageOwner.call{value: collectedGasFees}("");
+      if (!success) {
+        revert FailedToWithdrawNativeGas(collectedGasFees);
+      }
     }
 
     // Insert the mortgage into the mortgage queue
@@ -257,10 +270,11 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
 
       // MortgagePosition used up (pop it)
       if (amountToUse >= mortgagePosition.principalRemaining()) {
+        // Update MortgageQueue and record the gas fee from the removed mortgageNode
+        uint256 mortgageGasFee;
+        (mortgageTokenId, mortgageGasFee) = _popMortgage(mortgageTokenId);
         // Increment the collected gas fees for the caller
-        collectedGasFees += _mortgageNodes[mortgageTokenId].gasFee;
-        // Update MortgageQueue
-        mortgageTokenId = _popMortgage(mortgageTokenId);
+        collectedGasFees += mortgageGasFee;
       }
     }
 
@@ -291,11 +305,8 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
       revert OnlyInactiveMortgage(mortgageTokenId);
     }
 
-    // Calculate the gas fees to collect
-    uint256 collectedGasFees = _mortgageNodes[mortgageTokenId].gasFee;
-
-    // Remove the mortgage from the conversion queue
-    _removeMortgage(mortgageTokenId);
+    // Remove the mortgage from the conversion queue and record the gas fee to collect
+    uint256 collectedGasFees = _removeMortgage(mortgageTokenId);
 
     // Emit gas withdrawn event
     emit NativeGasWithdrawn(collectedGasFees);

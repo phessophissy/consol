@@ -161,8 +161,9 @@ contract MortgageQueue is Context, ERC165, AccessControl, IMortgageQueue {
   /**
    * @dev Removes a mortgage position from the queue
    * @param tokenId The tokenId of the MortgagePosition to remove.
+   * @return gasFee The gas fee collected from the removed mortgageNode
    */
-  function _removeMortgage(uint256 tokenId) internal {
+  function _removeMortgage(uint256 tokenId) internal returns (uint256 gasFee) {
     // Validate that the tokenId is in the queue
     if (_mortgageNodes[tokenId].tokenId == 0) {
       revert TokenIdNotInQueue(tokenId);
@@ -185,6 +186,9 @@ contract MortgageQueue is Context, ERC165, AccessControl, IMortgageQueue {
     // Update the size
     mortgageSize--;
 
+    // Get the gas fee from the node
+    gasFee = _mortgageNodes[tokenId].gasFee;
+
     // Delete the node
     delete _mortgageNodes[tokenId];
 
@@ -196,10 +200,11 @@ contract MortgageQueue is Context, ERC165, AccessControl, IMortgageQueue {
    * @dev Pops the current node from the queue and returns the next node
    * @param tokenId The tokenId of the node to pop.
    * @return nextId The tokenId of the next node in the queue.
+   * @return gasFee The gas fee collected from the removed mortgageNode
    */
-  function _popMortgage(uint256 tokenId) internal returns (uint256 nextId) {
+  function _popMortgage(uint256 tokenId) internal returns (uint256 nextId, uint256 gasFee) {
     nextId = _mortgageNodes[tokenId].next;
-    _removeMortgage(tokenId);
+    gasFee = _removeMortgage(tokenId);
   }
 
   /**
