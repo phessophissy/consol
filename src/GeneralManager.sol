@@ -295,6 +295,28 @@ contract GeneralManager is
   }
 
   /**
+   * @dev Validates that the amount being borrowed exceeds the minimum cap and does not exceed the maximum cap
+   * @param mortgageParams The mortgage parameters
+   */
+  function _validateBorrowCaps(MortgageParams memory mortgageParams) internal view {
+    // Fetch storage
+    GeneralManagerStorage storage $ = _getGeneralManagerStorage();
+
+    // Validate that the amount being borrowed exceeds the minimum cap
+    if (mortgageParams.amountBorrowed < $._minimumCaps[mortgageParams.collateral]) {
+      revert MinimumCapNotMet(
+        mortgageParams.collateral, mortgageParams.amountBorrowed, $._minimumCaps[mortgageParams.collateral]
+      );
+    }
+    // Validate that the amount being borrowed does not exceed the maximum cap
+    if (mortgageParams.amountBorrowed > $._maximumCaps[mortgageParams.collateral]) {
+      revert MaximumCapExceeded(
+        mortgageParams.collateral, mortgageParams.amountBorrowed, $._maximumCaps[mortgageParams.collateral]
+      );
+    }
+  }
+
+  /**
    * @inheritdoc IERC165
    */
   function supportsInterface(bytes4 interfaceId)
@@ -663,12 +685,7 @@ contract GeneralManager is
       _prepareOrder(tokenId, baseRequest, collateral, subConsol, hasPaymentPlan);
 
     // Validate that the amount being borrowed is within the minimum and maximum caps for the collateral
-    if (mortgageParams.amountBorrowed < $._minimumCaps[mortgageParams.collateral]) {
-      revert MinimumCapNotMet(mortgageParams.amountBorrowed, $._minimumCaps[mortgageParams.collateral]);
-    }
-    if (mortgageParams.amountBorrowed > $._maximumCaps[mortgageParams.collateral]) {
-      revert MaximumCapExceeded(mortgageParams.amountBorrowed, $._maximumCaps[mortgageParams.collateral]);
-    }
+    _validateBorrowCaps(mortgageParams);
 
     // Collect any collateral (from compounding requests)
     if (orderAmounts.collateralCollected > 0) {
@@ -783,6 +800,9 @@ contract GeneralManager is
         originationParameters.mortgageParams.collateral, originationParameters.mortgageParams.totalPeriods
       );
     }
+
+    // Validate that the amount being borrowed exceeds the minimum cap and does not exceed the maximum cap
+    _validateBorrowCaps(originationParameters.mortgageParams);
 
     // Call deploy on the origination pool with the amount of USDX to deploy from it
     // After this call, the origination pool will flash lend `deployAmount` to the GeneralManager and call `originationPoolDeployCallback`
