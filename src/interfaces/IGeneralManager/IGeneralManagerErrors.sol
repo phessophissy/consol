@@ -79,17 +79,19 @@ interface IGeneralManagerErrors {
 
   /**
    * @notice Thrown when the amount borrowed is below the minimum cap for the collateral
+   * @param collateral The address of the collateral
    * @param amountBorrowed The amount borrowed
    * @param minimumCap The minimum cap
    */
-  error MinimumCapNotMet(uint256 amountBorrowed, uint256 minimumCap);
+  error MinimumCapNotMet(address collateral, uint256 amountBorrowed, uint256 minimumCap);
 
   /**
    * @notice Thrown when the amount borrowed is above the maximum cap for the collateral
+   * @param collateral The address of the collateral
    * @param amountBorrowed The amount borrowed
    * @param maximumCap The maximum cap
    */
-  error MaximumCapExceeded(uint256 amountBorrowed, uint256 maximumCap);
+  error MaximumCapExceeded(address collateral, uint256 amountBorrowed, uint256 maximumCap);
 
   /**
    * @notice Thrown when the caller sends too little gas to the contract

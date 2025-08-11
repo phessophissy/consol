@@ -135,7 +135,7 @@ contract GeneralManagerTest is BaseTest {
   function test_setPenaltyRate(uint16 newPenaltyRate) public {
     MortgagePosition memory mortgagePosition;
 
-    // Attempt to set the penalty rate without the admin role
+    // Set the penalty rate as admin
     vm.startPrank(admin);
     vm.expectEmit(true, true, true, true);
     emit IGeneralManagerEvents.PenaltyRateSet(penaltyRate, newPenaltyRate);
@@ -162,7 +162,7 @@ contract GeneralManagerTest is BaseTest {
   function test_setRefinanceRate(uint16 newRefinanceRate) public {
     MortgagePosition memory mortgagePosition;
 
-    // Attempt to set the refinance rate without the admin role
+    // Set the refinance rate as admin
     vm.startPrank(admin);
     vm.expectEmit(true, true, true, true);
     emit IGeneralManagerEvents.RefinanceRateSet(refinanceRate, newRefinanceRate);
@@ -543,6 +543,90 @@ contract GeneralManagerTest is BaseTest {
     generalManager.requestMortgageCreation(creationRequest);
   }
 
+  function test_requestMortgageCreation_revertsIfAmountBorrowedIsLessThanMinimumCap(
+    CreationRequest memory createRequestSeed,
+    uint128 minimumCap
+  ) public {
+    // Fuzz the create request (assume compounding and payment plan for simplicity)
+    CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
+    creationRequest.base.isCompounding = true;
+    creationRequest.hasPaymentPlan = true;
+
+    // Admin sets the minimum cap
+    vm.startPrank(admin);
+    generalManager.setMinimumCap(address(wbtc), minimumCap);
+    vm.stopPrank();
+
+    // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
+    // Calculating the required collateral deposit amount
+    uint256 requiredCollateralAmount =
+      Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
+    uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+
+    // Ensure the amount borrowed is less than the minimum cap
+    vm.assume(amountBorrowed < minimumCap);
+
+    // Minting collateral to the borrower and approving the generalManager to spend it
+    vm.startPrank(borrower);
+    ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
+    ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
+    vm.stopPrank();
+
+    // Attempt to request a compounding mortgage with a payment plan with an amount borrowed less than the minimum cap
+    vm.startPrank(borrower);
+    vm.expectRevert(
+      abi.encodeWithSelector(IGeneralManagerErrors.MinimumCapNotMet.selector, address(wbtc), amountBorrowed, minimumCap)
+    );
+    generalManager.requestMortgageCreation(creationRequest);
+    vm.stopPrank();
+  }
+
+  function test_requestMortgageCreation_revertsIfAmountBorrowedIsMoreThanMaximumCap(
+    CreationRequest memory createRequestSeed,
+    uint128 maximumCap
+  ) public {
+    // Fuzz the create request (assume compounding and payment plan for simplicity)
+    CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
+    creationRequest.base.isCompounding = true;
+    creationRequest.hasPaymentPlan = true;
+
+    // Admin sets the maximum cap
+    vm.startPrank(admin);
+    generalManager.setMaximumCap(address(wbtc), maximumCap);
+    vm.stopPrank();
+
+    // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
+    // Calculating the required collateral deposit amount
+    uint256 requiredCollateralAmount =
+      Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
+    uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+
+    // Ensure the amount borrowed is more than the maximum cap
+    vm.assume(amountBorrowed > maximumCap);
+
+    // Minting collateral to the borrower and approving the generalManager to spend it
+    vm.startPrank(borrower);
+    ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
+    ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
+    vm.stopPrank();
+
+    // Attempt to request a compounding mortgage with a payment plan with an amount borrowed more than the maximum cap
+    vm.startPrank(borrower);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IGeneralManagerErrors.MaximumCapExceeded.selector, address(wbtc), amountBorrowed, maximumCap
+      )
+    );
+    generalManager.requestMortgageCreation(creationRequest);
+    vm.stopPrank();
+  }
+
   function test_requestMortgageCreation_compoundingWithPaymentPlan(
     CreationRequest memory createRequestSeed,
     uint256 mortgageGasFee,
@@ -750,8 +834,8 @@ contract GeneralManagerTest is BaseTest {
     );
   }
 
-  // // // ToDo: test_requestMortgageCreation_compoundingWithoutPaymentPlan
-  // // // ToDo: test_requestMortgageCreation_nonCompoundingWithoutPaymentPlan
+  // ToDo: test_requestMortgageCreation_compoundingWithoutPaymentPlan
+  // ToDo: test_requestMortgageCreation_nonCompoundingWithoutPaymentPlan
 
   function test_originate_compoundingShouldRevertIfOriginationPoolNotRegistered(
     CreationRequest memory createRequestSeed,
@@ -792,7 +876,7 @@ contract GeneralManagerTest is BaseTest {
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e18);
 
-    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
 
     // Have the lender deposit amountBorrowed of USDX into the origination pool
@@ -885,7 +969,7 @@ contract GeneralManagerTest is BaseTest {
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e18);
 
-    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
 
     // Have the lender deposit amountBorrowed of USDX into the origination pool
@@ -941,6 +1025,204 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
   }
 
+  function test_originate_revertsIfAmountBorrowedIsLessThanMinimumCap(
+    CreationRequest memory createRequestSeed,
+    uint256 expiration,
+    uint256 orderPoolGasFee,
+    uint256 mortgageGasFee,
+    uint256 minimumCap
+  ) public {
+    // Set the expiration to be between the deploy and redemption phase of the origination pool
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp(),
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
+
+    // Ensuring the gas fees don't overflow
+    orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
+
+    // Fuzz the create request
+    CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
+    creationRequest.base.expiration = expiration;
+    creationRequest.base.isCompounding = true;
+    creationRequest.hasPaymentPlan = true;
+
+    // Have the admin set the gas fee on the conversion queue
+    vm.startPrank(admin);
+    conversionQueue.setMortgageGasFee(mortgageGasFee);
+    vm.stopPrank();
+
+    // Have the admin set the gas fee on the order pool
+    vm.startPrank(admin);
+    orderPool.setGasFee(orderPoolGasFee);
+    vm.stopPrank();
+
+    // Deal the borrower both the gas fees
+    vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
+
+    // Calculating the required collateral deposit amount
+    uint256 requiredCollateralAmount =
+      Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
+    uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
+    vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
+
+    // Have the lender deposit amountBorrowed of USDX into the origination pool
+    _mintUsdx(lender, amountBorrowed);
+    vm.startPrank(lender);
+    usdx.approve(address(originationPool), amountBorrowed);
+    originationPool.deposit(amountBorrowed);
+    vm.stopPrank();
+
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
+    // Minting collateral to the borrower and approving the generalManager to spend it
+    vm.startPrank(borrower);
+    ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
+    ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
+    vm.stopPrank();
+
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
+    // Request a compounding mortgage with a payment plan
+    vm.startPrank(borrower);
+    generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
+    vm.stopPrank();
+
+    // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
+    vm.startPrank(fulfiller);
+    ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmount - requiredCollateralAmount);
+    ERC20Mock(address(wbtc)).approve(
+      address(orderPool), creationRequest.base.collateralAmount - requiredCollateralAmount
+    );
+    vm.stopPrank();
+
+    // Make sure the minimum cap is more than the amount borrowed
+    minimumCap = bound(minimumCap, amountBorrowed + 1, type(uint256).max);
+
+    // Admin sets the minimum cap (after the request but before origination)
+    vm.startPrank(admin);
+    generalManager.setMinimumCap(address(wbtc), minimumCap);
+    vm.stopPrank();
+
+    // Have the fulfiller attempt to process the order on the OrderPool
+    vm.startPrank(fulfiller);
+    uint256[] memory orderIds = new uint256[](1);
+    uint256[] memory hintPrevIds = new uint256[](1);
+    orderIds[0] = 0;
+    hintPrevIds[0] = 0;
+    vm.expectRevert(
+      abi.encodeWithSelector(IGeneralManagerErrors.MinimumCapNotMet.selector, address(wbtc), amountBorrowed, minimumCap)
+    );
+    orderPool.processOrders(orderIds, hintPrevIds);
+    vm.stopPrank();
+  }
+
+  function test_originate_revertsIfAmountBorrowedIsMoreThanMaximumCap(
+    CreationRequest memory createRequestSeed,
+    uint256 expiration,
+    uint256 orderPoolGasFee,
+    uint256 mortgageGasFee,
+    uint256 maximumCap
+  ) public {
+    // Set the expiration to be between the deploy and redemption phase of the origination pool
+    expiration = bound(
+      expiration,
+      originationPool.deployPhaseTimestamp(),
+      originationPool.deployPhaseTimestamp() + orderPool.maximumOrderDuration()
+    );
+
+    // Ensuring the gas fees don't overflow
+    orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
+
+    // Fuzz the create request
+    CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
+    creationRequest.base.expiration = expiration;
+    creationRequest.base.isCompounding = true;
+    creationRequest.hasPaymentPlan = true;
+
+    // Have the admin set the gas fee on the conversion queue
+    vm.startPrank(admin);
+    conversionQueue.setMortgageGasFee(mortgageGasFee);
+    vm.stopPrank();
+
+    // Have the admin set the gas fee on the order pool
+    vm.startPrank(admin);
+    orderPool.setGasFee(orderPoolGasFee);
+    vm.stopPrank();
+
+    // Deal the borrower both the gas fees
+    vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
+
+    // Calculating the required collateral deposit amount
+    uint256 requiredCollateralAmount =
+      Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
+    uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
+    vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
+
+    // Have the lender deposit amountBorrowed of USDX into the origination pool
+    _mintUsdx(lender, amountBorrowed);
+    vm.startPrank(lender);
+    usdx.approve(address(originationPool), amountBorrowed);
+    originationPool.deposit(amountBorrowed);
+    vm.stopPrank();
+
+    // Skip ahead to the deploy phase of the origination pool
+    vm.warp(originationPool.deployPhaseTimestamp());
+
+    // Minting collateral to the borrower and approving the generalManager to spend it
+    vm.startPrank(borrower);
+    ERC20Mock(address(wbtc)).mint(borrower, requiredCollateralAmount);
+    ERC20Mock(address(wbtc)).approve(address(generalManager), requiredCollateralAmount);
+    vm.stopPrank();
+
+    // Set the oracle values
+    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
+    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+
+    // Request a compounding mortgage with a payment plan
+    vm.startPrank(borrower);
+    generalManager.requestMortgageCreation{value: orderPoolGasFee + mortgageGasFee}(creationRequest);
+    vm.stopPrank();
+
+    // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
+    vm.startPrank(fulfiller);
+    ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmount - requiredCollateralAmount);
+    ERC20Mock(address(wbtc)).approve(
+      address(orderPool), creationRequest.base.collateralAmount - requiredCollateralAmount
+    );
+    vm.stopPrank();
+
+    // Make sure the maximum cap is less than the amount borrowed
+    maximumCap = bound(maximumCap, 0, amountBorrowed - 1);
+
+    // Admin sets the minimum cap (after the request but before origination)
+    vm.startPrank(admin);
+    generalManager.setMaximumCap(address(wbtc), maximumCap);
+    vm.stopPrank();
+
+    // Have the fulfiller attempt to process the order on the OrderPool
+    vm.startPrank(fulfiller);
+    uint256[] memory orderIds = new uint256[](1);
+    uint256[] memory hintPrevIds = new uint256[](1);
+    orderIds[0] = 0;
+    hintPrevIds[0] = 0;
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IGeneralManagerErrors.MaximumCapExceeded.selector, address(wbtc), amountBorrowed, maximumCap
+      )
+    );
+    orderPool.processOrders(orderIds, hintPrevIds);
+    vm.stopPrank();
+  }
+
   function test_originate_compoundingWithPaymentPlanCreation(
     CreationRequest memory createRequestSeed,
     uint256 expiration,
@@ -981,7 +1263,7 @@ contract GeneralManagerTest is BaseTest {
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
 
-    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
 
     // Have the lender deposit amountBorrowed of USDX into the origination pool
@@ -1104,7 +1386,7 @@ contract GeneralManagerTest is BaseTest {
       requiredUsdxAmount += 1;
     }
 
-    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
 
     // Have the lender deposit amountBorrowed of USDX into the origination pool
@@ -1248,7 +1530,7 @@ contract GeneralManagerTest is BaseTest {
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
 
-    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
 
     // Have the lender deposit amountBorrowed of USDX into the origination pool
@@ -1771,7 +2053,7 @@ contract GeneralManagerTest is BaseTest {
       Math.mulDiv((creationRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
 
-    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
 
     // Have the lender deposit amountBorrowed of USDX into the origination pool
@@ -1833,7 +2115,7 @@ contract GeneralManagerTest is BaseTest {
       Math.mulDiv((expansionRequest.base.collateralAmount + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     uint256 amountIn = Math.mulDiv(expansionRequest.base.collateralAmount / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
 
-    // Make sure that the amountIn is less than the pool limit but more than the minimum borrow amount
+    // Make sure that the amountIn is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountIn < originationPool.poolLimit() && amountIn > 1e18);
 
     // Have the lender deposit amountIn of USDX into the origination pool
@@ -2021,5 +2303,63 @@ contract GeneralManagerTest is BaseTest {
 
     // Validate that the mortgage was enqueued into the conversion queue
     assertEq(conversionQueue.mortgageSize(), 1, "Conversion queue should have 1 mortgage");
+  }
+
+  function test_setMinimumCap_revertsIfDoesNotHaveDefaultAdminRole(
+    address caller,
+    address collateral,
+    uint256 newMinimumCap
+  ) public {
+    // Ensure the caller doesn't have the admin role
+    vm.assume(!GeneralManager(address(generalManager)).hasRole(Roles.DEFAULT_ADMIN_ROLE, caller));
+
+    // Caller attempts to set the minimum cap without the admin role
+    vm.startPrank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.DEFAULT_ADMIN_ROLE)
+    );
+    generalManager.setMinimumCap(collateral, newMinimumCap);
+    vm.stopPrank();
+  }
+
+  function test_setMinimumCap(address collateral, uint256 newMinimumCap) public {
+    // Set the minimum cap as admin
+    vm.startPrank(admin);
+    vm.expectEmit(true, true, true, true);
+    emit IGeneralManagerEvents.MinimumCapSet(collateral, newMinimumCap);
+    generalManager.setMinimumCap(collateral, newMinimumCap);
+    vm.stopPrank();
+
+    // Validate the minimum cap was set correctly
+    assertEq(generalManager.minimumCap(collateral), newMinimumCap, "Minimum cap should be set correctly");
+  }
+
+  function test_setMaximumCap_revertsIfDoesNotHaveDefaultAdminRole(
+    address caller,
+    address collateral,
+    uint256 newMaximumCap
+  ) public {
+    // Ensure the caller doesn't have the admin role
+    vm.assume(!GeneralManager(address(generalManager)).hasRole(Roles.DEFAULT_ADMIN_ROLE, caller));
+
+    // Caller attempts to set the maximum cap without the admin role
+    vm.startPrank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.DEFAULT_ADMIN_ROLE)
+    );
+    generalManager.setMaximumCap(collateral, newMaximumCap);
+    vm.stopPrank();
+  }
+
+  function test_setMaximumCap(address collateral, uint256 newMaximumCap) public {
+    // Set the maximum cap as admin
+    vm.startPrank(admin);
+    vm.expectEmit(true, true, true, true);
+    emit IGeneralManagerEvents.MaximumCapSet(collateral, newMaximumCap);
+    generalManager.setMaximumCap(collateral, newMaximumCap);
+    vm.stopPrank();
+
+    // Validate the maximum cap was set correctly
+    assertEq(generalManager.maximumCap(collateral), newMaximumCap, "Maximum cap should be set correctly");
   }
 }
