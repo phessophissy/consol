@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {IUSDX, IUSDXEvents} from "../src/interfaces/IUSDX/IUSDX.sol";
+import {IUSDX, IUSDXEvents, IUSDXErrors} from "../src/interfaces/IUSDX/IUSDX.sol";
 import {
   IMultiTokenVault,
   IMultiTokenVaultEvents,
@@ -16,7 +16,7 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
-contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
+contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
   USDX public usdx;
 
   // Constructor params
@@ -35,6 +35,12 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     vm.startPrank(admin);
     usdx.grantRole(Roles.SUPPORTED_TOKEN_ROLE, supportedTokenManager);
     vm.stopPrank();
+  }
+
+  modifier ensureValidScalars(uint256 scalarNumerator, uint256 scalarDenominator) {
+    vm.assume(scalarDenominator != 0);
+    vm.assume(scalarDenominator <= scalarNumerator);
+    _;
   }
 
   function test_Constructor() public view {
@@ -81,6 +87,31 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     vm.stopPrank();
   }
 
+  function test_addSupportedToken_revertsIfInvalidScalars(
+    address supportedToken,
+    uint256 scalarNumerator,
+    uint256 scalarDenominator
+  ) public {
+    // Ensure one of the following three conditions are met:
+    // 1. scalarDenominator is 0
+    // 2. scalarDenominator is greater than scalarNumerator
+    // 3. scalarNumerator is 0
+    vm.assume(scalarDenominator == 0 || scalarDenominator > scalarNumerator || scalarNumerator == 0);
+
+    // Ensure the supported token is not the zero address
+    vm.assume(supportedToken != address(0));
+
+    // Supported token manager attempts to add a supported token with invalid scalars
+    vm.startPrank(supportedTokenManager);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IUSDXErrors.InvalidTokenScalars.selector, supportedToken, scalarNumerator, scalarDenominator
+      )
+    );
+    usdx.addSupportedToken(supportedToken, scalarNumerator, scalarDenominator);
+    vm.stopPrank();
+  }
+
   function test_addSupportedToken_noScalars(address supportedToken) public {
     // Ensure the supported token is not the zero address
     vm.assume(supportedToken != address(0));
@@ -106,7 +137,7 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     address supportedToken,
     uint256 scalarNumerator,
     uint256 scalarDenominator
-  ) public {
+  ) public ensureValidScalars(scalarNumerator, scalarDenominator) {
     // Ensure the supported token is not the zero address
     vm.assume(supportedToken != address(0));
 
@@ -247,12 +278,9 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     uint128 scalarNumerator,
     uint128 scalarDenominator,
     string calldata callerName
-  ) public {
+  ) public ensureValidScalars(scalarNumerator, scalarDenominator) {
     // Create a new caller
     address caller = makeAddr(callerName);
-
-    // Make sure that scalarDenominator is not zero
-    vm.assume(scalarDenominator != 0);
 
     // Make sure cap is < 1 to make sure that the cap is exceeded
     cap = uint16(bound(cap, 1, 1e4 - 1));
@@ -293,12 +321,9 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     uint128 scalarNumerator,
     uint128 scalarDenominator,
     string calldata callerName
-  ) public {
+  ) public ensureValidScalars(scalarNumerator, scalarDenominator) {
     // Create a new caller
     address caller = makeAddr(callerName);
-
-    // Make sure that scalarDenominator is not zero
-    vm.assume(scalarDenominator != 0);
 
     // Calculate the mintAmount
     uint256 mintAmount = Math.mulDiv(amount, scalarNumerator, scalarDenominator);
@@ -358,12 +383,9 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     uint128 scalarNumerator,
     uint128 scalarDenominator,
     string calldata callerName
-  ) public {
+  ) public ensureValidScalars(scalarNumerator, scalarDenominator) {
     // Create a new caller
     address caller = makeAddr(callerName);
-
-    // Make sure that scalarDenominator is not zero
-    vm.assume(scalarDenominator != 0);
 
     // Calculate mintAmount
     uint256 mintAmount = Math.mulDiv(depositAmount, scalarNumerator, scalarDenominator);
@@ -424,13 +446,9 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     uint128 scalarNumerator,
     uint128 scalarDenominator,
     string calldata callerName
-  ) public {
+  ) public ensureValidScalars(scalarNumerator, scalarDenominator) {
     // Create a new caller
     address caller = makeAddr(callerName);
-
-    // Make sure that scalarDenominator and scalarNumerator are not zero
-    vm.assume(scalarNumerator != 0);
-    vm.assume(scalarDenominator != 0);
 
     // Make sure that we don't overflow the total shares and that more than 0 is minted
     vm.assume(expectedAmount > 0);
@@ -466,13 +484,9 @@ contract USDXTest is Test, IUSDXEvents, IMultiTokenVaultEvents {
     uint128 scalarNumerator,
     uint128 scalarDenominator,
     string calldata callerName
-  ) public {
+  ) public ensureValidScalars(scalarNumerator, scalarDenominator) {
     // Create a new caller
     address caller = makeAddr(callerName);
-
-    // Make sure that scalarDenominator and scalarNumerator are not zero
-    vm.assume(scalarNumerator != 0);
-    vm.assume(scalarDenominator != 0);
 
     // Make sure that we don't overflow the total shares and that more than 0 is minted
     vm.assume(expectedAmount > 0);

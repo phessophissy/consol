@@ -69,6 +69,9 @@ contract USDX is IUSDX, MultiTokenVault {
     onlyRole(Roles.SUPPORTED_TOKEN_ROLE)
   {
     super.addSupportedToken(token);
+    if (scalarNumerator == 0 || scalarDenominator == 0 || scalarDenominator > scalarNumerator) {
+      revert InvalidTokenScalars(token, scalarNumerator, scalarDenominator);
+    }
     tokenScalars[token] = TokenScalars({numerator: scalarNumerator, denominator: scalarDenominator});
     emit TokenScalarsAdded(token, scalarNumerator, scalarDenominator);
   }

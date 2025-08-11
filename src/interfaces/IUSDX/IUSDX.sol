@@ -3,13 +3,14 @@ pragma solidity ^0.8.20;
 
 import {IMultiTokenVault} from "../IMultiTokenVault/IMultiTokenVault.sol";
 import {IUSDXEvents} from "./IUSDXEvents.sol";
+import {IUSDXErrors} from "./IUSDXErrors.sol";
+
 /**
  * @title IUSDX
  * @author SocksNFlops
  * @notice Interface for the USDX contract. A wrapper token for USD-pegged tokens.
  */
-
-interface IUSDX is IMultiTokenVault, IUSDXEvents {
+interface IUSDX is IMultiTokenVault, IUSDXEvents, IUSDXErrors {
   /**
    * @notice Add a supported token to the MultiTokenVault with specified scalar values
    * @param token The address of the token to add
