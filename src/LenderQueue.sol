@@ -173,7 +173,9 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
     withdrawalRequests[index].shares = 0;
 
     // Burn the excess shares that correspond to forfeited yield while the request was in the queue
-    IConsol(consol).burnExcessShares(request.shares, request.amount);
+    if (request.shares > 0 && request.amount > 0) {
+      IConsol(consol).burnExcessShares(request.shares, request.amount);
+    }
 
     // Transfer the request.amount of Consols back to the request owner's Account
     IERC20(consol).safeTransfer(request.account, request.amount);

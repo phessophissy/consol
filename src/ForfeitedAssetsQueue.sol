@@ -40,7 +40,7 @@ contract ForfeitedAssetsQueue is LenderQueue {
       WithdrawalRequest memory request = withdrawalRequests[withdrawalQueueHead];
 
       // If the request hasn't been cancelled, burn the forfeited assets pool tokens to the request owner's address
-      if (request.amount > 0) {
+      if (request.shares > 0 && request.amount > 0) {
         // Burn the excess shares that correspond to forfeited yield while the request was in the queue
         IConsol(consol).burnExcessShares(request.shares, request.amount);
 

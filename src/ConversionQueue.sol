@@ -224,17 +224,22 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
       // Get the first request from the queue
       WithdrawalRequest memory request = withdrawalRequests[withdrawalQueueHead];
 
+      uint256 amountToUse;
+      uint256 collateralToUse;
+
       // Burn the excess shares that correspond to forfeited yield while the request was in the queue
-      IConsol(consol).burnExcessShares(request.shares, request.amount);
+      if (request.shares > 0 && request.amount > 0) {
+        IConsol(consol).burnExcessShares(request.shares, request.amount);
 
-      // Calculate how much from the mortgagePosition is available for processing
-      uint256 amountToUse = Math.min(mortgagePosition.principalRemaining(), request.amount);
+        // Calculate how much from the mortgagePosition is available for processing
+        amountToUse = Math.min(mortgagePosition.principalRemaining(), request.amount);
 
-      // Calculate the paymentToUse by applying the interest
-      uint256 paymentToUse = mortgagePosition.convertPrincipalToPayment(amountToUse);
+        // Calculate the paymentToUse by applying the interest
+        uint256 paymentToUse = mortgagePosition.convertPrincipalToPayment(amountToUse);
 
-      // Calculate how much collateral to use
-      uint256 collateralToUse = _calculateCollateralToUse(mortgagePosition, paymentToUse);
+        // Calculate how much collateral to use
+        collateralToUse = _calculateCollateralToUse(mortgagePosition, paymentToUse);
+      }
 
       // Request used up
       if (amountToUse >= request.amount) {
@@ -263,10 +268,14 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
       }
 
       // Send the Consol to the GeneralManager
-      IConsol(consol).transfer(generalManager, amountToUse);
+      if (amountToUse > 0) {
+        IConsol(consol).transfer(generalManager, amountToUse);
+      }
 
       // Update the values on the MortgagePosition
-      IGeneralManager(generalManager).convert(mortgageTokenId, amountToUse, collateralToUse, request.account);
+      if (amountToUse > 0) {
+        IGeneralManager(generalManager).convert(mortgageTokenId, amountToUse, collateralToUse, request.account);
+      }
 
       // MortgagePosition used up (pop it)
       if (amountToUse >= mortgagePosition.principalRemaining()) {

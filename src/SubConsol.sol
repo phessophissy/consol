@@ -75,8 +75,12 @@ contract SubConsol is Context, ERC165, AccessControl, ERC20, ISubConsol {
     override
     onlyRole(Roles.ACCOUNTING_ROLE)
   {
-    IERC20(collateral).safeTransferFrom(_msgSender(), address(this), collateralAmount);
-    _mint(_msgSender(), mintAmount);
+    if (collateralAmount > 0) {
+      IERC20(collateral).safeTransferFrom(_msgSender(), address(this), collateralAmount);
+    }
+    if (mintAmount > 0) {
+      _mint(_msgSender(), mintAmount);
+    }
     emit Deposit(_msgSender(), collateralAmount, mintAmount);
   }
 
@@ -90,8 +94,12 @@ contract SubConsol is Context, ERC165, AccessControl, ERC20, ISubConsol {
     internal
     onlyRole(Roles.ACCOUNTING_ROLE)
   {
-    IERC20(collateral).safeTransfer(to, collateralAmount);
-    _burn(_msgSender(), burnAmount);
+    if (collateralAmount > 0) {
+      IERC20(collateral).safeTransfer(to, collateralAmount);
+    }
+    if (burnAmount > 0) {
+      _burn(_msgSender(), burnAmount);
+    }
   }
 
   /**

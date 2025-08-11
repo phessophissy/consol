@@ -223,20 +223,26 @@ contract LoanManager is ILoanManager, ERC165, Context {
     uint256 collateralAmount,
     uint256 amount
   ) internal {
-    // Approve the SubConsol contract to spend the collateral
-    IERC20(collateral).approve(subConsol, collateralAmount);
+    if (amount > 0) {
+      // Approve the SubConsol contract to spend the collateral
+      if (collateralAmount > 0) {
+        IERC20(collateral).approve(subConsol, collateralAmount);
+      }
 
-    // Deposit the collateral into the SubConsol contract
-    ISubConsol(subConsol).depositCollateral(collateralAmount, amount);
+      // Deposit the collateral into the SubConsol contract
+      ISubConsol(subConsol).depositCollateral(collateralAmount, amount);
 
-    // Approve the Consol contract to spend the subConsol
-    IERC20(subConsol).approve(consol, amount);
+      // Approve the Consol contract to spend the subConsol
+      IERC20(subConsol).approve(consol, amount);
 
-    // Deposit the subConsol into the Consol contract
-    IConsol(consol).deposit(subConsol, amount);
-
+      // Deposit the subConsol into the Consol contract
+      IConsol(consol).deposit(subConsol, amount);
+    }
     // Send all minted Consol to the general manager
-    IConsol(consol).safeTransfer(generalManager, IConsol(consol).balanceOf(address(this)));
+    uint256 balance = IConsol(consol).balanceOf(address(this));
+    if (balance > 0) {
+      IConsol(consol).safeTransfer(generalManager, balance);
+    }
   }
 
   /**
@@ -489,9 +495,11 @@ contract LoanManager is ILoanManager, ERC165, Context {
       );
 
       // Send the collateral to the forfeited assets pool
-      IForfeitedAssetsPool(forfeitedAssetsPool).depositAsset(
-        mortgagePosition.collateral, mortgagePosition.collateralAmount - mortgagePosition.collateralConverted, amount
-      );
+      if (amount > 0) {
+        IForfeitedAssetsPool(forfeitedAssetsPool).depositAsset(
+          mortgagePosition.collateral, mortgagePosition.collateralAmount - mortgagePosition.collateralConverted, amount
+        );
+      }
 
       // Transfer the forfeited assets pool tokens directly to the Consol contract
       IERC20(forfeitedAssetsPool).transfer(address(consol), amount);
