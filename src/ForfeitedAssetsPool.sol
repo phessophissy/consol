@@ -82,6 +82,11 @@ contract ForfeitedAssetsPool is IForfeitedAssetsPool, ERC165, AccessControl, ERC
       revert AssetNotSupported(asset);
     }
 
+    // Withdraw any leftover balance of the asset
+    if (IERC20(asset).balanceOf(address(this)) > 0) {
+      IERC20(asset).safeTransfer(_msgSender(), IERC20(asset).balanceOf(address(this)));
+    }
+
     // Remove the asset from the set
     assets.remove(asset);
 
