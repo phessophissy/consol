@@ -55,7 +55,7 @@ contract LocalhostSetupPart2 is BaseScript {
     loanManager = ILoanManager(contractAddresses.loanManagerAddress);
     generalManager = IGeneralManager(contractAddresses.generalManagerAddress);
     orderPool = IOrderPool(contractAddresses.orderPoolAddress);
-    conversionQueue = IConversionQueue(contractAddresses.conversionQueues[1]);
+    conversionQueue = IConversionQueue(contractAddresses.conversionQueues[0]);
     pyth = MockPyth(contractAddresses.pythAddress);
     originationPool2 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(2).deploymentAddress);
   }
