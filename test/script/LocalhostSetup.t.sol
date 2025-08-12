@@ -29,8 +29,7 @@ contract LocalhostSetupTest is DeployAllTest {
     // Also deal 2k hype for wrapping into whype
     vm.deal(
       deployerAddress,
-      2_000 * 1e18 +
-      deployAll.orderPool().gasFee() + deployAll.conversionQueues(1).mortgageGasFee()
+      2_000 * 1e18 + deployAll.orderPool().gasFee() + deployAll.conversionQueues(1).mortgageGasFee()
         + deployAll.usdxQueue().withdrawalGasFee()
     );
   }
