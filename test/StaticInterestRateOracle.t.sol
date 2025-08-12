@@ -30,6 +30,9 @@ contract StaticInterestRateOracleTest is BaseTest {
   }
 
   function test_interestRate_sampleValues(uint8 totalPeriods, bool hasPaymentPlan) public view {
+    // Ensure the total periods are valid
+    vm.assume(totalPeriods == 36 || totalPeriods == 60);
+
     uint16 expectedInterestRate = INTEREST_RATE_BASE + (hasPaymentPlan ? 100 : 200);
     uint16 interestRate = interestRateOracle.interestRate(totalPeriods, hasPaymentPlan);
     if (hasPaymentPlan) {
