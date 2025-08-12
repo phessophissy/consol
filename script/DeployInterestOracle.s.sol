@@ -3,12 +3,12 @@ pragma solidity ^0.8.20;
 
 import {BaseScript} from "./BaseScript.s.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
-import {PythInterestRateOracle} from "../src/PythInterestRateOracle.sol";
-import {MockPyth} from "../test/mocks/MockPyth.sol";
-import {IPyth} from "@pythnetwork/IPyth.sol";
+import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 contract DeployInterestOracle is BaseScript {
-  IPyth public pyth;
+  using SafeCast for uint256;
+
   IInterestRateOracle public interestRateOracle;
 
   function setUp() public virtual override {
@@ -18,27 +18,13 @@ contract DeployInterestOracle is BaseScript {
   function run() public virtual override {
     super.run();
     vm.startBroadcast(deployerPrivateKey);
-    pyth = getOrCreatePyth();
     deployInterestOracle();
     vm.stopBroadcast();
   }
 
-  function getOrCreatePyth() public returns (IPyth) {
-    if (isTest || isTestnet) {
-      pyth = IPyth(address(new MockPyth()));
-    } else {
-      pyth = IPyth(vm.envAddress("PYTH_ADDRESS"));
-    }
-    return pyth;
-  }
-
-  function logPyth(string memory objectKey) public returns (string memory json) {
-    json = vm.serializeAddress(objectKey, "pythAddress", address(pyth));
-  }
-
   function deployInterestOracle() public {
-    pyth = getOrCreatePyth();
-    interestRateOracle = new PythInterestRateOracle(address(pyth));
+    uint256 interestRateBase = vm.envUint("STATIC_INTEREST_RATE_ORACLE_BASE");
+    interestRateOracle = new StaticInterestRateOracle(interestRateBase.toUint16());
   }
 
   function logInterestOracle(string memory objectKey) public returns (string memory json) {

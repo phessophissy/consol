@@ -72,10 +72,12 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
+    // Update the interest rate oracle to 9%
+    _updateInterestRateOracle(900);
+
     // Borrower sets the btc price to $100k and the interest rate to 4.5%
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
-    MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 450000000, 384706, -8, block.timestamp);
     vm.stopPrank();
 
     // Borrower approves the general manager to take the down payment of 101k usdx
@@ -475,10 +477,8 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     generalManager.setRefinanceRate(1000);
     vm.stopPrank();
 
-    // Borrower sets the interest rate to 2%
-    vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 200000000, 384706, -8, block.timestamp);
-    vm.stopPrank();
+    // Update the interest rate oracle to 4%
+    _updateInterestRateOracle(400);
 
     // Estimate the refinance fee (rounded up)
     uint256 refinanceFee = (mortgagePosition.principalRemaining() + 9) / 10;

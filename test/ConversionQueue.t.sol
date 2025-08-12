@@ -15,7 +15,7 @@ import {IMortgageQueue, IMortgageQueueEvents} from "../src/interfaces/IMortgageQ
 import {MockPyth} from "./mocks/MockPyth.sol";
 import {IPriceOracle} from "../src/interfaces/IPriceOracle.sol";
 import {PythPriceOracle} from "../src/PythPriceOracle.sol";
-import {PythInterestRateOracle} from "../src/PythInterestRateOracle.sol";
+import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
 import {MockPyth} from "./mocks/MockPyth.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
@@ -55,9 +55,6 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
 
     // Move time forward into the deployment phase
     vm.warp(originationPool.deployPhaseTimestamp());
-
-    // Set the treasury interest to 4% (with 1% confidence)
-    mockPyth.setPrice(TREASURY_3YR_ID, 4e8, 1e8, -8, block.timestamp);
 
     // Open a mortgage for borrower1
     _requestNoncompoundingPaymentPlanMortgage(borrower1, "mortgage1", 100_000e18, 2e8, address(0));
@@ -342,13 +339,13 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Validate the termBalance of mortgagePosition1 and mortgagePosition2
     assertEq(
       mortgagePosition1.termBalance,
-      127000000000000000000008,
-      "mortgagePosition1.termBalance == 127000000000000000000008"
+      115000000000000000000020,
+      "mortgagePosition1.termBalance == 115000000000000000000020"
     );
     assertEq(
       mortgagePosition2.termBalance,
-      254000000000000000000016,
-      "mortgagePosition2.termBalance == 254000000000000000000016"
+      230000000000000000000004,
+      "mortgagePosition2.termBalance == 230000000000000000000004"
     );
 
     // Mortgage1: Calculate the expected amountToUse, collateralToUse, and subConsolToUse

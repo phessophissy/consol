@@ -69,10 +69,12 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
     usdx.deposit(address(usdt), 121_200e6);
     vm.stopPrank();
 
-    // Borrower sets the btc price to $120k and the interest rate to 1.234%
+    // Update the interest rate oracle to 2.46%
+    _updateInterestRateOracle(246);
+
+    // Borrower sets the btc price to $120k and the interest rate to 2.46%
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 120_000e8, 4349253107, -8, block.timestamp);
-    MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 123400003, 384706, -8, block.timestamp);
     vm.stopPrank();
 
     // Borrower approves the general manager to take the down payment of 121.2k usdx

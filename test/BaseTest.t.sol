@@ -19,7 +19,7 @@ import {MockPyth} from "./mocks/MockPyth.sol";
 import {IPriceOracle} from "../src/interfaces/IPriceOracle.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 import {PythPriceOracle} from "../src/PythPriceOracle.sol";
-import {PythInterestRateOracle} from "../src/PythInterestRateOracle.sol";
+import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {GeneralManager} from "../src/GeneralManager.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -69,11 +69,11 @@ contract BaseTest is Test {
   IPriceOracle public priceOracle;
   IInterestRateOracle public interestRateOracle;
   // Constants
-  bytes32 public constant TREASURY_3YR_ID = 0x25ac38864cd1802a9441e82d4b3e0a4eed9938a1849b8d2dcd788e631e3b288c;
   bytes32 public constant BTC_PRICE_ID = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
   uint256 public constant MAX_CONFIDENCE = 100e18; // Confidence can not deviate more than $100 // ToDo: Rename this to MAX_PRICE_CONFIDENCE
   string public constant MORTGAGE_NFT_NAME = "Mortgage NFT";
   string public constant MORTGAGE_NFT_SYMBOL = "MNFT";
+  uint16 public constant INTEREST_RATE_BASE = 400; // 4%
 
   // Parameters
   uint16 public penaltyRate = 50; // 50 bps
@@ -312,7 +312,7 @@ contract BaseTest is Test {
     consol = new Consol("Consol", "CONSOL", 8, address(admin), address(forfeitedAssetsPool));
     // Create the oracles
     mockPyth = new MockPyth();
-    interestRateOracle = new PythInterestRateOracle(address(mockPyth));
+    interestRateOracle = new StaticInterestRateOracle(INTEREST_RATE_BASE);
     priceOracle = new PythPriceOracle(address(mockPyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8);
 
     // Create the general manager

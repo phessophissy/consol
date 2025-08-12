@@ -75,10 +75,12 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
     usdx.deposit(address(usdt), 50_500e6);
     vm.stopPrank();
 
-    // Borrower sets the btc price to $100k and the interest rate to 3.847%
+    // Update the interest rate oracle to 7.69%
+    _updateInterestRateOracle(769);
+
+    // Borrower sets the btc price to $100k
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
-    MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 384700003, 384706, -8, block.timestamp);
     vm.stopPrank();
 
     // Both borrowers approve the general manager to take the down payment of 50.5k usdx
