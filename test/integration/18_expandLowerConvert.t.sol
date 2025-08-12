@@ -104,10 +104,12 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     // Mint 1.01 BTC to Hyperstrategy
     MockERC20(address(btc)).mint(address(hyperstrategy), 1.01e8);
 
-    // Hyperstrategy sets the btc price to $100k and the interest rate to 3.847%
+    // Update the interest rate oracle to 7.69%
+    _updateInterestRateOracle(769);
+
+    // Hyperstrategy sets the btc price to $100k
     vm.startPrank(hyperstrategy);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
-    MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 384700003, 384706, -8, block.timestamp);
     vm.stopPrank();
 
     // Hyperstrategy approves the general manager to take the down payment of 1.01 BTC
@@ -233,10 +235,12 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     // Mint 1.01 BTC to Hyperstrategy
     MockERC20(address(btc)).mint(address(hyperstrategy), 1.01e8);
 
-    // Hyperstrategy sets the btc price to $50k and the interest rate to 5%
+    // Update the interest rate oracle to 10%
+    _updateInterestRateOracle(1000);
+
+    // Hyperstrategy sets the btc price to $50k
     vm.startPrank(hyperstrategy);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 50_000e8, 4349253107, -8, block.timestamp);
-    MockPyth(address(pyth)).setPrice(pythPriceId3YrInterestRate, 500000000, 384706, -8, block.timestamp);
     vm.stopPrank();
 
     // Hyperstrategy approves the general manager to take the down payment of 1.01 BTC

@@ -22,6 +22,7 @@ import {IForfeitedAssetsPool} from "../../src/interfaces/IForfeitedAssetsPool/IF
 import {IConsol} from "../../src/interfaces/IConsol/IConsol.sol";
 import {ILenderQueue} from "../../src/interfaces/ILenderQueue/ILenderQueue.sol";
 import {IConversionQueue} from "../../src/interfaces/IConversionQueue/IConversionQueue.sol";
+import {StaticInterestRateOracle} from "../../src/StaticInterestRateOracle.sol";
 
 /**
  * @title IntegrationBaseTest
@@ -53,8 +54,6 @@ abstract contract IntegrationBaseTest is DeployAllTest {
   IConversionQueue public conversionQueue;
   IPyth public pyth;
   bytes32 public pythPriceIdBTC = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
-  bytes32 public pythPriceId3YrInterestRate = 0x25ac38864cd1802a9441e82d4b3e0a4eed9938a1849b8d2dcd788e631e3b288c;
-  bytes32 public pythPriceId5YrInterestRate = 0x7d220b081152db0d74a93d3ce383c61d0ec5250c6dd2b2cdb2d1e4b8919e1a6e;
 
   function integrationTestId() public pure virtual returns (string memory);
 
@@ -98,6 +97,15 @@ abstract contract IntegrationBaseTest is DeployAllTest {
     forfeitedAssetsQueue.setWithdrawalGasFee(0.01e18);
     conversionQueue.setMortgageGasFee(0.01e18);
     conversionQueue.setWithdrawalGasFee(0.01e18);
+    vm.stopPrank();
+  }
+
+  function _updateInterestRateOracle(uint16 baseRate) internal {
+    // Deploy a new oracle with a different base rate
+    StaticInterestRateOracle newInterestRateOracle = new StaticInterestRateOracle(uint16(baseRate));
+    // Set the interest rate oracle
+    vm.startPrank(admin1);
+    generalManager.setInterestRateOracle(address(newInterestRateOracle));
     vm.stopPrank();
   }
 }

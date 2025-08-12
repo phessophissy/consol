@@ -15,7 +15,7 @@ import {
 } from "../src/interfaces/IGeneralManager/IGeneralManager.sol";
 import {GeneralManager} from "../src/GeneralManager.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
-import {PythInterestRateOracle} from "../src/PythInterestRateOracle.sol";
+import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LoanManager} from "../src/LoanManager.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
@@ -223,24 +223,26 @@ contract GeneralManagerTest is BaseTest {
     assertEq(generalManager.interestRateOracle(), newInterestRateOracle, "Interest rate oracle should be set correctly");
   }
 
-  function test_interestRate(int64 pythInterestRate, uint64 pythConfidence, bool hasPaymentPlan) public {
-    // Set the interest rate between 0% and 100%
-    pythInterestRate = int64(uint64(bound(uint64(pythInterestRate), 0, 100e8)));
+  function test_interestRate(uint16 baseRate, bool hasPaymentPlan) public {
+    // Ensure this new rate isn't out of bounds
+    baseRate = uint16(bound(baseRate, 0, type(uint16).max - 200));
 
-    // Set the confidence to at most 1%
-    pythConfidence = uint64(bound(pythConfidence, 0, 1e6));
+    // Deploy a new oracle with the new base rate
+    StaticInterestRateOracle newInterestRateOracle = new StaticInterestRateOracle(uint16(baseRate));
 
-    // Set the pyth interest rate oracle price
-    mockPyth.setPrice(TREASURY_3YR_ID, pythInterestRate, pythConfidence, -8, block.timestamp);
+    // Set the interest rate oracle
+    vm.startPrank(admin);
+    generalManager.setInterestRateOracle(address(newInterestRateOracle));
+    vm.stopPrank();
 
     // Get the interest rate
     uint16 interestRate = generalManager.interestRate(address(wbtc), DEFAULT_MORTGAGE_PERIODS, hasPaymentPlan);
 
     // expectedSpread is 100 BPS for mortgages with a payment plan and 200 BPS for compounding mortgages
-    int64 expectedSpread = hasPaymentPlan ? int64(1e8) : int64(2e8);
+    uint16 expectedSpread = hasPaymentPlan ? 100 : 200;
 
     // Calculate the expected interest rate
-    uint16 expectedInterestRate = uint16(uint64((2 * pythInterestRate + expectedSpread) / 1e6));
+    uint16 expectedInterestRate = uint16(baseRate + expectedSpread);
 
     // Validate the interest rate was set correctly
     assertEq(interestRate, expectedInterestRate, "Interest rate should be set correctly");
@@ -533,7 +535,6 @@ contract GeneralManagerTest is BaseTest {
     creationRequest.base.totalPeriods = totalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Attempt to request a mortgage with unsupported total periods
@@ -558,7 +559,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
@@ -599,7 +599,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
@@ -653,8 +652,12 @@ contract GeneralManagerTest is BaseTest {
     // Deal the borrower the gas fee
     vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
 
+    // Update the interest rate oracle to the new base rate of 7.69%
+    vm.startPrank(admin);
+    generalManager.setInterestRateOracle(address(new StaticInterestRateOracle(769)));
+    vm.stopPrank();
+
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
@@ -756,8 +759,12 @@ contract GeneralManagerTest is BaseTest {
     // Deal the borrower both the gas fees
     vm.deal(borrower, orderPoolGasFee + mortgageGasFee);
 
+    // Update the interest rate oracle to the new base rate of 7.69%
+    vm.startPrank(admin);
+    generalManager.setInterestRateOracle(address(new StaticInterestRateOracle(769)));
+    vm.stopPrank();
+
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required usdx deposit amount
@@ -896,7 +903,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
@@ -989,7 +995,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
@@ -1086,7 +1091,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
@@ -1184,7 +1188,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
@@ -1283,7 +1286,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
@@ -1406,7 +1408,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a non-compounding mortgage with a payment plan
@@ -1550,7 +1551,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 3_84700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 107537_17500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
@@ -1694,7 +1694,6 @@ contract GeneralManagerTest is BaseTest {
     expansionRequest.base.totalPeriods = invalidTotalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Mock the loan manager to return a blank mortgage position (with wbtc as the collateral)
@@ -1739,7 +1738,6 @@ contract GeneralManagerTest is BaseTest {
     expansionRequest.base.totalPeriods = expansionTotalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Mock the loan manager to return a blank mortgage position (with wbtc as the collateral)
@@ -1796,8 +1794,12 @@ contract GeneralManagerTest is BaseTest {
     // Deal the balanceSheetExpander the gas fee
     vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee);
 
+    // Update the interest rate oracle to the new base rate of 7.69%
+    vm.startPrank(admin);
+    generalManager.setInterestRateOracle(address(new StaticInterestRateOracle(769)));
+    vm.stopPrank();
+
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
@@ -1920,8 +1922,12 @@ contract GeneralManagerTest is BaseTest {
     // Deal the balanceSheetExpander the gas fee
     vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee);
 
+    // Update the interest rate oracle to the new base rate of 7.69%
+    vm.startPrank(admin);
+    generalManager.setInterestRateOracle(address(new StaticInterestRateOracle(769)));
+    vm.stopPrank();
+
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required usdx deposit amount
@@ -2073,7 +2079,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage without a payment plan
@@ -2135,7 +2140,6 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Update the oracle values (keep the same ones for simplicity)
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding balance sheet expansion of the previous mortgage (tokenId should be 1 since it was the first mortgage)
@@ -2221,7 +2225,6 @@ contract GeneralManagerTest is BaseTest {
     vm.deal(borrower, orderPoolGasFee);
 
     // Set the oracle values
-    mockPyth.setPrice(TREASURY_3YR_ID, 384700003, 384706, -8, block.timestamp);
     mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required usdx deposit amount

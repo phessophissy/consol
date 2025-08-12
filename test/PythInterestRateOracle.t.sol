@@ -11,9 +11,12 @@ contract PythInterestRateOracleTest is BaseTest {
   // Contracts
   PythInterestRateOracle public pythInterestRateOracle;
 
+  // Pyth price IDs
+  bytes32 public constant TREASURY_3YR_ID = 0x25ac38864cd1802a9441e82d4b3e0a4eed9938a1849b8d2dcd788e631e3b288c;
+
   function setUp() public override {
     super.setUp();
-    pythInterestRateOracle = PythInterestRateOracle(address(interestRateOracle));
+    pythInterestRateOracle = new PythInterestRateOracle(address(mockPyth));
   }
 
   function test_constructor() public view {
