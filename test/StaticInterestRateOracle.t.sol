@@ -6,21 +6,14 @@ import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 
 contract StaticInterestRateOracleTest is BaseTest {
-
   function setUp() public override {
     super.setUp();
   }
 
   function test_constructor() public view {
+    assertEq(StaticInterestRateOracle(address(interestRateOracle)).baseRate(), INTEREST_RATE_BASE, "Base rate mismatch");
     assertEq(
-      StaticInterestRateOracle(address(interestRateOracle)).baseRate(),
-      INTEREST_RATE_BASE,
-      "Base rate mismatch"
-    );
-    assertEq(
-      StaticInterestRateOracle(address(interestRateOracle)).PAYMENT_PLAN_SPREAD(),
-      100,
-      "Payment plan spread mismatch"
+      StaticInterestRateOracle(address(interestRateOracle)).PAYMENT_PLAN_SPREAD(), 100, "Payment plan spread mismatch"
     );
     assertEq(
       StaticInterestRateOracle(address(interestRateOracle)).NO_PAYMENT_PLAN_SPREAD(),
