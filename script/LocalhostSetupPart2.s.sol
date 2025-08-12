@@ -14,13 +14,15 @@ import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 import {IOrderPool} from "../src/interfaces/IOrderPool/IOrderPool.sol";
 import {CreationRequest, BaseRequest} from "../src/types/orders/OrderRequests.sol";
 import {IConversionQueue} from "../src/interfaces/IConversionQueue/IConversionQueue.sol";
+import {IWHYPE9} from "./external/IWHYPE9.sol";
+import {console} from "forge-std/console.sol";
 
 contract LocalhostSetupPart2 is BaseScript {
   MockERC20 public usdToken0;
   IUSDX public usdx;
-  MockERC20 public collateral1;
-  ISubConsol public subConsol1;
-  bytes32 public pythPriceId1;
+  IWHYPE9 public collateral0;
+  ISubConsol public subConsol0;
+  bytes32 public pythPriceId0;
   IOriginationPoolScheduler public originationPoolScheduler;
   ILoanManager public loanManager;
   IGeneralManager public generalManager;
@@ -31,7 +33,7 @@ contract LocalhostSetupPart2 is BaseScript {
 
   // Mortgage Parameters
   string public mortgageId = "Test Mortgage";
-  uint256 public collateralAmount = 1 * 1e8;
+  uint256 public collateralAmount = 2_000 * 1e18;
   bytes public swapData;
 
   function setUp() public override(BaseScript) {
@@ -46,9 +48,9 @@ contract LocalhostSetupPart2 is BaseScript {
 
     usdToken0 = MockERC20(contractAddresses.usdAddresses[0]);
     usdx = IUSDX(contractAddresses.usdxAddress);
-    collateral1 = MockERC20(contractAddresses.collateralAddresses[1]);
-    subConsol1 = ISubConsol(contractAddresses.subConsolAddresses[1]);
-    pythPriceId1 = vm.envBytes32(string.concat("PYTH_PRICE_ID_1"));
+    collateral0 = IWHYPE9(contractAddresses.collateralAddresses[0]);
+    subConsol0 = ISubConsol(contractAddresses.subConsolAddresses[0]);
+    pythPriceId0 = vm.envBytes32(string.concat("PYTH_PRICE_ID_0"));
     originationPoolScheduler = IOriginationPoolScheduler(contractAddresses.originationPoolSchedulerAddress);
     loanManager = ILoanManager(contractAddresses.loanManagerAddress);
     generalManager = IGeneralManager(contractAddresses.generalManagerAddress);
@@ -70,12 +72,14 @@ contract LocalhostSetupPart2 is BaseScript {
       0x25ac38864cd1802a9441e82d4b3e0a4eed9938a1849b8d2dcd788e631e3b288c, 384700003, 384706, -8, block.timestamp
     );
 
-    // Set the pyth price feed for the collateral (100k per btc)
-    pyth.setPrice(pythPriceId1, 100_000e8, 4349253107, -8, block.timestamp);
+    // Set the pyth price feed for the collateral ($50 per hype)
+    pyth.setPrice(pythPriceId0, 50e8, 870832, -8, block.timestamp);
 
     // Mint collateral to the deployer to fulfill the order and grant the orderPool permission to spend it
-    collateral1.mint(address(deployerAddress), collateralAmount);
-    collateral1.approve(address(orderPool), collateralAmount);
+    console.log("deployAddress.balance", address(deployerAddress).balance);
+    console.log("collateralAmount", collateralAmount);
+    collateral0.deposit{value: collateralAmount}();
+    collateral0.approve(address(orderPool), collateralAmount);
 
     // Request a non-compounding mortgage via the generalManager
     generalManager.requestMortgageCreation{value: orderPool.gasFee() + conversionQueue.mortgageGasFee()}(
@@ -89,8 +93,8 @@ contract LocalhostSetupPart2 is BaseScript {
           expiration: block.timestamp + 60
         }),
         mortgageId: mortgageId,
-        collateral: address(collateral1),
-        subConsol: address(subConsol1),
+        collateral: address(collateral0),
+        subConsol: address(subConsol0),
         hasPaymentPlan: true
       })
     );

@@ -15,8 +15,6 @@ import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 contract LocalhostSetupPart1 is BaseScript {
   MockERC20 public usdToken0;
   IUSDX public usdx;
-  MockERC20 public collateral1;
-  ISubConsol public subConsol1;
   IOriginationPoolScheduler public originationPoolScheduler;
   ILoanManager public loanManager;
   IGeneralManager public generalManager;
@@ -35,8 +33,6 @@ contract LocalhostSetupPart1 is BaseScript {
 
     usdToken0 = MockERC20(contractAddresses.usdAddresses[0]);
     usdx = IUSDX(contractAddresses.usdxAddress);
-    collateral1 = MockERC20(contractAddresses.collateralAddresses[1]);
-    subConsol1 = ISubConsol(contractAddresses.subConsolAddresses[1]);
     originationPoolScheduler = IOriginationPoolScheduler(contractAddresses.originationPoolSchedulerAddress);
     loanManager = ILoanManager(contractAddresses.loanManagerAddress);
     generalManager = IGeneralManager(contractAddresses.generalManagerAddress);
