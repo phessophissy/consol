@@ -15,8 +15,6 @@ import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 contract LocalhostSetupPart1 is BaseScript {
   MockERC20 public usdToken0;
   IUSDX public usdx;
-  MockERC20 public collateral1;
-  ISubConsol public subConsol1;
   IOriginationPoolScheduler public originationPoolScheduler;
   ILoanManager public loanManager;
   IGeneralManager public generalManager;
@@ -35,8 +33,6 @@ contract LocalhostSetupPart1 is BaseScript {
 
     usdToken0 = MockERC20(contractAddresses.usdAddresses[0]);
     usdx = IUSDX(contractAddresses.usdxAddress);
-    collateral1 = MockERC20(contractAddresses.collateralAddresses[1]);
-    subConsol1 = ISubConsol(contractAddresses.subConsolAddresses[1]);
     originationPoolScheduler = IOriginationPoolScheduler(contractAddresses.originationPoolSchedulerAddress);
     loanManager = ILoanManager(contractAddresses.loanManagerAddress);
     generalManager = IGeneralManager(contractAddresses.generalManagerAddress);
@@ -53,15 +49,15 @@ contract LocalhostSetupPart1 is BaseScript {
       IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(2)));
 
     // Mint 101k USDToken0
-    usdToken0.mint(address(deployerAddress), 101_000 * 1e6);
+    usdToken0.mint(address(deployerAddress), 202_000 * 1e6);
 
-    // Deposit the 101k USDToken0 into USDX
-    usdToken0.approve(address(usdx), 101_000 * 1e6);
-    usdx.deposit(address(usdToken0), 101_000 * 1e6);
+    // Deposit the 202k USDToken0 into USDX
+    usdToken0.approve(address(usdx), 202_000 * 1e6);
+    usdx.deposit(address(usdToken0), 202_000 * 1e6);
 
-    // Deposit the 50k USDX into the origination pool
-    usdx.approve(address(originationPool2), 50_000 * 1e18);
-    originationPool2.deposit(50_000 * 1e18);
+    // Deposit the 100k USDX into the origination pool
+    usdx.approve(address(originationPool2), 100_000 * 1e18);
+    originationPool2.deposit(100_000 * 1e18);
 
     // Stop broadcasting
     vm.stopBroadcast();

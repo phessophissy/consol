@@ -18,10 +18,10 @@ ANVIL_PID=$!
 # Wait a few seconds for anvil to start up
 sleep 2
 
-# Set balance for specific address (amount in hex, this example is 100 ETH)
+# Set balance for specific address (amount in hex, this example is 2_000 hype)
 echo "Setting balance for address: $DEPLOYER_ADDRESS"
 
-cast rpc anvil_setBalance $DEPLOYER_ADDRESS 0x56BC75E2D63100000 --rpc-url http://localhost:8545
+cast rpc anvil_setBalance $DEPLOYER_ADDRESS 0x6C7974123F64A40000 --rpc-url http://localhost:8545
 
 # Set the WHYPE precompile to the 0x555... address
 echo "Deploying WHYPE precompile to 0x5555555555555555555555555555555555555555"

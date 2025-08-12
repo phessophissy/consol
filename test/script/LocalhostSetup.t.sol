@@ -26,9 +26,10 @@ contract LocalhostSetupTest is DeployAllTest {
     localhostSetupPart3 = new LocalhostSetupPart3();
 
     // Deal gas for submitting an order, enqueuing a mortgage to the conversion queue, and withdrawing from UsdxQueue
+    // Also deal 2k hype for wrapping into whype
     vm.deal(
       deployerAddress,
-      deployAll.orderPool().gasFee() + deployAll.conversionQueues(1).mortgageGasFee()
+      2_000 * 1e18 + deployAll.orderPool().gasFee() + deployAll.conversionQueues(1).mortgageGasFee()
         + deployAll.usdxQueue().withdrawalGasFee()
     );
   }
