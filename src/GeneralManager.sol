@@ -624,6 +624,7 @@ contract GeneralManager is
    * @param hasPaymentPlan Whether the mortgage has a payment plan
    * @return mortgageParams The mortgage parameters
    * @return orderAmounts The order amounts
+   * @return borrowAmounts The amounts being borrowed from each origination pool
    */
   function _prepareOrder(
     uint256 tokenId,
