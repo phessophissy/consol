@@ -139,4 +139,45 @@ contract USDX is IUSDX, MultiTokenVault {
       totalSupply += Math.mulDiv(IERC20(token).balanceOf(address(this)), scalars.numerator, scalars.denominator);
     }
   }
+
+  /**
+   * @inheritdoc IUSDX
+   */
+  function burn(uint256 amount) public {
+    // Revert if the amount is too small
+    if (amount == 0) {
+      revert AmountTooSmall(amount);
+    }
+
+    uint256[] memory balances = new uint256[](supportedTokens.length());
+    uint256 total = 0;
+    // Iterate over the supported tokens and sum up the balances while recording each one
+    for (uint256 i = 0; i < supportedTokens.length(); i++) {
+      address token = supportedTokens.at(i);
+      balances[i] = IERC20(token).balanceOf(address(this));
+      total += convertAmount(token, balances[i]);
+    }
+
+    // Iterate over each of the balances and burn a proportional amount of the token
+    uint256 totalBurned = 0;
+    for (uint256 i = 0; i < supportedTokens.length(); i++) {
+      address token = supportedTokens.at(i);
+      uint256 tokenAmount = Math.mulDiv(amount, balances[i], total, Math.Rounding.Floor);
+      uint256 burnedAmount = convertAmount(token, tokenAmount);
+      if (tokenAmount > 0) {
+        // Transfer the tokens to the user
+        IERC20(token).safeTransfer(_msgSender(), tokenAmount);
+        // Emit the withdraw event (because of precision loss, the last withdraw event will contain the remainder)
+        if (i == supportedTokens.length() - 1) {
+          emit Withdraw(_msgSender(), token, tokenAmount, burnedAmount);
+        } else {
+          emit Withdraw(_msgSender(), token, tokenAmount, amount - totalBurned);
+        }
+        totalBurned += burnedAmount;
+      }
+    }
+
+    // Burn the tokens from the user
+    _burn(_msgSender(), amount);
+  }
 }

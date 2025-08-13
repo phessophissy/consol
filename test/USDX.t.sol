@@ -15,6 +15,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Roles} from "../src/libraries/Roles.sol";
+import {MockERC20} from "./mocks/MockERC20.sol";
 
 contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
   USDX public usdx;
@@ -515,5 +516,64 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
       // This means the underlying amount is too low and the deposit will revert. Also proof of underestimation
     }
     vm.stopPrank();
+  }
+
+  function test_burn_revertsIfAmountIsTooSmall(address caller) public {
+    // Caller attempts to burn 0 USDX
+    vm.startPrank(caller);
+    vm.expectRevert(abi.encodeWithSelector(IMultiTokenVaultErrors.AmountTooSmall.selector, 0));
+    usdx.burn(0);
+    vm.stopPrank();
+  }
+
+  function test_burn(string memory callerName, uint128 usdaAmount, uint128 usdbAmount, uint128 usdcAmount) public {
+    // Ensure the amounts are greater than 0
+    usdaAmount = uint128(bound(usdaAmount, 1, type(uint128).max));
+    usdbAmount = uint128(bound(usdbAmount, 1, type(uint128).max));
+    usdcAmount = uint128(bound(usdcAmount, 1, type(uint128).max));
+
+    // Create a new caller
+    address caller = makeAddr(callerName);
+
+    // Create some new usdTokens
+    MockERC20 usda = new MockERC20("USDA", "USDA", 18);
+    vm.label(address(usda), "USDA");
+    MockERC20 usdb = new MockERC20("USDB", "USDB", 12);
+    vm.label(address(usdb), "USDB");
+    MockERC20 usdc = new MockERC20("USDC", "USDC", 6);
+    vm.label(address(usdc), "USDC");
+
+    // Have the supported token manager add the tokens
+    vm.startPrank(supportedTokenManager);
+    usdx.addSupportedToken(address(usda), 1, 1);
+    usdx.addSupportedToken(address(usdb), 1e6, 1);
+    usdx.addSupportedToken(address(usdc), 1e12, 1);
+    vm.stopPrank();
+
+    // Caller mints and deposits the tokens
+    vm.startPrank(caller);
+    usda.mint(caller, usdaAmount);
+    usda.approve(address(usdx), usdaAmount);
+    usdx.deposit(address(usda), usdaAmount);
+    usdb.mint(caller, usdbAmount);
+    usdb.approve(address(usdx), usdbAmount);
+    usdx.deposit(address(usdb), usdbAmount);
+    usdc.mint(caller, usdcAmount);
+    usdc.approve(address(usdx), usdcAmount);
+    usdx.deposit(address(usdc), usdcAmount);
+    vm.stopPrank();
+
+    // Caller burns 1/3rd of their USDX balance
+    vm.startPrank(caller);
+    usdx.burn(usdx.balanceOf(caller) / 3);
+    vm.stopPrank();
+
+    // Validate that the caller has the correct amount of tokens
+    assertApproxEqAbs(usda.balanceOf(caller), usdaAmount / 3, 1, "Caller should have the correct amount of USDA");
+    assertLe(usda.balanceOf(caller), usdaAmount / 3, "Balance should round down");
+    assertApproxEqAbs(usdb.balanceOf(caller), usdbAmount / 3, 1, "Caller should have the correct amount of USDB");
+    assertLe(usdb.balanceOf(caller), usdbAmount / 3, "Balance should round down");
+    assertApproxEqAbs(usdc.balanceOf(caller), usdcAmount / 3, 1, "Caller should have the correct amount of USDC");
+    assertLe(usdc.balanceOf(caller), usdcAmount / 3, "Balance should round down");
   }
 }

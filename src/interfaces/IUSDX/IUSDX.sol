@@ -26,4 +26,10 @@ interface IUSDX is IMultiTokenVault, IUSDXEvents, IUSDXErrors {
    * @return denominator The denominator for the token
    */
   function tokenScalars(address token) external view returns (uint256 numerator, uint256 denominator);
+
+  /**
+   * @notice Burn a specified amount of USDX for a proportional amount of each supported token
+   * @param amount The amount of USDX to burn
+   */
+  function burn(uint256 amount) external;
 }
