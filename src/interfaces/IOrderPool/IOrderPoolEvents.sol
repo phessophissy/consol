@@ -25,14 +25,14 @@ interface IOrderPoolEvents {
    * @notice Emitted when a purchase order is added
    * @param index The index of the purchase order
    * @param owner The owner of the mortgage being created
-   * @param originationPool The address of the origination pool to deploy funds from
+   * @param originationPools The addresses of the origination pools to deploy funds from
    * @param collateral The address of the collateral token
    * @param order The purchase order
    */
   event PurchaseOrderAdded(
     uint256 index,
     address indexed owner,
-    address indexed originationPool,
+    address[] indexed originationPools,
     address indexed collateral,
     PurchaseOrder order
   );

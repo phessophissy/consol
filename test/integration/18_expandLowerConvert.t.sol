@@ -124,24 +124,30 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     _validateBalances(0.02e18, 0, 0, 0, 1);
 
     // Hyperstrategy requests a compounding mortgage
-    vm.startPrank(hyperstrategy);
-    generalManager.requestMortgageCreation{value: 0.02e18}(
-      CreationRequest({
-        base: BaseRequest({
-          collateralAmount: 2e8,
-          totalPeriods: 36,
-          originationPool: address(originationPool),
-          conversionQueue: address(conversionQueue),
-          isCompounding: true,
-          expiration: block.timestamp
-        }),
-        mortgageId: mortgageId,
-        collateral: address(btc),
-        subConsol: address(btcSubConsol),
-        hasPaymentPlan: false
-      })
-    );
-    vm.stopPrank();
+    {
+      uint256[] memory collateralAmounts = new uint256[](1);
+      collateralAmounts[0] = 2e8;
+      address[] memory originationPools = new address[](1);
+      originationPools[0] = address(originationPool);
+      vm.startPrank(hyperstrategy);
+      generalManager.requestMortgageCreation{value: 0.02e18}(
+        CreationRequest({
+          base: BaseRequest({
+            collateralAmounts: collateralAmounts,
+            totalPeriods: 36,
+            originationPools: originationPools,
+            conversionQueue: address(conversionQueue),
+            isCompounding: true,
+            expiration: block.timestamp
+          }),
+          mortgageId: mortgageId,
+          collateral: address(btc),
+          subConsol: address(btcSubConsol),
+          hasPaymentPlan: false
+        })
+      );
+      vm.stopPrank();
+    }
 
     // Validate the balances [2]
     _validateBalances(0, 0, 0, 0.02e18, 2);
@@ -255,21 +261,27 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     _validateBalances(0.02e18, 0.01e18, 0.01e18, 0, 4);
 
     // Hyperstrategy requests a balance sheet expansion of their existing mortgage
-    vm.startPrank(hyperstrategy);
-    generalManager.requestBalanceSheetExpansion{value: 0.02e18}(
-      ExpansionRequest({
-        base: BaseRequest({
-          collateralAmount: 2e8,
-          totalPeriods: 36,
-          originationPool: address(originationPool),
-          conversionQueue: address(conversionQueue),
-          isCompounding: true,
-          expiration: block.timestamp
-        }),
-        tokenId: 1
-      })
-    );
-    vm.stopPrank();
+    {
+      uint256[] memory collateralAmounts = new uint256[](1);
+      collateralAmounts[0] = 2e8;
+      address[] memory originationPools = new address[](1);
+      originationPools[0] = address(originationPool);
+      vm.startPrank(hyperstrategy);
+      generalManager.requestBalanceSheetExpansion{value: 0.02e18}(
+        ExpansionRequest({
+          base: BaseRequest({
+            collateralAmounts: collateralAmounts,
+            totalPeriods: 36,
+            originationPools: originationPools,
+            conversionQueue: address(conversionQueue),
+            isCompounding: true,
+            expiration: block.timestamp
+          }),
+          tokenId: 1
+        })
+      );
+      vm.stopPrank();
+    }
 
     // Validate the balances [5]
     _validateBalances(0, 0.01e18, 0.01e18, 0.02e18, 5);

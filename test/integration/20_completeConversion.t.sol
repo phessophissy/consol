@@ -87,24 +87,30 @@ contract Integration_20_CompleteConversionTest is IntegrationBaseTest {
     vm.deal(address(borrower), 0.02e18);
 
     // Borrower requests a non-compounding mortgage
-    vm.startPrank(borrower);
-    generalManager.requestMortgageCreation{value: 0.02e18}(
-      CreationRequest({
-        base: BaseRequest({
-          collateralAmount: 2e8,
-          totalPeriods: 36,
-          originationPool: address(originationPool),
-          conversionQueue: address(conversionQueue),
-          isCompounding: false,
-          expiration: block.timestamp
-        }),
-        mortgageId: mortgageId,
-        collateral: address(btc),
-        subConsol: address(btcSubConsol),
-        hasPaymentPlan: true
-      })
-    );
-    vm.stopPrank();
+    {
+      uint256[] memory collateralAmounts = new uint256[](1);
+      collateralAmounts[0] = 2e8;
+      address[] memory originationPools = new address[](1);
+      originationPools[0] = address(originationPool);
+      vm.startPrank(borrower);
+      generalManager.requestMortgageCreation{value: 0.02e18}(
+        CreationRequest({
+          base: BaseRequest({
+            collateralAmounts: collateralAmounts,
+            totalPeriods: 36,
+            originationPools: originationPools,
+            conversionQueue: address(conversionQueue),
+            isCompounding: false,
+            expiration: block.timestamp
+          }),
+          mortgageId: mortgageId,
+          collateral: address(btc),
+          subConsol: address(btcSubConsol),
+          hasPaymentPlan: true
+        })
+      );
+      vm.stopPrank();
+    }
 
     // Fulfiller approves the order pool to take his 2 btc that he's selling
     vm.startPrank(fulfiller);

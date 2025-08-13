@@ -84,31 +84,37 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
     vm.deal(address(borrower), 0.02e18);
 
     // Borrower requests a non-compounding mortgage
-    vm.startPrank(borrower);
-    generalManager.requestMortgageCreation{value: 0.02e18}(
-      CreationRequest({
-        base: BaseRequest({
-          collateralAmount: 2e8,
-          totalPeriods: 36,
-          originationPool: address(originationPool),
-          conversionQueue: address(conversionQueue),
-          isCompounding: false,
-          expiration: block.timestamp + 5 minutes
-        }),
-        mortgageId: mortgageId,
-        collateral: address(btc),
-        subConsol: address(btcSubConsol),
-        hasPaymentPlan: true
-      })
-    );
-    vm.stopPrank();
+    {
+      uint256[] memory collateralAmounts = new uint256[](1);
+      collateralAmounts[0] = 2e8;
+      address[] memory originationPools = new address[](1);
+      originationPools[0] = address(originationPool);
+      vm.startPrank(borrower);
+      generalManager.requestMortgageCreation{value: 0.02e18}(
+        CreationRequest({
+          base: BaseRequest({
+            collateralAmounts: collateralAmounts,
+            totalPeriods: 36,
+            originationPools: originationPools,
+            conversionQueue: address(conversionQueue),
+            isCompounding: false,
+            expiration: block.timestamp + 5 minutes
+          }),
+          mortgageId: mortgageId,
+          collateral: address(btc),
+          subConsol: address(btcSubConsol),
+          hasPaymentPlan: true
+        })
+      );
+      vm.stopPrank();
+    }
 
     // Validate that the borrower has a mortgageNFT
     assertEq(mortgageNFT.ownerOf(mortgageId), address(borrower), "borrower.ownerOf(mortgageId)");
     assertEq(mortgageNFT.ownerOf(1), address(borrower), "borrower.ownerOf(1)");
 
     // Validate that the orderPool has the order
-    assertEq(orderPool.orders(0).originationPool, address(originationPool), "orderPool.orders(0).originationPool");
+    assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "orderPool.orders(0).originationPool");
     assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "orderPool.orders(0).conversionQueue");
     assertEq(
       orderPool.orders(0).orderAmounts.purchaseAmount, 200_000e18, "orderPool.orders(0).orderAmounts.purchaseAmount"

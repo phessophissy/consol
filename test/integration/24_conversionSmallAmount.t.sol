@@ -96,42 +96,54 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
     vm.deal(address(secondBorrower), 0.02e18);
 
     // Both borrowers request a non-compounding mortgage
-    vm.startPrank(borrower);
-    generalManager.requestMortgageCreation{value: 0.02e18}(
-      CreationRequest({
-        base: BaseRequest({
-          collateralAmount: 1e8,
-          totalPeriods: 36,
-          originationPool: address(originationPool),
-          conversionQueue: address(conversionQueue),
-          isCompounding: false,
-          expiration: block.timestamp
-        }),
-        mortgageId: mortgageId,
-        collateral: address(btc),
-        subConsol: address(btcSubConsol),
-        hasPaymentPlan: true
-      })
-    );
-    vm.stopPrank();
-    vm.startPrank(secondBorrower);
-    generalManager.requestMortgageCreation{value: 0.02e18}(
-      CreationRequest({
-        base: BaseRequest({
-          collateralAmount: 1e8,
-          totalPeriods: 36,
-          originationPool: address(originationPool),
-          conversionQueue: address(conversionQueue),
-          isCompounding: false,
-          expiration: block.timestamp
-        }),
-        mortgageId: secondMortgageId,
-        collateral: address(btc),
-        subConsol: address(btcSubConsol),
-        hasPaymentPlan: true
-      })
-    );
-    vm.stopPrank();
+    {
+      uint256[] memory collateralAmounts = new uint256[](1);
+      collateralAmounts[0] = 1e8;
+      address[] memory originationPools = new address[](1);
+      originationPools[0] = address(originationPool);
+      vm.startPrank(borrower);
+      generalManager.requestMortgageCreation{value: 0.02e18}(
+        CreationRequest({
+          base: BaseRequest({
+            collateralAmounts: collateralAmounts,
+            totalPeriods: 36,
+            originationPools: originationPools,
+            conversionQueue: address(conversionQueue),
+            isCompounding: false,
+            expiration: block.timestamp
+          }),
+          mortgageId: mortgageId,
+          collateral: address(btc),
+          subConsol: address(btcSubConsol),
+          hasPaymentPlan: true
+        })
+      );
+      vm.stopPrank();
+    }
+    {
+      uint256[] memory collateralAmounts = new uint256[](1);
+      collateralAmounts[0] = 1e8;
+      address[] memory originationPools = new address[](1);
+      originationPools[0] = address(originationPool);
+      vm.startPrank(secondBorrower);
+      generalManager.requestMortgageCreation{value: 0.02e18}(
+        CreationRequest({
+          base: BaseRequest({
+            collateralAmounts: collateralAmounts,
+            totalPeriods: 36,
+            originationPools: originationPools,
+            conversionQueue: address(conversionQueue),
+            isCompounding: false,
+            expiration: block.timestamp
+          }),
+          mortgageId: secondMortgageId,
+          collateral: address(btc),
+          subConsol: address(btcSubConsol),
+          hasPaymentPlan: true
+        })
+      );
+      vm.stopPrank();
+    }
 
     // Fulfiller approves the order pool to take his 2 btc that he's selling
     vm.startPrank(fulfiller);

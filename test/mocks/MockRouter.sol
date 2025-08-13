@@ -121,8 +121,8 @@ contract MockRouter is Context {
   {
     if (creationRequest.base.isCompounding) {
       // If compounding, need to collect 1/2 of the collateral amount + commission fee (this is in the form of collateral)
-      collateralCollected = IOriginationPool(creationRequest.base.originationPool).calculateReturnAmount(
-        (creationRequest.base.collateralAmount + 1) / 2
+      collateralCollected = IOriginationPool(creationRequest.base.originationPools[0]).calculateReturnAmount(
+        (creationRequest.base.collateralAmounts[0] + 1) / 2
       );
       collateralDecimals =
         IPriceOracle(IGeneralManager(generalManager).priceOracles(creationRequest.collateral)).collateralDecimals();
@@ -130,8 +130,8 @@ contract MockRouter is Context {
       // If non-compounding, need to collect the full mortgage amount in USDX + commission fee
       (paymentAmount, collateralDecimals) = IPriceOracle(
         IGeneralManager(generalManager).priceOracles(creationRequest.collateral)
-      ).cost(creationRequest.base.collateralAmount);
-      usdxCollected = IOriginationPool(creationRequest.base.originationPool).calculateReturnAmount(paymentAmount / 2);
+      ).cost(creationRequest.base.collateralAmounts[0]);
+      usdxCollected = IOriginationPool(creationRequest.base.originationPools[0]).calculateReturnAmount(paymentAmount / 2);
       if (paymentAmount % 2 == 1) {
         usdxCollected += 1;
       }

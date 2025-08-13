@@ -134,8 +134,12 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.expectRevert(
       abi.encodeWithSelector(IOrderPoolErrors.OnlyGeneralManager.selector, caller, address(generalManager))
     );
+
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
     orderPool.sendOrder(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -160,11 +164,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Deal the general manager gasValue of native gas
     vm.deal(address(generalManager), gasValue);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Attempt to send an order from the general manager without sufficient gas
     vm.startPrank(address(generalManager));
     vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.InsufficientGasFee.selector, gasFee, gasValue));
     orderPool.sendOrder{value: gasValue}(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -187,11 +195,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Deal the general manager the gas fee
     vm.deal(address(generalManager), orderPoolGasFee);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Attempt to send an order from the general manager without sufficient gas
     vm.startPrank(address(generalManager));
     vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.AlreadyExpired.selector, expiration, block.timestamp));
     orderPool.sendOrder{value: orderPoolGasFee}(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -222,6 +234,10 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Deal the general manager the gas fee
     vm.deal(address(generalManager), orderPoolGasFee);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Attempt to send an order from the general manager without sufficient gas
     vm.startPrank(address(generalManager));
     vm.expectRevert(
@@ -230,7 +246,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
       )
     );
     orderPool.sendOrder{value: orderPoolGasFee}(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -273,9 +289,13 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderAmounts.collateralCollected =
       Math.mulDiv((collateralAmount + 1) / 2, 1e4 + originationPool.poolMultiplierBps(), 1e4);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Generate the expected PurchaseOrder struct
     PurchaseOrder memory expectedPurchaseOrder = PurchaseOrder({
-      originationPool: address(originationPool),
+      originationPools: originationPools,
       conversionQueue: address(conversionQueue),
       orderAmounts: orderAmounts,
       mortgageParams: mortgageParams,
@@ -290,15 +310,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.startPrank(address(generalManager));
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderAdded(
-      0, borrower, address(originationPool), address(wbtc), expectedPurchaseOrder
+      0, borrower, originationPools, address(wbtc), expectedPurchaseOrder
     );
     orderPool.sendOrder{value: orderPoolGasFee}(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
 
     // Validate that the order was placed correctly
-    assertEq(orderPool.orders(0).originationPool, address(originationPool), "Origination pool mismatch");
+    assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "originationPools[0] mismatch");
     assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "Conversion queue mismatch");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, orderAmounts.purchaseAmount, "Purchase amount mismatch");
     assertEq(
@@ -361,9 +381,13 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Calculate the requiredUsdxDeposit (the amount being borrowed + commission fee paid to the origination pool)
     orderAmounts.usdxCollected = IOriginationPool(originationPool).calculateReturnAmount(amountBorrowed);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Generate the expected PurchaseOrder struct
     PurchaseOrder memory expectedPurchaseOrder = PurchaseOrder({
-      originationPool: address(originationPool),
+      originationPools: originationPools,
       conversionQueue: address(conversionQueue),
       orderAmounts: orderAmounts,
       mortgageParams: mortgageParams,
@@ -378,15 +402,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.startPrank(address(generalManager));
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderAdded(
-      0, borrower, address(originationPool), address(wbtc), expectedPurchaseOrder
+      0, borrower, originationPools, address(wbtc), expectedPurchaseOrder
     );
     orderPool.sendOrder{value: orderPoolGasFee}(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
 
     // Validate that the order was placed correctly
-    assertEq(orderPool.orders(0).originationPool, address(originationPool), "Origination pool mismatch");
+    assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "originationPools[0] mismatch");
     assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "Conversion queue mismatch");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, orderAmounts.purchaseAmount, "Purchase amount mismatch");
     assertEq(
@@ -480,10 +504,14 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Mint requiredCollateralDeposit of collateral to the orderPool to emulate the general manager sending it with the order
     ERC20Mock(address(wbtc)).mint(address(orderPool), orderAmounts.collateralCollected);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Mock the general manager to send the order
     vm.startPrank(address(generalManager));
     orderPool.sendOrder{value: orderPoolGasFee + mortgageGasFee}(
-      address(originationPool), address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
 
@@ -525,7 +553,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     );
 
     // Validate that the order was deleted
-    assertEq(orderPool.orders(0).originationPool, address(0), "Origination pool should be 0");
+    assertEq(orderPool.orders(0).originationPools.length, 0, "originationPools length should be 0");
     assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, 0, "purchaseAmount should be 0");
     assertEq(orderPool.orders(0).orderAmounts.collateralCollected, 0, "Collateral collected mismatch");
@@ -616,10 +644,14 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Minting orderAmounts.collateralCollected of collateral to the orderPool to emulate the general manager sending it with the order
     ERC20Mock(address(wbtc)).mint(address(orderPool), orderAmounts.collateralCollected);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Mock the general manager to send the order
     vm.startPrank(address(generalManager));
     orderPool.sendOrder{value: orderPoolGasFee + mortgageGasFee}(
-      address(originationPool),
+      originationPools,
       address(conversionQueue),
       orderAmounts,
       mortgageParams,
@@ -666,7 +698,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     );
 
     // Validate that the order was deleted
-    assertEq(orderPool.orders(0).originationPool, address(0), "Origination pool should be 0");
+    assertEq(orderPool.orders(0).originationPools.length, 0, "originationPools length should be 0");
     assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, 0, "purchaseAmount should be 0");
     assertEq(orderPool.orders(0).orderAmounts.collateralCollected, 0, "Collateral collected mismatch");
@@ -754,10 +786,14 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Minting returnAmount of USDX to the orderPool to emulate the general manager sending it with the order
     _mintUsdx(address(orderPool), orderAmounts.usdxCollected);
 
+    // Set up the origination pools array
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Mock the general manager to send the order
     vm.startPrank(address(generalManager));
     orderPool.sendOrder{value: orderPoolGasFee + mortgageGasFee}(
-      address(originationPool),
+      originationPools,
       address(conversionQueue),
       orderAmounts,
       mortgageParams,
@@ -804,7 +840,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     );
 
     // Validate that the order was deleted
-    assertEq(orderPool.orders(0).originationPool, address(0), "Origination pool should be 0");
+    assertEq(orderPool.orders(0).originationPools.length, 0, "originationPools length should be 0");
     assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, 0, "purchaseAmount should be 0");
     assertEq(orderPool.orders(0).orderAmounts.collateralCollected, 0, "Collateral collected mismatch");

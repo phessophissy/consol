@@ -32,8 +32,9 @@ contract LocalhostSetupPart2 is BaseScript {
 
   // Mortgage Parameters
   string public mortgageId = "Test Mortgage";
-  uint256 public collateralAmount = 2_000 * 1e18;
+  uint256[] public collateralAmounts = [2_000 * 1e18];
   bytes public swapData;
+  address[] public originationPools;
 
   function setUp() public override(BaseScript) {
     BaseScript.setUp();
@@ -57,6 +58,7 @@ contract LocalhostSetupPart2 is BaseScript {
     conversionQueue = IConversionQueue(contractAddresses.conversionQueues[0]);
     pyth = MockPyth(contractAddresses.pythAddress);
     originationPool2 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(2).deploymentAddress);
+    originationPools = [address(originationPool2)];
   }
 
   function run() public override(BaseScript) {
@@ -75,16 +77,20 @@ contract LocalhostSetupPart2 is BaseScript {
     pyth.setPrice(pythPriceId0, 50e8, 870832, -8, block.timestamp);
 
     // Mint collateral to the deployer to fulfill the order and grant the orderPool permission to spend it
-    collateral0.deposit{value: collateralAmount}();
-    collateral0.approve(address(orderPool), collateralAmount);
+    uint256 collateralAmountTotal = 0;
+    for (uint256 i = 0; i < collateralAmounts.length; i++) {
+      collateralAmountTotal += collateralAmounts[i];
+    }
+    collateral0.deposit{value: collateralAmountTotal}();
+    collateral0.approve(address(orderPool), collateralAmountTotal);
 
     // Request a non-compounding mortgage via the generalManager
     generalManager.requestMortgageCreation{value: orderPool.gasFee() + conversionQueue.mortgageGasFee()}(
       CreationRequest({
         base: BaseRequest({
-          collateralAmount: collateralAmount,
+          collateralAmounts: collateralAmounts,
           totalPeriods: 36,
-          originationPool: address(originationPool2),
+          originationPools: originationPools,
           conversionQueue: address(conversionQueue),
           isCompounding: false,
           expiration: block.timestamp + 60

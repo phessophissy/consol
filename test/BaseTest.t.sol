@@ -262,14 +262,20 @@ contract BaseTest is Test {
     // Record the orderId
     uint256 orderId = orderPool.orderCount();
 
+    uint256[] memory collateralAmounts = new uint256[](1);
+    collateralAmounts[0] = collateralAmount;
+
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
+
     // Have request submit the mortgage request
     vm.startPrank(requester);
     generalManager.requestMortgageCreation(
       CreationRequest({
         base: BaseRequest({
-          collateralAmount: collateralAmount,
+          collateralAmounts: collateralAmounts,
+          originationPools: originationPools,
           totalPeriods: DEFAULT_MORTGAGE_PERIODS,
-          originationPool: address(originationPool),
           conversionQueue: conversionQueueAddress,
           isCompounding: false,
           expiration: originationPool.deployPhaseTimestamp()

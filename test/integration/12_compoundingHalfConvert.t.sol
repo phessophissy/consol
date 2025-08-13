@@ -81,13 +81,17 @@ contract Integration_12_CompoundingHalfConvertTest is IntegrationBaseTest {
     vm.deal(address(borrower), 0.02e18);
 
     // Borrower requests a compounding mortgage
+    uint256[] memory collateralAmounts = new uint256[](1);
+    collateralAmounts[0] = 2e8;
+    address[] memory originationPools = new address[](1);
+    originationPools[0] = address(originationPool);
     vm.startPrank(borrower);
     generalManager.requestMortgageCreation{value: 0.02e18}(
       CreationRequest({
         base: BaseRequest({
-          collateralAmount: 2e8,
+          collateralAmounts: collateralAmounts,
           totalPeriods: 36,
-          originationPool: address(originationPool),
+          originationPools: originationPools,
           conversionQueue: address(conversionQueue),
           isCompounding: true,
           expiration: block.timestamp

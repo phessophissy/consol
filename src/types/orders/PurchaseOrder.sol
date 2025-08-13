@@ -8,7 +8,7 @@ import {OrderAmounts} from "./OrderAmounts.sol";
  * @title PurchaseOrder
  * @author SocksNFlops
  * @notice A struct that represents the intent to purchase the collateral for a mortgage
- * @param originationPool The address of the origination pool to deploy funds from
+ * @param originationPools The addresses of the origination pools to deploy funds from
  * @param conversionQueue The address of the conversion queue to use
  * @param orderAmounts The amounts of the order (purchaseAmount, collateralCollected, usdxCollected)
  * @param mortgageParams The parameters for the mortgage being created. Includes the owner, collateral, collateralAmount, subConsol, interestRate, amountBorrowed, and totalPeriods
@@ -19,7 +19,7 @@ import {OrderAmounts} from "./OrderAmounts.sol";
  * @param expansion Whether the purchase order is for a new mortgage creation or a balance sheet expansion
  */
 struct PurchaseOrder {
-  address originationPool;
+  address[] originationPools;
   address conversionQueue;
   OrderAmounts orderAmounts;
   MortgageParams mortgageParams;
