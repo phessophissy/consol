@@ -7,9 +7,12 @@ import {DeployGeneralManager} from "./DeployGeneralManager.s.sol";
 import {ConversionQueue} from "../src/ConversionQueue.sol";
 import {IConversionQueue} from "../src/interfaces/IConversionQueue/IConversionQueue.sol";
 import {ForfeitedAssetsQueue} from "../src/ForfeitedAssetsQueue.sol";
+import {IProcessor} from "../src/interfaces/IProcessor.sol";
+import {QueueProcessor} from "../src/QueueProcesssor.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
 contract DeployQueues is DeployGeneralManager {
+  IProcessor public processor;
   IConversionQueue[] public conversionQueues;
   ILenderQueue public usdxQueue;
   ILenderQueue public forfeitedAssetsQueue;
@@ -21,10 +24,15 @@ contract DeployQueues is DeployGeneralManager {
   function run() public virtual override(DeployGeneralManager) {
     super.run();
     vm.startBroadcast(deployerPrivateKey);
+    deployProcessor();
     deployUsdxQueue();
     deployForfeitedAssetsQueue();
     deployConversionQueues();
     vm.stopBroadcast();
+  }
+
+  function deployProcessor() public {
+    processor = new QueueProcessor();
   }
 
   function deployUsdxQueue() public {
@@ -35,6 +43,9 @@ contract DeployQueues is DeployGeneralManager {
     for (uint256 i = 0; i < admins.length; i++) {
       UsdxQueue(address(usdxQueue)).grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[i]);
     }
+
+    // Grant the PROCESSOR_ROLE to the processor
+    UsdxQueue(address(usdxQueue)).grantRole(Roles.PROCESSOR_ROLE, address(processor));
 
     // Set the withdrawal gas fee
     UsdxQueue(address(usdxQueue)).setWithdrawalGasFee(usdxWithdrawalGasFee);
@@ -51,6 +62,9 @@ contract DeployQueues is DeployGeneralManager {
     for (uint256 i = 0; i < admins.length; i++) {
       ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[i]);
     }
+
+    // Grant the PROCESSOR_ROLE to the processor
+    ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).grantRole(Roles.PROCESSOR_ROLE, address(processor));
 
     // Set the withdrawal gas fee
     ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).setWithdrawalGasFee(forfeitedAssetsWithdrawalGasFee);
@@ -81,6 +95,9 @@ contract DeployQueues is DeployGeneralManager {
         conversionQueue.grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[j]);
       }
 
+      // Grant the PROCESSOR_ROLE to the processor
+      ConversionQueue(address(conversionQueue)).grantRole(Roles.PROCESSOR_ROLE, address(processor));
+
       // Set the mortgage and withdrawal gas fees
       conversionQueue.setMortgageGasFee(conversionMortgageGasFee);
       conversionQueue.setWithdrawalGasFee(conversionWithdrawalGasFee);
@@ -91,6 +108,10 @@ contract DeployQueues is DeployGeneralManager {
       // Push to the array of collateralQueues
       conversionQueues.push(conversionQueue);
     }
+  }
+
+  function logProcessor(string memory objectKey) public returns (string memory json) {
+    json = vm.serializeAddress(objectKey, "processor", address(processor));
   }
 
   function logUsdxQueue(string memory objectKey) public returns (string memory json) {

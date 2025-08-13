@@ -92,4 +92,10 @@ library Roles {
    * @return The IGNORE_CAP_ROLE
    */
   bytes32 public constant IGNORE_CAP_ROLE = keccak256("IGNORE_CAP_ROLE");
+  /**
+   * @notice Role that allows whitelisted addresses to process withdrawal requests from a queue
+   * @dev Applicable to LenderQueue.
+   * @return The PROCESSOR_ROLE
+   */
+  bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
 }

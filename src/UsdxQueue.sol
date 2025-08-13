@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {WithdrawalRequest} from "./types/WithdrawalRequest.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IConsol} from "./interfaces/IConsol/IConsol.sol";
+import {Roles} from "./libraries/Roles.sol";
 
 /**
  * @title UsdxQueue
@@ -26,15 +27,21 @@ contract UsdxQueue is LenderQueue {
   /**
    * @inheritdoc LenderQueue
    */
-  function processWithdrawalRequests(uint256 numberOfRequests) external virtual override nonReentrant {
+  function processWithdrawalRequests(uint256 iterations, address receiver)
+    external
+    virtual
+    override
+    nonReentrant
+    onlyRole(Roles.PROCESSOR_ROLE)
+  {
     // Validate that the queue is not empty
-    if (withdrawalQueueLength < numberOfRequests) {
-      revert InsufficientWithdrawalCapacity(numberOfRequests, withdrawalQueueLength);
+    if (withdrawalQueueLength < iterations) {
+      revert InsufficientWithdrawalCapacity(iterations, withdrawalQueueLength);
     }
 
     uint256 collectedGasFees;
 
-    while (withdrawalQueueLength > 0 && numberOfRequests > 0) {
+    while (withdrawalQueueLength > 0 && iterations > 0) {
       // Get the first request from the queue
       WithdrawalRequest memory request = withdrawalRequests[withdrawalQueueHead];
 
@@ -69,11 +76,11 @@ contract UsdxQueue is LenderQueue {
       // Increment the queue head and length, and decrement the number of requests to process
       withdrawalQueueHead++;
       withdrawalQueueLength--;
-      numberOfRequests--;
+      iterations--;
     }
 
-    // Send the collected gas fees to the _msgSender
-    (bool success,) = _msgSender().call{value: collectedGasFees}("");
+    // Send the collected gas fees to the receiver
+    (bool success,) = receiver.call{value: collectedGasFees}("");
     if (!success) {
       revert FailedToWithdrawNativeGas(collectedGasFees);
     }

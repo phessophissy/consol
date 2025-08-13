@@ -35,6 +35,11 @@ import {CreationRequest, BaseRequest} from "../src/types/orders/OrderRequests.so
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IConversionQueue} from "../src/interfaces/IConversionQueue/IConversionQueue.sol";
 import {ConversionQueue} from "../src/ConversionQueue.sol";
+import {ForfeitedAssetsQueue} from "../src/ForfeitedAssetsQueue.sol";
+import {UsdxQueue} from "../src/UsdxQueue.sol";
+import {ILenderQueue} from "../src/interfaces/ILenderQueue/ILenderQueue.sol";
+import {IProcessor} from "../src/interfaces/IProcessor.sol";
+import {QueueProcessor} from "../src/QueueProcesssor.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
 contract BaseTest is Test {
@@ -64,6 +69,9 @@ contract BaseTest is Test {
   OriginationPoolScheduler public originationPoolScheduler;
   IOriginationPool public originationPool;
   IConversionQueue public conversionQueue;
+  ILenderQueue public forfeitedAssetsQueue;
+  ILenderQueue public usdxQueue;
+  IProcessor public processor;
   // Oracles
   MockPyth public mockPyth;
   IPriceOracle public priceOracle;
@@ -164,6 +172,43 @@ contract BaseTest is Test {
     // Have GeneralManager grant the CONVERSION_ROLE to the conversion queue
     vm.startPrank(admin);
     IAccessControl(address(generalManager)).grantRole(Roles.CONVERSION_ROLE, address(conversionQueue));
+    vm.stopPrank();
+  }
+
+  function _createForfeitedAssetsQueue() internal {
+    forfeitedAssetsQueue = new ForfeitedAssetsQueue(address(forfeitedAssetsPool), address(consol), admin);
+
+    // Have the admin grant the consol's withdraw role to the forfeited assets queue contract
+    vm.startPrank(admin);
+    IAccessControl(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(forfeitedAssetsQueue));
+    vm.stopPrank();
+  }
+
+  function _createUsdxQueue() internal {
+    usdxQueue = new UsdxQueue(address(usdx), address(consol), admin);
+
+    // Have the admin grant the consol's withdraw role to the usdx queue contract
+    vm.startPrank(admin);
+    IAccessControl(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(usdxQueue));
+    vm.stopPrank();
+  }
+
+  function _createProcessor() internal {
+    processor = new QueueProcessor();
+
+    // ConversionQueue grants the PROCESSOR_ROLE to the processor
+    vm.startPrank(admin);
+    IAccessControl(address(conversionQueue)).grantRole(Roles.PROCESSOR_ROLE, address(processor));
+    vm.stopPrank();
+
+    // ForfeitedAssetsQueue grants the PROCESSOR_ROLE to the processor
+    vm.startPrank(admin);
+    IAccessControl(address(forfeitedAssetsQueue)).grantRole(Roles.PROCESSOR_ROLE, address(processor));
+    vm.stopPrank();
+
+    // UsdxQueue grants the PROCESSOR_ROLE to the processor
+    vm.startPrank(admin);
+    IAccessControl(address(usdxQueue)).grantRole(Roles.PROCESSOR_ROLE, address(processor));
     vm.stopPrank();
   }
 
@@ -329,6 +374,15 @@ contract BaseTest is Test {
 
     // Create the conversion queue
     _createConversionQueue();
+
+    // Create the forfeited assets queue
+    _createForfeitedAssetsQueue();
+
+    // Create the usdx queue
+    _createUsdxQueue();
+
+    // Create the processor
+    _createProcessor();
 
     nftMetadataGenerator = new MockNFTMetadataGenerator();
     loanManager = new LoanManager(

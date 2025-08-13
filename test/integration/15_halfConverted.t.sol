@@ -191,7 +191,7 @@ contract Integration_15_HalfConvertedTest is IntegrationBaseTest {
 
     // Rando processes the withdrawal request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Estimate how much of the BTC should have been converted

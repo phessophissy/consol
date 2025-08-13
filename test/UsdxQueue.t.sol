@@ -13,34 +13,30 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {Roles} from "../src/libraries/Roles.sol";
 
 contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
-  UsdxQueue public usdxQueue;
-
   function setUp() public override {
     super.setUp();
-    usdxQueue = new UsdxQueue(address(usdx), address(consol), admin);
-
-    // Have the admin grant the consol's withdraw role to the usdx queue contract
-    vm.startPrank(admin);
-    IAccessControl(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(usdxQueue));
-    vm.stopPrank();
   }
 
   function test_constructor() public view {
     assertEq(usdxQueue.asset(), address(usdx), "Asset mismatch");
     assertEq(usdxQueue.consol(), address(consol), "Consol mismatch");
-    assertTrue(usdxQueue.hasRole(Roles.DEFAULT_ADMIN_ROLE, admin), "Admin does not have the default admin role");
+    assertTrue(
+      IAccessControl(address(usdxQueue)).hasRole(Roles.DEFAULT_ADMIN_ROLE, admin),
+      "Admin does not have the default admin role"
+    );
   }
 
   function test_supportsInterface() public view {
     assertTrue(
-      usdxQueue.supportsInterface(type(ILenderQueue).interfaceId),
+      IERC165(address(usdxQueue)).supportsInterface(type(ILenderQueue).interfaceId),
       "UsdxQueue does not support the ILenderQueue interface"
     );
     assertTrue(
-      usdxQueue.supportsInterface(type(IERC165).interfaceId), "UsdxQueue does not support the IERC165 interface"
+      IERC165(address(usdxQueue)).supportsInterface(type(IERC165).interfaceId),
+      "UsdxQueue does not support the IERC165 interface"
     );
     assertTrue(
-      usdxQueue.supportsInterface(type(IAccessControl).interfaceId),
+      IERC165(address(usdxQueue)).supportsInterface(type(IAccessControl).interfaceId),
       "UsdxQueue does not support the IAccessControl interface"
     );
   }
@@ -48,7 +44,7 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
   function test_processWithdrawalRequests_revertIfQueueIsEmpty(address caller) public {
     vm.startPrank(caller);
     vm.expectRevert(abi.encodeWithSelector(ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, 1, 0));
-    usdxQueue.processWithdrawalRequests(1);
+    processor.process(address(usdxQueue), 1);
     vm.stopPrank();
   }
 
@@ -113,7 +109,7 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true);
     emit WithdrawalProcessed(0, withdrawer, expectedShares, amount, block.timestamp - 1, gasFee, block.timestamp);
-    usdxQueue.processWithdrawalRequests(1);
+    processor.process(address(usdxQueue), 1);
     vm.stopPrank();
 
     // Validate that the queue has been updated correctly
@@ -198,7 +194,7 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
         ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, numberOfRequests, withdrawalCount
       )
     );
-    usdxQueue.processWithdrawalRequests(numberOfRequests);
+    processor.process(address(usdxQueue), numberOfRequests);
     vm.stopPrank();
   }
 }

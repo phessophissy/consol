@@ -28,11 +28,11 @@ interface ILenderQueueErrors {
   error InsufficientWithdrawalAmount(uint256 minimumWithdrawalAmount, uint256 amount);
 
   /**
-   * @notice The withdrawal queue does not have enough capacity to process the requested number of requests.
-   * @param numberOfRequests The number of requests to process
+   * @notice The withdrawal queue does not have enough capacity to process the request number of iterations.
+   * @param iterations The number of iterations to process
    * @param capacity The capacity of the withdrawal queue
    */
-  error InsufficientWithdrawalCapacity(uint256 numberOfRequests, uint256 capacity);
+  error InsufficientWithdrawalCapacity(uint256 iterations, uint256 capacity);
 
   /**
    * @notice Insufficient tokens returned.

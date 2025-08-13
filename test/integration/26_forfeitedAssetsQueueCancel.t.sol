@@ -179,7 +179,7 @@ contract Integration_26_ForfeitedAssetsQueueCancel is IntegrationBaseTest {
 
     // Rando processes the withdrawal request
     vm.startPrank(rando);
-    forfeitedAssetsQueue.processWithdrawalRequests(2);
+    processor.process(address(forfeitedAssetsQueue), 2);
     vm.stopPrank();
 
     // Confirm that the withdrawal queue is empty

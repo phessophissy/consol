@@ -204,7 +204,7 @@ contract Integration_12_CompoundingHalfConvertTest is IntegrationBaseTest {
 
     // Rando processes the conversion request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Confirm that the conversion queue is empty

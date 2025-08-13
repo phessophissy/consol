@@ -23,6 +23,7 @@ import {IConsol} from "../../src/interfaces/IConsol/IConsol.sol";
 import {ILenderQueue} from "../../src/interfaces/ILenderQueue/ILenderQueue.sol";
 import {IConversionQueue} from "../../src/interfaces/IConversionQueue/IConversionQueue.sol";
 import {StaticInterestRateOracle} from "../../src/StaticInterestRateOracle.sol";
+import {IProcessor} from "../../src/interfaces/IProcessor.sol";
 
 /**
  * @title IntegrationBaseTest
@@ -49,6 +50,7 @@ abstract contract IntegrationBaseTest is DeployAllTest {
   IOriginationPool public originationPool;
   IOrderPool public orderPool;
   IMortgageNFT public mortgageNFT;
+  IProcessor public processor;
   ILenderQueue public usdxQueue;
   ILenderQueue public forfeitedAssetsQueue;
   IConversionQueue public conversionQueue;
@@ -76,6 +78,7 @@ abstract contract IntegrationBaseTest is DeployAllTest {
     originationPoolScheduler = deployAll.originationPoolScheduler();
     orderPool = deployAll.orderPool();
     mortgageNFT = deployAll.mortgageNFT();
+    processor = deployAll.processor();
     usdxQueue = deployAll.usdxQueue();
     forfeitedAssetsQueue = deployAll.forfeitedAssetsQueue();
     conversionQueue = deployAll.conversionQueues(1);

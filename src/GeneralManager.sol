@@ -286,6 +286,21 @@ contract GeneralManager is
   }
 
   /**
+   * @dev Validates that the total periods is supported for the collateral
+   * @param collateral The collateral address
+   * @param totalPeriods The total periods
+   */
+  function _validateTotalPeriods(address collateral, uint8 totalPeriods) internal view {
+    // Fetch storage
+    GeneralManagerStorage storage $ = _getGeneralManagerStorage();
+
+    // Validate that the total periods is supported for the collateral
+    if (!$._supportedMortgagePeriodTerms[collateral][totalPeriods]) {
+      revert InvalidTotalPeriods(collateral, totalPeriods);
+    }
+  }
+
+  /**
    * @dev Modifier to check if the caller is the owner of the mortgage
    * @param tokenId The ID of the mortgage position
    */
@@ -335,6 +350,18 @@ contract GeneralManager is
         revert InvalidOriginationPool(originationPools[i]);
       }
     }
+  }
+
+  /**
+   * @dev Revokes the NFT role of an address and grants it to a new address
+   * @param oldRoleHolder The address to remove the NFT role from
+   * @param newRoleHolder The address to grant the NFT role to
+   */
+  function _replaceNFTRole(address oldRoleHolder, address newRoleHolder) internal {
+    // Remove the old role holder's NFT role
+    _revokeRole(Roles.NFT_ROLE, oldRoleHolder);
+    // Grant the new role holder the NFT role
+    _grantRole(Roles.NFT_ROLE, newRoleHolder);
   }
 
   /**
@@ -433,9 +460,7 @@ contract GeneralManager is
     GeneralManagerStorage storage $ = _getGeneralManagerStorage();
 
     // Validate that the total periods is supported for the collateral
-    if (!$._supportedMortgagePeriodTerms[collateral][totalPeriods]) {
-      revert InvalidTotalPeriods(collateral, totalPeriods);
-    }
+    _validateTotalPeriods(collateral, totalPeriods);
 
     // Fetch the interest rate from the interest rate oracle
     return IInterestRateOracle($._interestRateOracle).interestRate(totalPeriods, hasPaymentPlan);
@@ -466,11 +491,8 @@ contract GeneralManager is
     // Cache old loan manager address
     address oldLoanManager = $._loanManager;
 
-    // Remove the old loan manager's NFT role
-    _revokeRole(Roles.NFT_ROLE, oldLoanManager);
-
-    // Grant the new loan manager the NFT role
-    _grantRole(Roles.NFT_ROLE, loanManager_);
+    // Remove the old loan manager's NFT role and grant it to the new loan manager
+    _replaceNFTRole(oldLoanManager, loanManager_);
 
     // Set the new loan manager
     $._loanManager = loanManager_;
@@ -503,11 +525,8 @@ contract GeneralManager is
     // Cache old order pool address
     address oldOrderPool = $._orderPool;
 
-    // Remove the old order pool's order NFT role
-    _revokeRole(Roles.NFT_ROLE, oldOrderPool);
-
-    // Grant the new order pool the order NFT role
-    _grantRole(Roles.NFT_ROLE, orderPool_);
+    // Remove the old order pool's order NFT role and grant it to the new order pool
+    _replaceNFTRole(oldOrderPool, orderPool_);
 
     // Set the new order pool
     $._orderPool = orderPool_;
@@ -847,15 +866,9 @@ contract GeneralManager is
     _validateOriginationPools(originationParameters.originationPools);
 
     // Validate that the total periods is supported
-    if (
-      !$._supportedMortgagePeriodTerms[originationParameters.mortgageParams.collateral][originationParameters
-        .mortgageParams
-        .totalPeriods]
-    ) {
-      revert InvalidTotalPeriods(
-        originationParameters.mortgageParams.collateral, originationParameters.mortgageParams.totalPeriods
-      );
-    }
+    _validateTotalPeriods(
+      originationParameters.mortgageParams.collateral, originationParameters.mortgageParams.totalPeriods
+    );
 
     // Validate that the amount being borrowed exceeds the minimum cap and does not exceed the maximum cap
     _validateBorrowCaps(originationParameters.mortgageParams);
@@ -894,7 +907,7 @@ contract GeneralManager is
         originationParameters.borrowAmounts[index + 1], abi.encode(originationParameters, index + 1)
       );
     } else {
-      // Send in the collateral from to the LoanManager before creating the origination pool
+      // Send in the collateral to the LoanManager before creating the origination pool
       IERC20(originationParameters.mortgageParams.collateral).safeTransfer(
         address(ILoanManager($._loanManager)), originationParameters.mortgageParams.collateralAmount
       );

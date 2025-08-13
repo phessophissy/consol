@@ -148,7 +148,7 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
   /**
    * @inheritdoc ILenderQueue
    */
-  function processWithdrawalRequests(uint256 numberOfRequests) external virtual override;
+  function processWithdrawalRequests(uint256 iterations, address receiver) external virtual override;
 
   /**
    * @inheritdoc ILenderQueue

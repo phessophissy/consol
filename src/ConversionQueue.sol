@@ -192,15 +192,13 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
   /**
    * @inheritdoc ILenderQueue
    */
-  function processWithdrawalRequests(uint256 numberOfRequests)
+  function processWithdrawalRequests(uint256 iterations, address receiver)
     external
     override(ILenderQueue, LenderQueue)
     nonReentrant
     whenNotPaused
+    onlyRole(Roles.PROCESSOR_ROLE)
   {
-    // Record the number of requests to process
-    uint256 requestsToProcess = numberOfRequests;
-
     // Store the conversion price in memory for efficiency
     uint256 currentConversionPrice = conversionPrice();
 
@@ -213,11 +211,14 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     // Find the start of qualified mortgages in the mortageQueue
     uint256 mortgageTokenId = _findFirstTriggered(currentConversionPrice);
 
+    // Start a count (gets incremented when a mortgage is popped or when a request is popped)
+    uint256 count = 0;
+
     // Stay in the for-loop while all three of these conditions hold:
     // - There are still withdrawalRequests enqueued
     // - There are still applicable mortgages that qualify
-    // - There are still requests waiting to be processed (if the number of requests is 0, we do a partial withdrawal on the first request)
-    while (withdrawalQueueLength > 0 && mortgageTokenId != 0 && (numberOfRequests == 0 || requestsToProcess > 0)) {
+    // - Count < iterations
+    while (withdrawalQueueLength > 0 && mortgageTokenId != 0 && count < iterations) {
       // Fetch the first mortgagePosition
       MortgagePosition memory mortgagePosition = loanManager.getMortgagePosition(mortgageTokenId);
 
@@ -260,7 +261,8 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
         // Increment the queue head and length, and decrement the number of requests to process
         withdrawalQueueHead++;
         withdrawalQueueLength--;
-        requestsToProcess--;
+        // Increment the count
+        count++;
       } else {
         withdrawalRequests[withdrawalQueueHead].amount -= amountToUse;
         withdrawalRequests[withdrawalQueueHead].shares =
@@ -284,18 +286,21 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
         (mortgageTokenId, mortgageGasFee) = _popMortgage(mortgageTokenId);
         // Increment the collected gas fees for the caller
         collectedGasFees += mortgageGasFee;
+        // Increment the count
+        count++;
       }
     }
 
-    if (requestsToProcess > 0) {
-      revert InsufficientWithdrawalCapacity(numberOfRequests, numberOfRequests - requestsToProcess);
+    // Validate that the number of iterations processed is at least as many as requested
+    if (count < iterations) {
+      revert InsufficientWithdrawalCapacity(iterations, count);
     }
 
     // Emit gas withdrawn event
     emit NativeGasWithdrawn(collectedGasFees);
 
-    // Send the collected gas fees to the _msgSender
-    (bool success,) = _msgSender().call{value: collectedGasFees}("");
+    // Send the collected gas fees to the receiver
+    (bool success,) = receiver.call{value: collectedGasFees}("");
     if (!success) {
       revert FailedToWithdrawNativeGas(collectedGasFees);
     }
