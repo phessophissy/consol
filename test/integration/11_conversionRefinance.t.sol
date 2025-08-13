@@ -185,7 +185,7 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(withdrawalRequest.timestamp, block.timestamp, "withdrawalRequest.Timestamp");
 
     // Validate that it's not possible to process the withdrawal request yet
-    try conversionQueue.processWithdrawalRequests(1) {
+    try processor.process(address(conversionQueue), 1) {
       revert();
     } catch {
       // Expected
@@ -198,7 +198,7 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
 
     // Have rando process the withdrawal request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Validate the rando has received only one gas fee (from the withdrawalRequest, not the mortgage)

@@ -16,6 +16,7 @@ struct ContractAddresses {
   address orderPoolAddress;
   address originationPoolSchedulerAddress;
   address[] priceOracles;
+  address processorAddress;
   address pythAddress;
   address[] subConsolAddresses;
   address[] usdAddresses;

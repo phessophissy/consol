@@ -378,7 +378,7 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
 
     // Rando processes the conversion request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Update mortgage position
@@ -650,7 +650,7 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
 
     // Rando processes the conversion request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Update mortgage position

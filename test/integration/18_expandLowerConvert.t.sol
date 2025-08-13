@@ -368,7 +368,7 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
 
     // Rando processes the withdrawal request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Estimate how much of the BTC should have been converted (100_000e18 + interest worth of BTC at a price of $112.5k)

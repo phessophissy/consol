@@ -218,7 +218,7 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
 
     // Rando processes the withdrawal request
     vm.startPrank(rando);
-    forfeitedAssetsQueue.processWithdrawalRequests(1);
+    processor.process(address(forfeitedAssetsQueue), 1);
     vm.stopPrank();
 
     // Validate that the forfeitedAssetsQueue has no withdrawal requests

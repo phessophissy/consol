@@ -13,40 +13,33 @@ import {ForfeitedAssetsQueue} from "../src/ForfeitedAssetsQueue.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
 contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
-  ForfeitedAssetsQueue public forfeitedAssetsQueue;
-
   address public withdrawer = makeAddr("withdrawer");
   address public holder = makeAddr("holder");
 
   function setUp() public override {
     super.setUp();
-    forfeitedAssetsQueue = new ForfeitedAssetsQueue(address(forfeitedAssetsPool), address(consol), admin);
-
-    // Have the admin grant the consol's withdraw role to the forfeited assets queue contract
-    vm.startPrank(admin);
-    IAccessControl(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(forfeitedAssetsQueue));
-    vm.stopPrank();
   }
 
   function test_constructor() public view {
     assertEq(forfeitedAssetsQueue.asset(), address(forfeitedAssetsPool), "Asset mismatch");
     assertEq(forfeitedAssetsQueue.consol(), address(consol), "Consol mismatch");
     assertTrue(
-      forfeitedAssetsQueue.hasRole(Roles.DEFAULT_ADMIN_ROLE, admin), "Admin does not have the default admin role"
+      IAccessControl(address(forfeitedAssetsQueue)).hasRole(Roles.DEFAULT_ADMIN_ROLE, admin),
+      "Admin does not have the default admin role"
     );
   }
 
   function test_supportsInterface() public view {
     assertTrue(
-      forfeitedAssetsQueue.supportsInterface(type(ILenderQueue).interfaceId),
+      IERC165(address(forfeitedAssetsQueue)).supportsInterface(type(ILenderQueue).interfaceId),
       "ForfeitedAssetsQueue does not support the ILenderQueue interface"
     );
     assertTrue(
-      forfeitedAssetsQueue.supportsInterface(type(IERC165).interfaceId),
+      IERC165(address(forfeitedAssetsQueue)).supportsInterface(type(IERC165).interfaceId),
       "ForfeitedAssetsQueue does not support the IERC165 interface"
     );
     assertTrue(
-      forfeitedAssetsQueue.supportsInterface(type(IAccessControl).interfaceId),
+      IERC165(address(forfeitedAssetsQueue)).supportsInterface(type(IAccessControl).interfaceId),
       "ForfeitedAssetsQueue does not support the IAccessControl interface"
     );
   }
@@ -54,7 +47,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
   function test_processWithdrawalRequests_revertIfQueueIsEmpty(address caller) public {
     vm.startPrank(caller);
     vm.expectRevert(abi.encodeWithSelector(ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, 1, 0));
-    forfeitedAssetsQueue.processWithdrawalRequests(1);
+    processor.process(address(forfeitedAssetsQueue), 1);
     vm.stopPrank();
   }
 
@@ -116,7 +109,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true);
     emit WithdrawalProcessed(0, withdrawer, expectedShares, amount, block.timestamp - 1, gasFee, block.timestamp);
-    forfeitedAssetsQueue.processWithdrawalRequests(1);
+    processor.process(address(forfeitedAssetsQueue), 1);
     vm.stopPrank();
 
     // Validate that the queue has been updated correctly
@@ -199,7 +192,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
         ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, numberOfRequests, withdrawalCount
       )
     );
-    forfeitedAssetsQueue.processWithdrawalRequests(numberOfRequests);
+    processor.process(address(forfeitedAssetsQueue), numberOfRequests);
     vm.stopPrank();
   }
 }

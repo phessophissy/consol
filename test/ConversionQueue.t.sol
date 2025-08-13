@@ -189,7 +189,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     vm.expectRevert(
       abi.encodeWithSelector(ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, numberOfRequests, 0)
     );
-    conversionQueue.processWithdrawalRequests(numberOfRequests);
+    processor.process(address(conversionQueue), numberOfRequests);
     vm.stopPrank();
   }
 
@@ -225,7 +225,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     vm.expectRevert(
       abi.encodeWithSelector(ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, numberOfRequests, 0)
     );
-    conversionQueue.processWithdrawalRequests(numberOfRequests);
+    processor.process(address(conversionQueue), numberOfRequests);
     vm.stopPrank();
   }
 
@@ -274,7 +274,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
 
     // Have the keeper process the withdrawal request
     vm.startPrank(keeper);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Update mortgagePosition1
@@ -314,7 +314,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     vm.stopPrank();
 
     // Validate that the conversion queue has 2 mortgages
-    assertEq(conversionQueue.mortgageSize(), 2, "Conversion queue does not have 2 mortgages");
+    assertEq(conversionQueue.mortgageSize(), 2, "Conversion queue should have 2 mortgages");
 
     // Now have Lender3 request a withdrawal of 250k consols
     vm.startPrank(lender3);
@@ -357,9 +357,9 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     uint256 expectedTermConverted2 = mortgagePosition2.convertPrincipalToPayment(expectedPrincipalConverted2);
     uint256 expectedCollateralToUse2 = Math.mulDiv(expectedTermConverted2, 1e8, 150_000e18);
 
-    // Have the keeper process the withdrawal request
+    // Have the keeper process the withdrawals (one mortgage pop, one request pop)
     vm.startPrank(keeper);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 2);
     vm.stopPrank();
 
     // Update mortgagePosition1
@@ -449,10 +449,10 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Set the price oracle to $200k per btc
     mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
-    // Have the keeper attempt to process the withdrawal request
+    // Have the keeper attempt to process three iterations (two mortgages pops, one request pop)
     vm.startPrank(keeper);
-    vm.expectRevert(abi.encodeWithSelector(ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, 1, 0));
-    conversionQueue.processWithdrawalRequests(1);
+    vm.expectRevert(abi.encodeWithSelector(ILenderQueueErrors.InsufficientWithdrawalCapacity.selector, 3, 2));
+    processor.process(address(conversionQueue), 3);
     vm.stopPrank();
   }
 
@@ -505,7 +505,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
 
     // Have the keeper do a partial withdrawal of the first request by passing in 0 requests
     vm.startPrank(keeper);
-    conversionQueue.processWithdrawalRequests(0);
+    processor.process(address(conversionQueue), 2);
     vm.stopPrank();
 
     // Validate that there is still 1 withdrawal request in the conversion queue

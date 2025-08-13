@@ -85,8 +85,9 @@ interface ILenderQueue is ILenderQueueErrors, ILenderQueueEvents {
   function withdrawalQueue(uint256 index) external view returns (WithdrawalRequest memory withdrawalRequest);
 
   /**
-   * @notice Process the requests from the front of the USDX withdrawal queue. Callable by anyone, preferably by a keeper.
-   * @param numberOfRequests The number of requests to process
+   * @notice Process the requests from the front of the USDX withdrawal queue. Callable by anyone by contracts with the PROCESSOR_ROLE.
+   * @param iterations The number of iterations to process. Each iteration returns collected gas fees.
+   * @param receiver The address to receive the gas fees
    */
-  function processWithdrawalRequests(uint256 numberOfRequests) external;
+  function processWithdrawalRequests(uint256 iterations, address receiver) external;
 }

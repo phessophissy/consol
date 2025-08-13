@@ -235,7 +235,7 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
 
     // Rando processes the withdrawal request
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Check that the first mortgagePosition is no longer enqueued

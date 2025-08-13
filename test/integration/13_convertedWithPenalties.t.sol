@@ -196,7 +196,7 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
 
     // Rando processes the conversion queue
     vm.startPrank(rando);
-    conversionQueue.processWithdrawalRequests(1);
+    processor.process(address(conversionQueue), 1);
     vm.stopPrank();
 
     // Calculate expectedCollateralConverted (termConverted / triggerPrice)

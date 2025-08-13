@@ -83,7 +83,7 @@ contract Integration_25_UsdxQueueCancel is IntegrationBaseTest {
 
     // Rando processes the withdrawal request
     vm.startPrank(rando);
-    usdxQueue.processWithdrawalRequests(2);
+    processor.process(address(usdxQueue), 2);
     vm.stopPrank();
 
     // Confirm that the withdrawal queue is empty

@@ -11,7 +11,7 @@ import {LenderQueue} from "../../src/LenderQueue.sol";
 contract MockLenderQueue is LenderQueue {
   constructor(address asset_, address consol_, address admin_) LenderQueue(asset_, consol_, admin_) {}
 
-  function processWithdrawalRequests(uint256 numberOfRequests) external override {
+  function processWithdrawalRequests(uint256 numberOfRequests, address receiver) external override {
     // Do nothing
   }
 }

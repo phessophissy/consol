@@ -40,6 +40,8 @@ contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanMan
     deployNFTMetadataGenerator();
     // Deploy GeneralManager
     deployGeneralManager();
+    // Deploy Processor
+    deployProcessor();
     // Deploy UsdxQueue
     deployUsdxQueue();
     // Deploy ForfeitedAssetsQueue
@@ -121,6 +123,8 @@ contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanMan
     json = logNFTMetadataGenerator(obj);
     // Log the general manager address
     json = logGeneralManager(obj);
+    // Log the processor address
+    json = logProcessor(obj);
     // Log the usdx queue address
     json = logUsdxQueue(obj);
     // Log the forfeited assets queue address

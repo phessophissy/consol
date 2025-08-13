@@ -157,7 +157,7 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
 
     // Rando attempts to process the request but fails
     vm.startPrank(rando);
-    try usdxQueue.processWithdrawalRequests(1) {
+    try processor.process(address(usdxQueue), 1) {
       revert("should revert");
     } catch (bytes memory) {
       // Do nothing
@@ -181,7 +181,7 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
 
     // Rando processes the requests
     vm.startPrank(rando);
-    usdxQueue.processWithdrawalRequests(1);
+    processor.process(address(usdxQueue), 1);
     vm.stopPrank();
 
     // Validate that the rando has received the gas fee
