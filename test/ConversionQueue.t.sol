@@ -194,7 +194,9 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     vm.stopPrank();
   }
 
-  function test_processWithdrawalRequests_redeemedMortgageEnqueued(uint128 mortgageGasFee, uint128 withdrawalGasFee) public {
+  function test_processWithdrawalRequests_redeemedMortgageEnqueued(uint128 mortgageGasFee, uint128 withdrawalGasFee)
+    public
+  {
     // Setup the 3 mortgages
     setupThreeMortgages();
 
@@ -267,7 +269,9 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     );
   }
 
-  function test_processWithdrawalRequests_foreclosedMortgageEnqueued(uint128 mortgageGasFee, uint128 withdrawalGasFee) public {
+  function test_processWithdrawalRequests_foreclosedMortgageEnqueued(uint128 mortgageGasFee, uint128 withdrawalGasFee)
+    public
+  {
     // Setup the 3 mortgages
     setupThreeMortgages();
 
