@@ -229,7 +229,8 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
       uint256 collateralToUse;
 
       // Burn the excess shares that correspond to forfeited yield while the request was in the queue
-      if (request.shares > 0 && request.amount > 0) {
+      // Skip if mortgage is not active
+      if (request.shares > 0 && request.amount > 0 && mortgagePosition.status == MortgageStatus.ACTIVE) {
         IConsol(consol).burnExcessShares(request.shares, request.amount);
 
         // Calculate how much from the mortgagePosition is available for processing
@@ -280,7 +281,7 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
       }
 
       // MortgagePosition used up (pop it)
-      if (amountToUse >= mortgagePosition.principalRemaining()) {
+      if (mortgagePosition.status != MortgageStatus.ACTIVE || amountToUse >= mortgagePosition.principalRemaining()) {
         // Update MortgageQueue and record the gas fee from the removed mortgageNode
         uint256 mortgageGasFee;
         (mortgageTokenId, mortgageGasFee) = _popMortgage(mortgageTokenId);

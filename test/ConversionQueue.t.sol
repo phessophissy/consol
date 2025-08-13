@@ -27,6 +27,7 @@ import {MortgageMath} from "../src/libraries/MortgageMath.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 import {WithdrawalRequest} from "../src/types/WithdrawalRequest.sol";
+import {IConsol} from "../src/interfaces/IConsol/IConsol.sol";
 
 contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEvents {
   using MortgageMath for MortgagePosition;
@@ -191,6 +192,146 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     );
     processor.process(address(conversionQueue), numberOfRequests);
     vm.stopPrank();
+  }
+
+  function test_processWithdrawalRequests_redeemedMortgageEnqueued(uint128 mortgageGasFee, uint128 withdrawalGasFee)
+    public
+  {
+    // Setup the 3 mortgages
+    setupThreeMortgages();
+
+    // Set the mortgage gas fee and withdrawal gas fee
+    vm.startPrank(admin);
+    conversionQueue.setMortgageGasFee(mortgageGasFee);
+    conversionQueue.setWithdrawalGasFee(withdrawalGasFee);
+    vm.stopPrank();
+
+    // Have borrowers enqueue the mortgages into the conversion queue (must be done through the general manager)
+    vm.deal(borrower1, mortgageGasFee);
+    vm.startPrank(borrower1);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(1, address(conversionQueue), 0);
+    vm.stopPrank();
+    vm.deal(borrower2, mortgageGasFee);
+    vm.startPrank(borrower2);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(2, address(conversionQueue), 0);
+    vm.stopPrank();
+
+    // Borrower 1 redeems their mortgage
+    {
+      // Fetch the mortgage position
+      MortgagePosition memory mortgagePosition = loanManager.getMortgagePosition(1);
+
+      // Pay off the term remaining
+      _mintConsolViaUsdx(borrower1, mortgagePosition.termRemaining());
+      vm.startPrank(borrower1);
+      consol.approve(address(loanManager), mortgagePosition.termRemaining());
+      loanManager.periodPay(1, mortgagePosition.termRemaining());
+      vm.stopPrank();
+
+      // Redeem the mortgage
+      vm.startPrank(borrower1);
+      loanManager.redeemMortgage(1, false);
+      vm.stopPrank();
+    }
+
+    // Validate that the conversion queue has 2 mortgages
+    assertEq(conversionQueue.mortgageSize(), 2, "Conversion queue should have 2 mortgages");
+
+    // Now have Lender1 request a withdrawal of 10k consols
+    vm.deal(lender1, withdrawalGasFee);
+    vm.startPrank(lender1);
+    consol.approve(address(conversionQueue), 10_000e18);
+    conversionQueue.requestWithdrawal{value: withdrawalGasFee}(10_000e18);
+    vm.stopPrank();
+
+    // Validate that there is 1 withdrawal request in the conversion queue
+    assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
+
+    // Set the price oracle to $200k per btc
+    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+
+    // Have the keeper process the queue (should pop the mortgage and the withdrawal request)
+    vm.startPrank(keeper);
+    processor.process(address(conversionQueue), 2);
+    vm.stopPrank();
+
+    // Check that the conversion queue has 1 mortgages
+    assertEq(conversionQueue.mortgageSize(), 1, "Conversion queue should have 1 mortgages");
+
+    // Check that the conversion queue has 0 withdrawal requests
+    assertEq(conversionQueue.withdrawalQueueLength(), 0, "Conversion queue should have 0 withdrawal requests");
+
+    // Check that the keeper collected the gas fees
+    assertEq(
+      address(keeper).balance,
+      conversionQueue.mortgageGasFee() + conversionQueue.withdrawalGasFee(),
+      "Keeper should have collected the gas fees"
+    );
+  }
+
+  function test_processWithdrawalRequests_foreclosedMortgageEnqueued(uint128 mortgageGasFee, uint128 withdrawalGasFee)
+    public
+  {
+    // Setup the 3 mortgages
+    setupThreeMortgages();
+
+    // Set the mortgage gas fee and withdrawal gas fee
+    vm.startPrank(admin);
+    conversionQueue.setMortgageGasFee(mortgageGasFee);
+    conversionQueue.setWithdrawalGasFee(withdrawalGasFee);
+    vm.stopPrank();
+
+    // Have borrowers enqueue the mortgages into the conversion queue (must be done through the general manager)
+    vm.deal(borrower1, mortgageGasFee);
+    vm.startPrank(borrower1);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(1, address(conversionQueue), 0);
+    vm.stopPrank();
+    vm.deal(borrower2, mortgageGasFee);
+    vm.startPrank(borrower2);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(2, address(conversionQueue), 0);
+    vm.stopPrank();
+
+    // Time passes that mortgage1 is foreclosed
+    {
+      skip(95 days);
+      vm.startPrank(borrower1);
+      loanManager.forecloseMortgage(1);
+      vm.stopPrank();
+    }
+
+    // Validate that the conversion queue has 2 mortgages
+    assertEq(conversionQueue.mortgageSize(), 2, "Conversion queue should have 2 mortgages");
+
+    // Now have Lender1 request a withdrawal of 10k consols
+    vm.deal(lender1, withdrawalGasFee);
+    vm.startPrank(lender1);
+    consol.approve(address(conversionQueue), 10_000e18);
+    conversionQueue.requestWithdrawal{value: withdrawalGasFee}(10_000e18);
+    vm.stopPrank();
+
+    // Validate that there is 1 withdrawal request in the conversion queue
+    assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
+
+    // Set the price oracle to $200k per btc
+    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+
+    // Have the keeper process the queue (should pop the mortgage and the withdrawal request)
+    vm.startPrank(keeper);
+    processor.process(address(conversionQueue), 2);
+    vm.stopPrank();
+
+    // Check that the conversion queue has 1 mortgages
+    assertEq(conversionQueue.mortgageSize(), 1, "Conversion queue should have 1 mortgages");
+
+    // Check that the conversion queue has 0 withdrawal requests
+    assertEq(conversionQueue.withdrawalQueueLength(), 0, "Conversion queue should have 0 withdrawal requests");
+
+    // Check that the keeper collected the gas fees
+    assertEq(
+      address(keeper).balance,
+      conversionQueue.mortgageGasFee() + conversionQueue.withdrawalGasFee(),
+      "Keeper should have collected the gas fees"
+    );
   }
 
   function test_processWithdrawalRequests_revertsNoWithdrawalRequests(uint256 numberOfRequests) public {
