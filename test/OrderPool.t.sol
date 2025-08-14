@@ -338,7 +338,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Validate that the order was placed correctly
     assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "originationPools[0] mismatch");
-    assertEq(orderPool.orders(0).conversionQueues.length, conversionQueues.length, "ConversionQueues length mismatch"); 
+    assertEq(orderPool.orders(0).conversionQueues.length, conversionQueues.length, "ConversionQueues length mismatch");
     assertEq(orderPool.orders(0).conversionQueues[0], address(conversionQueue), "ConversionQueues[0] mismatch");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, orderAmounts.purchaseAmount, "Purchase amount mismatch");
     assertEq(

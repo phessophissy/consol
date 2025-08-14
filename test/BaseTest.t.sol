@@ -95,7 +95,15 @@ contract BaseTest is Test {
     GeneralManager generalManagerImplementation = new GeneralManager();
     bytes memory initializerData = abi.encodeCall(
       GeneralManager.initialize,
-      (address(usdx), address(consol), penaltyRate, refinanceRate, conversionPremiumRate, insuranceFund, address(interestRateOracle))
+      (
+        address(usdx),
+        address(consol),
+        penaltyRate,
+        refinanceRate,
+        conversionPremiumRate,
+        insuranceFund,
+        address(interestRateOracle)
+      )
     );
     vm.startPrank(admin);
     ERC1967Proxy proxy = new ERC1967Proxy(address(generalManagerImplementation), initializerData);

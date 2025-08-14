@@ -122,8 +122,7 @@ library MortgageMath {
         && mortgagePosition.termPaid == other.termPaid && mortgagePosition.termConverted == other.termConverted
         && mortgagePosition.amountConverted == other.amountConverted
         && mortgagePosition.penaltyAccrued == other.penaltyAccrued && mortgagePosition.penaltyPaid == other.penaltyPaid
-        && mortgagePosition.paymentsMissed == other.paymentsMissed
-        && mortgagePosition.totalPeriods == other.totalPeriods
+        && mortgagePosition.paymentsMissed == other.paymentsMissed && mortgagePosition.totalPeriods == other.totalPeriods
         && mortgagePosition.status == other.status && mortgagePosition.hasPaymentPlan == other.hasPaymentPlan
     );
   }
@@ -432,7 +431,10 @@ library MortgageMath {
     // Calculate the number of since origination
     periods = uint8((block.timestamp - mortgagePosition.termOriginated) / Constants.PERIOD_DURATION);
     // If the late payment window can impact the number of periods, subtract one
-    if (periods > 0 && (block.timestamp - mortgagePosition.termOriginated) % Constants.PERIOD_DURATION <= latePaymentWindow) {
+    if (
+      periods > 0
+        && (block.timestamp - mortgagePosition.termOriginated) % Constants.PERIOD_DURATION <= latePaymentWindow
+    ) {
       periods -= 1;
     }
   }
@@ -547,13 +549,19 @@ library MortgageMath {
     return mortgagePosition;
   }
 
-  function _refinanceHelper(MortgagePosition memory mortgagePosition, uint256 principalIn, uint16 newInterestRate, uint8 newTotalPeriods) private view returns (MortgagePosition memory) {
+  function _refinanceHelper(
+    MortgagePosition memory mortgagePosition,
+    uint256 principalIn,
+    uint16 newInterestRate,
+    uint8 newTotalPeriods
+  ) private view returns (MortgagePosition memory) {
     uint256 principalPaid = mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termPaid);
     uint256 principalConverted = mortgagePosition.convertPaymentToPrincipal(
       mortgagePosition.termPaid + mortgagePosition.termConverted
     ) - principalPaid;
-    mortgagePosition.termBalance =
-      calculateTermBalance(mortgagePosition.principalRemaining() + principalIn, newInterestRate, newTotalPeriods, newTotalPeriods);
+    mortgagePosition.termBalance = calculateTermBalance(
+      mortgagePosition.principalRemaining() + principalIn, newInterestRate, newTotalPeriods, newTotalPeriods
+    );
     mortgagePosition.interestRate = newInterestRate;
     mortgagePosition.totalPeriods = newTotalPeriods;
     mortgagePosition.amountPrior += principalPaid;

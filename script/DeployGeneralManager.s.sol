@@ -35,7 +35,15 @@ contract DeployGeneralManager is DeployPriceOracles, DeployConsol {
 
     bytes memory initializerData = abi.encodeCall(
       GeneralManager.initialize,
-      (address(usdx), address(consol), penaltyRate, refinanceRate, conversionPremiumRate, insuranceFund, address(interestRateOracle))
+      (
+        address(usdx),
+        address(consol),
+        penaltyRate,
+        refinanceRate,
+        conversionPremiumRate,
+        insuranceFund,
+        address(interestRateOracle)
+      )
     );
     ERC1967Proxy proxy = new ERC1967Proxy(address(generalManagerImplementation), initializerData);
     generalManager = GeneralManager(payable(address(proxy)));

@@ -285,10 +285,21 @@ contract LoanManager is ILoanManager, ERC165, Context {
     );
 
     // Deposit the collateral -> subConsol -> Consol into the general manager
-    _depositCollateralToConsolForGeneralManager(mortgageParams.collateral, mortgageParams.subConsol, mortgageParams.collateralAmount, mortgageParams.amountBorrowed);
+    _depositCollateralToConsolForGeneralManager(
+      mortgageParams.collateral,
+      mortgageParams.subConsol,
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
+    );
 
     // Emit a create mortgage event
-    emit CreateMortgage(mortgageParams.tokenId, mortgageParams.owner, mortgageParams.collateral, mortgageParams.collateralAmount, mortgageParams.amountBorrowed);
+    emit CreateMortgage(
+      mortgageParams.tokenId,
+      mortgageParams.owner,
+      mortgageParams.collateral,
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
+    );
   }
 
   /**
@@ -508,13 +519,13 @@ contract LoanManager is ILoanManager, ERC165, Context {
   /**
    * @inheritdoc ILoanManager
    */
-  function convertMortgage(uint256 tokenId, uint256 currentPrice, uint256 amount, uint256 collateralAmount, address receiver)
-    external
-    override
-    mortgageExistsAndActive(tokenId)
-    imposePenaltyBefore(tokenId)
-    onlyGeneralManager
-  {
+  function convertMortgage(
+    uint256 tokenId,
+    uint256 currentPrice,
+    uint256 amount,
+    uint256 collateralAmount,
+    address receiver
+  ) external override mortgageExistsAndActive(tokenId) imposePenaltyBefore(tokenId) onlyGeneralManager {
     mortgagePositions[tokenId] =
       mortgagePositions[tokenId].convert(currentPrice, amount, collateralAmount, Constants.LATE_PAYMENT_WINDOW);
 

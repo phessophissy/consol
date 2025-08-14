@@ -54,13 +54,10 @@ contract LoanManagerTest is BaseTest {
     assertEq(loanManager.supportsInterface(type(IERC165).interfaceId), true, "Supports IERC165 interface");
   }
 
-  function test_createMortgage_notGeneralManager(
-    address caller,
-    MortgageParams memory mortgageParams
-  ) public {
+  function test_createMortgage_notGeneralManager(address caller, MortgageParams memory mortgageParams) public {
     // Ensure the caller is not the general manager
     vm.assume(caller != address(generalManager));
- 
+
     // Fuzz the mortgage params
     mortgageParams = fuzzMortgageParams(mortgageParams);
     mortgageParams.owner = caller;
@@ -79,13 +76,16 @@ contract LoanManagerTest is BaseTest {
     vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the amountBorrowed is below the minimum threshold
-    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 0, Constants.MINIMUM_AMOUNT_BORROWED - 1));
+    mortgageParams.amountBorrowed =
+      uint128(bound(mortgageParams.amountBorrowed, 0, Constants.MINIMUM_AMOUNT_BORROWED - 1));
 
     // Attempt to create a mortgage with an amountBorrowed below the minimum threshold
     vm.startPrank(address(generalManager));
     vm.expectRevert(
       abi.encodeWithSelector(
-        ILoanManagerErrors.AmountBorrowedBelowMinimum.selector, mortgageParams.amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED
+        ILoanManagerErrors.AmountBorrowedBelowMinimum.selector,
+        mortgageParams.amountBorrowed,
+        Constants.MINIMUM_AMOUNT_BORROWED
       )
     );
     loanManager.createMortgage(mortgageParams);
@@ -97,7 +97,7 @@ contract LoanManagerTest is BaseTest {
     mortgageParams = fuzzMortgageParams(mortgageParams);
 
     // Ensure that owner is not the zero address
-    vm.assume(mortgageParams.owner != address(0));    
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the amountBorrowed is above a minimum threshold
     mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
@@ -111,42 +111,92 @@ contract LoanManagerTest is BaseTest {
     // Create a mortgage
     vm.startPrank(address(generalManager));
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.CreateMortgage(mortgageParams.tokenId, mortgageParams.owner, address(wbtc), mortgageParams.collateralAmount, mortgageParams.amountBorrowed);
+    emit ILoanManagerEvents.CreateMortgage(
+      mortgageParams.tokenId,
+      mortgageParams.owner,
+      address(wbtc),
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
+    );
     loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Validate that the mortgage position was created correctly
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).tokenId, mortgageParams.tokenId, "MortgageId is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).collateral, address(wbtc), "Collateral is not set correctly");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).tokenId,
+      mortgageParams.tokenId,
+      "MortgageId is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).collateral,
+      address(wbtc),
+      "Collateral is not set correctly"
+    );
     assertEq(
       loanManager.getMortgagePosition(mortgageParams.tokenId).collateralAmount,
       mortgageParams.collateralAmount,
       "Collateral amount is not set correctly"
     );
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).collateralConverted, 0, "Collateral converted is not set correctly"
-    );
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).subConsol, address(subConsol), "SubConsol is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).interestRate, mortgageParams.interestRate, "Interest rate is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).conversionPremiumRate, mortgageParams.conversionPremiumRate, "Conversion premium rate is not set correctly");
-    assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).dateOriginated, block.timestamp, "Date originated is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).collateralConverted,
+      0,
+      "Collateral converted is not set correctly"
     );
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).termOriginated, block.timestamp, "Term originated is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).subConsol,
+      address(subConsol),
+      "SubConsol is not set correctly"
     );
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed, mortgageParams.amountBorrowed, "amountBorrowed is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).interestRate,
+      mortgageParams.interestRate,
+      "Interest rate is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).conversionPremiumRate,
+      mortgageParams.conversionPremiumRate,
+      "Conversion premium rate is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).dateOriginated,
+      block.timestamp,
+      "Date originated is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termOriginated,
+      block.timestamp,
+      "Term originated is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed,
+      mortgageParams.amountBorrowed,
+      "amountBorrowed is not set correctly"
     );
     assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).amountPrior, 0, "Amount prior should be 0");
     assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).termPaid, 0, "Term paid is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).amountConverted, 0, "Amount converted is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, 0, "Penalty accrued is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid, 0, "Penalty paid is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 0, "Payments missed is not set correctly");
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods, mortgageParams.totalPeriods, "Total periods is not set correctly");
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).hasPaymentPlan, mortgageParams.hasPaymentPlan, "hasPaymentPlan is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountConverted,
+      0,
+      "Amount converted is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, 0, "Penalty accrued is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid, 0, "Penalty paid is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 0, "Payments missed is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods,
+      mortgageParams.totalPeriods,
+      "Total periods is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).hasPaymentPlan,
+      mortgageParams.hasPaymentPlan,
+      "hasPaymentPlan is not set correctly"
     );
     assertEq(
       uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status),
@@ -157,7 +207,9 @@ contract LoanManagerTest is BaseTest {
     assertEq(consol.balanceOf(address(loanManager)), 0, "Loan manager should not have collected any consol");
     // Validate that the general manager has collected the consol
     assertEq(
-      consol.balanceOf(address(generalManager)), mortgageParams.amountBorrowed, "General manager should have collected the consol"
+      consol.balanceOf(address(generalManager)),
+      mortgageParams.amountBorrowed,
+      "General manager should have collected the consol"
     );
   }
 
@@ -167,10 +219,7 @@ contract LoanManagerTest is BaseTest {
     loanManager.imposePenalty(tokenId);
   }
 
-  function test_imposePenalty_noPenaltyImposed(
-    MortgageParams memory mortgageParams,
-    uint32 timeskip
-  ) public {
+  function test_imposePenalty_noPenaltyImposed(MortgageParams memory mortgageParams, uint32 timeskip) public {
     // Fuzz the mortgage params
     mortgageParams = fuzzMortgageParams(mortgageParams);
 
@@ -202,10 +251,14 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that no penalty has been pre-calculated
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, 0, "[1] Penalty accrued should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      0,
+      "[1] Penalty accrued should not have been updated"
     );
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 0, "[1] Payments missed should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      0,
+      "[1] Payments missed should not have been updated"
     );
 
     // Call imposePenalty
@@ -213,10 +266,14 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that no penalty was imposed and no missed payments were recorded
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, 0, "[2] Penalty accrued should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      0,
+      "[2] Penalty accrued should not have been updated"
     );
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 0, "[2] Payments missed should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      0,
+      "[2] Payments missed should not have been updated"
     );
   }
 
@@ -271,7 +328,9 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that no penalty has been pre-calculated
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, periodsMissed, "Payments missed should have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      periodsMissed,
+      "Payments missed should have been updated"
     );
     assertEq(
       loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
@@ -366,15 +425,14 @@ contract LoanManagerTest is BaseTest {
 
     // Attempt to make a period payment
     vm.expectRevert(
-      abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId))
+      abi.encodeWithSelector(
+        MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
+      )
     );
     loanManager.periodPay(mortgageParams.tokenId, amount);
   }
 
-  function test_periodPay_onePeriodWithPaymentPlan(
-    MortgageParams memory mortgageParams,
-    address caller
-  ) public {
+  function test_periodPay_onePeriodWithPaymentPlan(MortgageParams memory mortgageParams, address caller) public {
     // Fuzz the mortgage params
     mortgageParams = fuzzMortgageParams(mortgageParams);
     mortgageParams.hasPaymentPlan = true;
@@ -409,8 +467,12 @@ contract LoanManagerTest is BaseTest {
     // Call periodPay
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.PeriodPay(mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment(), 1);
-    loanManager.periodPay(mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
+    emit ILoanManagerEvents.PeriodPay(
+      mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment(), 1
+    );
+    loanManager.periodPay(
+      mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()
+    );
     vm.stopPrank();
 
     loanManager.getMortgagePosition(mortgageParams.tokenId);
@@ -431,18 +493,34 @@ contract LoanManagerTest is BaseTest {
     );
     // Validate that the amountBorrowed has not changed
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed, mortgageParams.amountBorrowed, "amountBorrowed should not have changed"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed,
+      mortgageParams.amountBorrowed,
+      "amountBorrowed should not have changed"
     );
     // Validate that the periodsPaid has increased by 1
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).periodsPaid(), 1, "Periods paid should have been increased by 1");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).periodsPaid(),
+      1,
+      "Periods paid should have been increased by 1"
+    );
     // Validate that total periods has not been updated
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods, mortgageParams.totalPeriods, "Total periods should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods,
+      mortgageParams.totalPeriods,
+      "Total periods should not have been updated"
     );
     // Validate that the penalty accrued has not been updated
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, 0, "Penalty accrued should not have been updated");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      0,
+      "Penalty accrued should not have been updated"
+    );
     // Validate that the penalty paid has not been updated
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid, 0, "Penalty paid should not have been updated");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid,
+      0,
+      "Penalty paid should not have been updated"
+    );
     // Validate that the loan manager has not collected any consol
     assertEq(consol.balanceOf(address(loanManager)), 0, "Loan manager should not have collected any consol");
   }
@@ -482,9 +560,7 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to pay a penalty with no missed payments
@@ -498,11 +574,7 @@ contract LoanManagerTest is BaseTest {
     vm.stopPrank();
   }
 
-  function test_penaltyPay_onePeriod(
-    MortgageParams memory mortgageParams,
-    address caller,
-    uint16 penaltyRate
-  ) public {
+  function test_penaltyPay_onePeriod(MortgageParams memory mortgageParams, address caller, uint16 penaltyRate) public {
     // Fuzz the mortgage params
     mortgageParams = fuzzMortgageParams(mortgageParams);
 
@@ -532,9 +604,7 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // If does not have a payment plan, skip the entire term (minus 1 period since we're about to do it again)
@@ -547,11 +617,18 @@ contract LoanManagerTest is BaseTest {
 
     // Calculate the expected penalty amount
     uint256 penaltyAmount = Math.mulDiv(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance, penaltyRate, uint256(mortgageParams.totalPeriods) * 1e4, Math.Rounding.Ceil
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance,
+      penaltyRate,
+      uint256(mortgageParams.totalPeriods) * 1e4,
+      Math.Rounding.Ceil
     );
 
     // Ensure that a missed payment has been recorded
-    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 1, "One missed payment should have been recorded");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      1,
+      "One missed payment should have been recorded"
+    );
     assertEq(
       loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
       penaltyAmount,
@@ -586,7 +663,9 @@ contract LoanManagerTest is BaseTest {
     );
     // Validate that the amountBorrowed has not changed
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed, mortgageParams.amountBorrowed, "amountBorrowed should not have changed"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed,
+      mortgageParams.amountBorrowed,
+      "amountBorrowed should not have changed"
     );
     // Validate that the periods since term origination has not changed
     assertEq(
@@ -596,11 +675,15 @@ contract LoanManagerTest is BaseTest {
     );
     // Validate that the penalty accrued has been updated
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, penaltyAmount, "Penalty accrued should have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      penaltyAmount,
+      "Penalty accrued should have been updated"
     );
     // Validate that the penalty paid has been updated
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid, penaltyAmount, "Penalty paid should have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid,
+      penaltyAmount,
+      "Penalty paid should have been updated"
     );
   }
 
@@ -641,14 +724,16 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to redeem the mortgage as a non-owner
     vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(ILoanManagerErrors.OnlyMortgageOwner.selector, mortgageParams.tokenId, mortgageParams.owner, caller));
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ILoanManagerErrors.OnlyMortgageOwner.selector, mortgageParams.tokenId, mortgageParams.owner, caller
+      )
+    );
     loanManager.redeemMortgage(mortgageParams.tokenId, false);
     vm.stopPrank();
   }
@@ -679,15 +764,15 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to redeem the mortgage without repaying the loan
     vm.startPrank(mortgageParams.owner);
     vm.expectRevert(
-      abi.encodeWithSelector(MortgageMath.UnpaidPayments.selector, loanManager.getMortgagePosition(mortgageParams.tokenId))
+      abi.encodeWithSelector(
+        MortgageMath.UnpaidPayments.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
+      )
     );
     loanManager.redeemMortgage(mortgageParams.tokenId, false);
     vm.stopPrank();
@@ -695,10 +780,7 @@ contract LoanManagerTest is BaseTest {
 
   // // ToDo: test_redeemMortgage_revertIfMortgageHasPaymentsMissed
 
-  function test_redeemMortgage(
-    MortgageParams memory mortgageParams,
-    string calldata mortgageId
-  ) public {
+  function test_redeemMortgage(MortgageParams memory mortgageParams, string calldata mortgageId) public {
     // Fuzz the mortgage params
     mortgageParams = fuzzMortgageParams(mortgageParams);
 
@@ -722,9 +804,7 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Deal entire payment of consol to the owner and approve the loan manager to spend it
@@ -754,7 +834,9 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that the mortgage position status is redeemed
     assertEq(
-      uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status), uint8(MortgageStatus.REDEEMED), "Status is not set correctly"
+      uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status),
+      uint8(MortgageStatus.REDEEMED),
+      "Status is not set correctly"
     );
 
     // Validate that the mortgage NFT has been burned
@@ -805,14 +887,16 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to refinance the mortgage as a non-owner
     vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(ILoanManagerErrors.OnlyMortgageOwner.selector, mortgageParams.tokenId, mortgageParams.owner, caller));
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ILoanManagerErrors.OnlyMortgageOwner.selector, mortgageParams.tokenId, mortgageParams.owner, caller
+      )
+    );
     loanManager.refinanceMortgage(mortgageParams.tokenId, mortgageParams.totalPeriods);
     vm.stopPrank();
   }
@@ -860,9 +944,7 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage (hardcoding collateralDecimals=8 to avoid stack too deep)
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -901,7 +983,11 @@ contract LoanManagerTest is BaseTest {
 
     // Attempt to refinance the mortgage without repaying the loan
     vm.startPrank(mortgageParams.owner);
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)));
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
+      )
+    );
     loanManager.refinanceMortgage(mortgageParams.tokenId, mortgageParams.totalPeriods);
     vm.stopPrank();
   }
@@ -1061,17 +1147,19 @@ contract LoanManagerTest is BaseTest {
     mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure the timeskip is less than (hasPaymentPlan ? 3 : totalPeriods - 1 + 3) periods + late payment window
-    timeSkip =
-      bound(timeSkip, 0 seconds, uint256(mortgageParams.hasPaymentPlan ? 3 : mortgageParams.totalPeriods - 1 + 3) * (30 days) + 72 hours - 1 seconds);
+    timeSkip = bound(
+      timeSkip,
+      0 seconds,
+      uint256(mortgageParams.hasPaymentPlan ? 3 : mortgageParams.totalPeriods - 1 + 3) * (30 days) + 72 hours
+        - 1 seconds
+    );
 
     // Deal collateralAmount of wbtc to the loan manager
     ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -1084,7 +1172,9 @@ contract LoanManagerTest is BaseTest {
     }
 
     // Validate the missed payments is less than 4
-    assertLt(loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 3, "Missed payments should be less than 3");
+    assertLt(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 3, "Missed payments should be less than 3"
+    );
 
     // Attempt to refinance the mortgage without repaying the loan
     vm.startPrank(mortgageParams.owner);
@@ -1131,9 +1221,7 @@ contract LoanManagerTest is BaseTest {
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      mortgageParams
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -1150,7 +1238,11 @@ contract LoanManagerTest is BaseTest {
     }
 
     // Validate the missed payments is greater than 3
-    assertGt(loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 3, "Missed payments should be greater than 3");
+    assertGt(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      3,
+      "Missed payments should be greater than 3"
+    );
     // Validate missed payments matched expected
     assertEq(
       loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
@@ -1172,7 +1264,9 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that the forfeited assets pool has the collateral (wbtc)
     assertEq(
-      wbtc.balanceOf(address(forfeitedAssetsPool)), mortgageParams.collateralAmount, "Forfeited assets pool should have the collateral"
+      wbtc.balanceOf(address(forfeitedAssetsPool)),
+      mortgageParams.collateralAmount,
+      "Forfeited assets pool should have the collateral"
     );
 
     // Validate that the mortgage NFT has been burned
@@ -1230,7 +1324,9 @@ contract LoanManagerTest is BaseTest {
     _mintConsolViaUsdx(mortgageParams.owner, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
     vm.startPrank(mortgageParams.owner);
     consol.approve(address(loanManager), loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
-    loanManager.periodPay(mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
+    loanManager.periodPay(
+      mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()
+    );
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -1243,7 +1339,11 @@ contract LoanManagerTest is BaseTest {
     }
 
     // Validate the missed payments is greater than 3
-    assertGt(loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 3, "Missed payments should be greater than 3");
+    assertGt(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      3,
+      "Missed payments should be greater than 3"
+    );
     // Validate missed payments matched expected
     assertEq(
       loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
@@ -1265,7 +1365,9 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that the forfeited assets pool has the collateral (wbtc)
     assertEq(
-      wbtc.balanceOf(address(forfeitedAssetsPool)), mortgageParams.collateralAmount, "Forfeited assets pool should have the collateral"
+      wbtc.balanceOf(address(forfeitedAssetsPool)),
+      mortgageParams.collateralAmount,
+      "Forfeited assets pool should have the collateral"
     );
 
     // Validate that the mortgage NFT has been burned
@@ -1287,7 +1389,9 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that all of the collateral is in the forfeited assets pool
     assertEq(
-      wbtc.balanceOf(address(forfeitedAssetsPool)), mortgageParams.collateralAmount, "Forfeited assets pool should have the collateral"
+      wbtc.balanceOf(address(forfeitedAssetsPool)),
+      mortgageParams.collateralAmount,
+      "Forfeited assets pool should have the collateral"
     );
 
     // Validate that the forfeited assets pool has total supply equal to the liabilities (principalRemaining)
@@ -1338,7 +1442,8 @@ contract LoanManagerTest is BaseTest {
     vm.assume(mortgageParams.tokenId != 0);
 
     // Ensure that the amountBorrowed is above a minimum threshold
-    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED, type(uint128).max));
+    mortgageParams.amountBorrowed =
+      uint128(bound(mortgageParams.amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED, type(uint128).max));
 
     // Ensure amountIn < the minimum threshold
     amountIn = uint128(bound(amountIn, 0, Constants.MINIMUM_AMOUNT_BORROWED - 1));
@@ -1352,7 +1457,13 @@ contract LoanManagerTest is BaseTest {
     // Create a mortgage
     vm.startPrank(address(generalManager));
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.CreateMortgage(mortgageParams.tokenId, mortgageParams.owner, address(wbtc), mortgageParams.collateralAmount, mortgageParams.amountBorrowed);
+    emit ILoanManagerEvents.CreateMortgage(
+      mortgageParams.tokenId,
+      mortgageParams.owner,
+      address(wbtc),
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
+    );
     loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 

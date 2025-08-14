@@ -447,7 +447,11 @@ contract MortgageMathTest is Test {
     );
     assertEq(mortgagePosition.subConsol, oldMortgagePosition.subConsol, "subConsol should be the same");
     assertEq(mortgagePosition.interestRate, oldMortgagePosition.interestRate, "interestRate should be the same");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(mortgagePosition.dateOriginated, oldMortgagePosition.dateOriginated, "dateOriginated should be the same");
     assertEq(mortgagePosition.termOriginated, oldMortgagePosition.termOriginated, "termOriginated should be the same");
     assertEq(mortgagePosition.termBalance, oldMortgagePosition.termBalance, "termBalance should be the same");
@@ -565,7 +569,11 @@ contract MortgageMathTest is Test {
     );
     assertEq(mortgagePosition.subConsol, oldMortgagePosition.subConsol, "subConsol should be the same");
     assertEq(mortgagePosition.interestRate, oldMortgagePosition.interestRate, "interestRate should be the same");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(mortgagePosition.dateOriginated, oldMortgagePosition.dateOriginated, "dateOriginated should be the same");
     assertEq(mortgagePosition.termOriginated, oldMortgagePosition.termOriginated, "termOriginated should be the same");
     assertEq(mortgagePosition.termBalance, oldMortgagePosition.termBalance, "termBalance should be the same");
@@ -755,7 +763,11 @@ contract MortgageMathTest is Test {
     );
     assertEq(mortgagePosition.subConsol, oldMortgagePosition.subConsol, "subConsol should be the same");
     assertEq(mortgagePosition.interestRate, oldMortgagePosition.interestRate, "interestRate should be the same");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(mortgagePosition.dateOriginated, oldMortgagePosition.dateOriginated, "dateOriginated should be the same");
     assertEq(mortgagePosition.termOriginated, oldMortgagePosition.termOriginated, "termOriginated should be the same");
     assertEq(mortgagePosition.termBalance, oldMortgagePosition.termBalance, "termBalance should be the same");
@@ -931,7 +943,11 @@ contract MortgageMathTest is Test {
     );
     assertEq(mortgagePosition.subConsol, oldMortgagePosition.subConsol, "subConsol should be the same");
     assertEq(mortgagePosition.interestRate, oldMortgagePosition.interestRate, "interestRate should be the same");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(mortgagePosition.dateOriginated, oldMortgagePosition.dateOriginated, "dateOriginated should be the same");
     assertEq(mortgagePosition.termOriginated, oldMortgagePosition.termOriginated, "termOriginated should be the same");
     assertEq(mortgagePosition.termBalance, expectedTermBalance, "termBalance should be the same as expectedTermBalance");
@@ -1235,7 +1251,11 @@ contract MortgageMathTest is Test {
 
     // Validate that updated fields are correct
     assertEq(mortgagePosition.interestRate, newInterestRate, "interestRate should be the new interest rate");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(
       mortgagePosition.termOriginated,
       uint32(block.timestamp),
@@ -1347,17 +1367,16 @@ contract MortgageMathTest is Test {
   ) public validLatePenaltyWindow(latePaymentWindow) {
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
-    
+
     // Ensure currentPrice is less than the conversion trigger price
     vm.assume(currentPrice < mortgagePosition.conversionTriggerPrice());
 
     // Attempt to over-convert the mortgage and expect a revert
     vm.expectRevert(
-      abi.encodeWithSelector(
-        MortgageMath.ConversionTriggerPriceNotMet.selector, mortgagePosition, currentPrice
-      )
+      abi.encodeWithSelector(MortgageMath.ConversionTriggerPriceNotMet.selector, mortgagePosition, currentPrice)
     );
-    mortgagePosition = mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
+    mortgagePosition =
+      mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
@@ -1370,7 +1389,7 @@ contract MortgageMathTest is Test {
   ) public validLatePenaltyWindow(latePaymentWindow) {
     // Fuzz the mortgage position
     MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
-    
+
     // Ensure currentPrice is greater than the conversion trigger price
     currentPrice = bound(currentPrice, mortgagePosition.conversionTriggerPrice(), type(uint256).max);
 
@@ -1383,7 +1402,8 @@ contract MortgageMathTest is Test {
         MortgageMath.CannotOverConvert.selector, mortgagePosition, principalConverting, collateralConverting
       )
     );
-    mortgagePosition = mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
+    mortgagePosition =
+      mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
@@ -1439,7 +1459,8 @@ contract MortgageMathTest is Test {
     uint256 expectedTermConverted = mortgagePosition.convertPrincipalToPayment(principalConverting);
 
     // Convert the mortgage
-    mortgagePosition = mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
+    mortgagePosition =
+      mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
 
     // Calculate expected termBalance, status, and periodsPaid
     uint256 expectedTermBalance = mortgagePosition.termBalance;
@@ -1472,7 +1493,11 @@ contract MortgageMathTest is Test {
     );
     assertEq(mortgagePosition.subConsol, oldMortgagePosition.subConsol, "subConsol should be the same");
     assertEq(mortgagePosition.interestRate, oldMortgagePosition.interestRate, "interestRate should be the same");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(mortgagePosition.dateOriginated, oldMortgagePosition.dateOriginated, "dateOriginated should be the same");
     assertEq(mortgagePosition.termOriginated, oldMortgagePosition.termOriginated, "termOriginated should be the same");
     assertEq(mortgagePosition.amountBorrowed, oldMortgagePosition.amountBorrowed, "amountBorrowed should be the same");
@@ -1638,7 +1663,11 @@ contract MortgageMathTest is Test {
     // Validate that updated fields are correct
     assertEq(mortgagePosition.termBalance, expectedTermBalance, "termBalance should match expectedTermBalance");
     assertEq(mortgagePosition.interestRate, expectedInterestRate, "interestRate should match expectedInterestRate");
-    assertEq(mortgagePosition.conversionPremiumRate, oldMortgagePosition.conversionPremiumRate, "conversionPremiumRate should be the same");
+    assertEq(
+      mortgagePosition.conversionPremiumRate,
+      oldMortgagePosition.conversionPremiumRate,
+      "conversionPremiumRate should be the same"
+    );
     assertEq(
       mortgagePosition.collateralAmount,
       oldMortgagePosition.collateralAmount + collateralAmountIn,

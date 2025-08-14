@@ -115,7 +115,9 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
 
     // Validate that the orderPool has the order
     assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "orderPool.orders(0).originationPool");
-    assertEq(orderPool.orders(0).conversionQueues[0], address(conversionQueue), "orderPool.orders(0).conversionQueues[0]");
+    assertEq(
+      orderPool.orders(0).conversionQueues[0], address(conversionQueue), "orderPool.orders(0).conversionQueues[0]"
+    );
     assertEq(
       orderPool.orders(0).orderAmounts.purchaseAmount, 200_000e18, "orderPool.orders(0).orderAmounts.purchaseAmount"
     );

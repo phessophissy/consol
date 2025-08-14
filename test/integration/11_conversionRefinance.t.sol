@@ -132,7 +132,7 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.collateralConverted, 0, "[1] collateralConverted");
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[1] subConsol");
     assertEq(mortgagePosition.interestRate, 869, "[1] interestRate");
-assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
+    assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
@@ -163,7 +163,11 @@ assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRat
     assertEq(mortgageNode.previous, 0, "mortgageNode.Previous");
     assertEq(mortgageNode.next, 0, "mortgageNode.Next");
     assertEq(mortgageNode.triggerPrice, 150_000e18, "mortgageNode.TriggerPrice");
-    assertEq(mortgageNode.triggerPrice, mortgagePosition.conversionTriggerPrice(), "mortgageNode.TriggerPrice == mortgagePosition.conversionTriggerPrice()");
+    assertEq(
+      mortgageNode.triggerPrice,
+      mortgagePosition.conversionTriggerPrice(),
+      "mortgageNode.TriggerPrice == mortgagePosition.conversionTriggerPrice()"
+    );
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "mortgageNode.GasFee");
 

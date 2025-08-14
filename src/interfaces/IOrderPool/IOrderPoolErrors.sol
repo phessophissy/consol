@@ -48,5 +48,7 @@ interface IOrderPoolErrors {
    * @param hintPrevIdsListLength The length of the hintPrevIds list
    * @param conversionQueuesListLength The length of the conversion queues list
    */
-  error HintPrevIdsListLengthMismatch(uint256 orderIndex, uint256 hintPrevIdsListLength, uint256 conversionQueuesListLength);
+  error HintPrevIdsListLengthMismatch(
+    uint256 orderIndex, uint256 hintPrevIdsListLength, uint256 conversionQueuesListLength
+  );
 }

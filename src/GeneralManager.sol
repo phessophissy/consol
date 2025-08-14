@@ -123,7 +123,9 @@ contract GeneralManager is
     address insuranceFund_,
     address interestRateOracle_
   ) internal onlyInitializing {
-    __GeneralManager_init_unchained(usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_);
+    __GeneralManager_init_unchained(
+      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_
+    );
   }
 
   /**
@@ -175,7 +177,9 @@ contract GeneralManager is
     address insuranceFund_,
     address interestRateOracle_
   ) external initializer {
-    __GeneralManager_init(usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_);
+    __GeneralManager_init(
+      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_
+    );
     _grantRole(Roles.DEFAULT_ADMIN_ROLE, _msgSender());
   }
 
@@ -496,7 +500,8 @@ contract GeneralManager is
     _validateTotalPeriods(collateral, totalPeriods);
 
     // Fetch the interest rate from the interest rate oracle
-    return IInterestRateOracle(_getGeneralManagerStorage()._interestRateOracle).interestRate(totalPeriods, hasPaymentPlan);
+    return
+      IInterestRateOracle(_getGeneralManagerStorage()._interestRateOracle).interestRate(totalPeriods, hasPaymentPlan);
   }
 
   /**
@@ -683,7 +688,8 @@ contract GeneralManager is
     returns (uint256 cost, uint8 collateralDecimals)
   {
     // Calculate the cost of the collateral
-    (cost, collateralDecimals) = IPriceOracle(_getGeneralManagerStorage()._priceOracles[collateral]).cost(collateralAmount);
+    (cost, collateralDecimals) =
+      IPriceOracle(_getGeneralManagerStorage()._priceOracles[collateral]).cost(collateralAmount);
   }
 
   /**
@@ -846,8 +852,10 @@ contract GeneralManager is
     external
     payable
     whenNotPaused
-    // sufficientGasFeeAndRefund(true, creationRequest.base.conversionQueues)
-    returns (uint256 tokenId)
+    returns (
+      // sufficientGasFeeAndRefund(true, creationRequest.base.conversionQueues)
+      uint256 tokenId
+    )
   {
     // If compounding, a conversion queue must be provided
     if (creationRequest.base.isCompounding && creationRequest.conversionQueues.length == 0) {
@@ -1024,7 +1032,9 @@ contract GeneralManager is
    * @param conversionQueueList The list of conversion queues
    * @param hintPrevIds The IDs of the previous mortgage position in the respective conversion queue
    */
-  function _enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds) internal {
+  function _enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds)
+    internal
+  {
     for (uint256 i = 0; i < conversionQueueList.length; i++) {
       // Validate that conversionQueueList[i] is a registered conversion queue
       if (!hasRole(Roles.CONVERSION_ROLE, conversionQueueList[i])) {
@@ -1032,9 +1042,9 @@ contract GeneralManager is
       }
 
       // Enqueue the mortgage position into conversionQueueList[i]
-      IConversionQueue(conversionQueueList[i]).enqueueMortgage{value: IConversionQueue(conversionQueueList[i]).mortgageGasFee()}(
-        tokenId, hintPrevIds[i]
-      );
+      IConversionQueue(conversionQueueList[i]).enqueueMortgage{
+        value: IConversionQueue(conversionQueueList[i]).mortgageGasFee()
+      }(tokenId, hintPrevIds[i]);
     }
   }
 

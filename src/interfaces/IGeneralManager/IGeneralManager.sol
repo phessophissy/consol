@@ -95,7 +95,10 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
    * @param hasPaymentPlan Whether the mortgage has a payment plan
    * @return The conversion premium rate
    */
-  function conversionPremiumRate(address collateral, uint8 totalPeriods, bool hasPaymentPlan) external view returns (uint16);
+  function conversionPremiumRate(address collateral, uint8 totalPeriods, bool hasPaymentPlan)
+    external
+    view
+    returns (uint16);
 
   /**
    * @notice Sets the conversion premium rate (in basis points)
@@ -235,7 +238,9 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
    * @param conversionQueueList The list of conversion queues to use
    * @param hintPrevIds The hint for the previous mortgage position in the conversion queue
    */
-  function enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds) external payable;
+  function enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds)
+    external
+    payable;
 
   /**
    * @notice Converts a mortgage position
