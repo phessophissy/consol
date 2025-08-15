@@ -2,7 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-optimizer-runs = 10_000
+optimizer_runs = 10_000
 
 # Create additional compiler profiles to satisfy compilation restrictions
 additional_compiler_profiles = [
@@ -20,6 +20,15 @@ fs_permissions = [
   { access = "read-write", path = "./addresses/addresses-998.json"},
   { access = "read", path = "./script/artifacts/WHYPE9.json"}
 ]
+
+[profile.coverage]
+via_ir = false
+optimizer = false
+optimizer_runs = 1_000
+
+# IMPORTANT: disable mixed compiles for coverage
+additional_compiler_profiles = []
+compilation_restrictions = []
 
 [fmt]
 tab_width = 2

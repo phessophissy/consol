@@ -34,7 +34,7 @@ jobs:
       
       - name: Run Forge Coverage -> Table
         run: |
-          forge coverage > ./coverage-report.md && ./utils/convert-coverage-table.sh coverage-report.md
+          FOUNDRY_PROFILE=coverage forge coverage > ./coverage-report.md && ./utils/convert-coverage-table.sh coverage-report.md
         id: coverage
 
       - name: Report Coverage in PR
