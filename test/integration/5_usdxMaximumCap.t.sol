@@ -17,11 +17,11 @@ import {Roles} from "../../src/libraries/Roles.sol";
 import {MockRouter} from "../mocks/MockRouter.sol";
 
 /**
- * @title Integration_5_UsdxCapTest
+ * @title Integration_5_UsdxMaximumCapTest
  * @author @SocksNFlops
- * @notice Trying to make a periodPayment via Consol when the usdx cap is already exceeded.
+ * @notice Trying to make a periodPayment via Consol when the usdx maximum cap is already exceeded.
  */
-contract Integration_5_UsdxCapTest is IntegrationBaseTest {
+contract Integration_5_UsdxMaximumCapTest is IntegrationBaseTest {
   using MortgageMath for MortgagePosition;
 
   MockERC20 public wnt;
@@ -29,7 +29,7 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
   MockRouter public router;
 
   function integrationTestId() public pure override returns (string memory) {
-    return type(Integration_5_UsdxCapTest).name;
+    return type(Integration_5_UsdxMaximumCapTest).name;
   }
 
   function setUp() public virtual override(IntegrationBaseTest) {
@@ -69,10 +69,10 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
     // Lender deploys the origination pool
     vm.startPrank(lender);
     originationPool =
-      IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(0)));
+      IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(1)));
     vm.stopPrank();
 
-    // Lender deposits USDX into the origination pool
+    // Lender deposits 100k USDX into the origination pool
     vm.startPrank(lender);
     usdx.approve(address(originationPool), 100_000e18);
     originationPool.deposit(100_000e18);
@@ -85,13 +85,13 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 100k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 100_000e6);
+    // Mint 101k usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 101_000e6);
 
-    // Borrower deposits the 100k usdt into USDX
+    // Borrower deposits the 101k usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
@@ -102,9 +102,9 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 100k usdx
+    // Borrower approves the general manager to take the down payment of 101k usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 100_000e18);
+    usdx.approve(address(generalManager), 101_000e18);
     vm.stopPrank();
 
     // Deal 0.01 native tokens to the borrow to pay for the gas fee (not enqueuing into a conversion queue)
@@ -135,6 +135,11 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
       );
       vm.stopPrank();
     }
+
+    // The supported token manager sets the Consol maximum cap of USDX to 100 Consol
+    vm.startPrank(supportedTokenManager);
+    consol.setMaximumCap(address(usdx), 100e18);
+    vm.stopPrank();
 
     // Fulfiller approves the order pool to take his 2 btc that he's selling
     vm.startPrank(fulfiller);
@@ -174,25 +179,18 @@ contract Integration_5_UsdxCapTest is IntegrationBaseTest {
     assertEq(mortgagePosition.hasPaymentPlan, true, "[1] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[1] status");
 
-    // Have rando mint 100k usdx into Consol to make the relative proportion of USDX in Consol 50%
-    MockERC20(address(usdt)).mint(address(rando), 100_000e6);
-    vm.startPrank(rando);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
-    usdx.approve(address(consol), 100_000e18);
-    consol.deposit(address(usdx), 100_000e18);
-    vm.stopPrank();
-
-    // Validate that the relative proportion of USDX in Consol is 50%
-    assertEq(consol.totalSupply() / usdx.balanceOf(address(consol)), 2, "relative proportion of USDX in Consol");
-
-    // The supported token manager sets the Consol relative cap of USDX to 10%
-    vm.startPrank(supportedTokenManager);
-    consol.setCap(address(usdx), 1e3);
-    vm.stopPrank();
+    // Validate that the maximumCap is already exceeded
+    assertGt(
+      consol.convertAmount(address(usdx), usdx.balanceOf(address(consol))),
+      consol.maximumCap(address(usdx)),
+      "Maximum cap should already be exceeded"
+    );
 
     // Calculate how much USDX is needed to make a period payment
     uint256 monthlyPayment = mortgagePosition.monthlyPayment();
+
+    // Ensure this value is >0
+    assertGt(monthlyPayment, 0, "Monthly payment should be >0");
 
     // Convert the USDX to USDT
     uint256 usdtNeeded = usdx.convertUnderlying(address(usdt), monthlyPayment);

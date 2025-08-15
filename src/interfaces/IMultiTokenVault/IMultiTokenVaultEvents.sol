@@ -33,9 +33,9 @@ interface IMultiTokenVaultEvents {
   event Withdraw(address indexed account, address indexed token, uint256 amount, uint256 burnAmount);
 
   /**
-   * @notice Emitted when the relative cap for a token is updated
-   * @param token The address of the token that was updated
-   * @param capBps The new cap for the token in basis points. Default is 10000 (100%, or no cap).
+   * @notice Emitted when the maximum cap for a token is set
+   * @param token The address of the token that was set
+   * @param maximumCap The new maximum cap for the token denominated in the UOA.
    */
-  event CapUpdated(address indexed token, uint16 capBps);
+  event MaximumCapSet(address indexed token, uint256 maximumCap);
 }

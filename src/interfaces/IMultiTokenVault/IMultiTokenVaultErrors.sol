@@ -33,16 +33,10 @@ interface IMultiTokenVaultErrors {
   error SharesMintedExceedsBurned(uint256 sharesBurned, uint256 sharesMinted);
 
   /**
-   * @notice Thrown when a cap is set to an invalid amount (not between 0 and 10000)
-   * @param capBps The cap in basis points
-   */
-  error InvalidCap(uint16 capBps);
-
-  /**
-   * @notice Thrown when a token's relative cap is exceeded
+   * @notice Thrown when a token's maximum cap is exceeded
    * @param token The address of the token that exceeded its cap
-   * @param proportion The proportion that would have resulted from the deposit
-   * @param cap The maximum allowed proportion for this token in basis points
+   * @param amount The total amount of tokens deposited
+   * @param maximumCap The maximum allowed amount for this token
    */
-  error CapExceeded(address token, uint256 proportion, uint256 cap);
+  error MaxmimumCapExceeded(address token, uint256 amount, uint256 maximumCap);
 }

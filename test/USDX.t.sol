@@ -196,7 +196,11 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
     assertEq(usdx.isTokenSupported(supportedToken), false, "Token should be removed from the supported tokens");
   }
 
-  function test_setCap_shouldRevertIfDoesNotHaveSupportedTokenRole(address caller, address token, uint16 capBps) public {
+  function test_setMaximumCap_shouldRevertIfDoesNotHaveSupportedTokenRole(
+    address caller,
+    address token,
+    uint256 maximumCap
+  ) public {
     // Ensure the caller does not have the supported token role
     vm.assume(!usdx.hasRole(Roles.SUPPORTED_TOKEN_ROLE, caller));
 
@@ -207,36 +211,11 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
         IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.SUPPORTED_TOKEN_ROLE
       )
     );
-    usdx.setCap(token, capBps);
+    usdx.setMaximumCap(token, maximumCap);
     vm.stopPrank();
   }
 
-  function test_setCap_shouldRevertIfCapIsInvalid(address token, uint16 capBps) public {
-    // Ensure the cap is invalid
-    capBps = uint16(bound(capBps, 1e4 + 1, type(uint16).max));
-
-    // Attempt to set the cap with an invalid cap
-    vm.startPrank(supportedTokenManager);
-    vm.expectRevert(abi.encodeWithSelector(IMultiTokenVaultErrors.InvalidCap.selector, capBps));
-    usdx.setCap(token, capBps);
-    vm.stopPrank();
-  }
-
-  function test_setCap_shouldRevertIfTokenNotSupported(address unsupportedToken, uint16 capBps) public {
-    // Ensure the cap is valid
-    capBps = uint16(bound(capBps, 0, 1e4));
-
-    // Attempt to set a cap for the unsupported token
-    vm.startPrank(supportedTokenManager);
-    vm.expectRevert(abi.encodeWithSelector(IMultiTokenVaultErrors.TokenNotSupported.selector, unsupportedToken));
-    usdx.setCap(unsupportedToken, capBps);
-    vm.stopPrank();
-  }
-
-  function test_setCap(address token, uint16 capBps) public {
-    // Ensure the cap is valid
-    capBps = uint16(bound(capBps, 0, 1e4));
-
+  function test_setMaximumCap(address token, uint256 maximumCap) public {
     // Ensure the token is not the zero address
     vm.assume(token != address(0));
 
@@ -248,12 +227,12 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
     // Set the cap for the token
     vm.startPrank(supportedTokenManager);
     vm.expectEmit(true, true, true, true);
-    emit CapUpdated(token, capBps);
-    usdx.setCap(token, capBps);
+    emit MaximumCapSet(token, maximumCap);
+    usdx.setMaximumCap(token, maximumCap);
     vm.stopPrank();
 
     // Validate that the cap is correct
-    assertEq(usdx.cap(token), capBps, "Token cap is incorrectly set");
+    assertEq(usdx.maximumCap(token), maximumCap, "Token maximum cap is incorrectly set");
   }
 
   function test_deposit_revertsIfTokenNotSupported(bytes32 tokenSalt, uint128 amount, string calldata callerName)
@@ -272,10 +251,10 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
     vm.stopPrank();
   }
 
-  function test_deposit_revertsIfCapExceeded(
+  function test_deposit_revertsIfMaximumCapExceeded(
     bytes32 tokenSalt,
     uint128 amount,
-    uint16 cap,
+    uint256 maximumCap,
     uint128 scalarNumerator,
     uint128 scalarDenominator,
     string calldata callerName
@@ -283,11 +262,11 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
     // Create a new caller
     address caller = makeAddr(callerName);
 
-    // Make sure cap is < 1 to make sure that the cap is exceeded
-    cap = uint16(bound(cap, 1, 1e4 - 1));
-
     // Calculate the mintAmount
     uint256 mintAmount = Math.mulDiv(amount, scalarNumerator, scalarDenominator);
+
+    // Make sure that the maximum cap is less than the mint amount
+    vm.assume(maximumCap < mintAmount);
 
     // Make sure that we don't overflow the total shares and that more than 0 is minted
     vm.assume(amount > 0);
@@ -300,7 +279,7 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
     // Have the supported token manager add the token and change the cap
     vm.startPrank(supportedTokenManager);
     usdx.addSupportedToken(address(token), scalarNumerator, scalarDenominator);
-    usdx.setCap(address(token), cap);
+    usdx.setMaximumCap(address(token), maximumCap);
     vm.stopPrank();
 
     // Mint the token to the caller and approve the USDX to spend it
@@ -311,7 +290,11 @@ contract USDXTest is Test, IUSDXEvents, IUSDXErrors, IMultiTokenVaultEvents {
 
     // Have the caller attempt to deposit the token (cap exceeded)
     vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(IMultiTokenVaultErrors.CapExceeded.selector, address(token), 1e4, cap));
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IMultiTokenVaultErrors.MaxmimumCapExceeded.selector, address(token), mintAmount, maximumCap
+      )
+    );
     usdx.deposit(address(token), amount);
     vm.stopPrank();
   }

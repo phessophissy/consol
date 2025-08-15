@@ -44,7 +44,7 @@ contract Consol is IConsol, MultiTokenVault, ReentrancyGuard {
   ) MultiTokenVault(name_, symbol_, decimalsOffset_, admin_) {
     forfeitedAssetsPool = forfeitedAssetsPool_;
     supportedTokens.add(forfeitedAssetsPool_);
-    cap[forfeitedAssetsPool_] = 1e4;
+    maximumCap[forfeitedAssetsPool_] = type(uint256).max;
     emit TokenAdded(forfeitedAssetsPool_);
   }
 
@@ -59,9 +59,9 @@ contract Consol is IConsol, MultiTokenVault, ReentrancyGuard {
    * @inheritdoc IConsol
    */
   function setForfeitedAssetsPool(address forfeitedAssetsPool_) external override onlyRole(Roles.SUPPORTED_TOKEN_ROLE) {
-    // Transfer the cap
-    cap[forfeitedAssetsPool_] = cap[forfeitedAssetsPool];
-    delete cap[forfeitedAssetsPool];
+    // Transfer the maximum cap
+    maximumCap[forfeitedAssetsPool_] = maximumCap[forfeitedAssetsPool];
+    delete maximumCap[forfeitedAssetsPool];
 
     // Remove the old forfeited assets pool from the supported tokens
     supportedTokens.remove(forfeitedAssetsPool);

@@ -57,7 +57,9 @@ contract DeployAll is DeployOriginationScheduler, DeployOrderPool, DeployLoanMan
     // Deploy LoanManager
     deployLoanManager();
     // Grant admin/withdraw roles and renounce on Consol
-    consolGrantRolesAndRenounce(address(loanManager), usdxQueue, forfeitedAssetsQueue, conversionQueues);
+    consolGrantRolesAndRenounce(
+      address(loanManager), address(generalManager), usdxQueue, forfeitedAssetsQueue, conversionQueues
+    );
     // Grant admin/depositor roles and renounce on ForfeitedAssetsPool
     forfeitedAssetsPoolGrantRolesAndRenounce(address(loanManager));
     // Deploy OrderPool

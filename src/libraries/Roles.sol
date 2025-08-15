@@ -86,8 +86,8 @@ library Roles {
   bytes32 public constant DEPLOY_ROLE = keccak256("DEPLOY_ROLE");
 
   /**
-   * @notice Role that allows whitelisted addresses to ignore the relative cap for a supported token while minting USDX or Consol.
-   * @dev Particularly useful for UsdxRouters to ensure payments are always unlocked regardless of relative caps.
+   * @notice Role that allows whitelisted addresses to ignore the absolute maximum cap for a supported token while minting USDX or Consol.
+   * @dev Particularly useful for UsdxRouters to ensure payments are always unlocked regardless of absolute maximum cap.
    * @dev Applicable to MultiTokenVault, Consol, USDX.
    * @return The IGNORE_CAP_ROLE
    */

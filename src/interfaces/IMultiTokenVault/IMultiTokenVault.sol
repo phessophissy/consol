@@ -81,16 +81,16 @@ interface IMultiTokenVault is IRebasingERC20, IMultiTokenVaultEvents, IMultiToke
   function burnExcessShares(uint256 shares, uint256 amount) external;
 
   /**
-   * @notice Set the relative cap for a token
+   * @notice Set the absolute maximum cap for an underlying token.
    * @param token The address of the token to set the cap for
-   * @param capBps The new cap for the token in basis points. Default is 10000 (100%, or no cap).
+   * @param _maximumCap The new maximum cap for the token denominated in the UOA. Default is type(uint256).max.
    */
-  function setCap(address token, uint16 capBps) external;
+  function setMaximumCap(address token, uint256 _maximumCap) external;
 
   /**
-   * @notice Get the relative cap for a token
+   * @notice Get the absolute maximum cap for a token
    * @param token The address of the token to get the cap for
-   * @return The cap for the token in basis points
+   * @return The maximum cap for the token denominated in the UOA.
    */
-  function cap(address token) external view returns (uint16);
+  function maximumCap(address token) external view returns (uint256);
 }

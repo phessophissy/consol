@@ -49,6 +49,7 @@ contract DeployConsol is DeployUSDX, DeployForfeitedAssetsPool, DeploySubConsols
 
   function consolGrantRolesAndRenounce(
     address loanManager,
+    address generalManager,
     ILenderQueue usdxQueue,
     ILenderQueue forfeitedAssetsQueue,
     IConversionQueue[] memory conversionQueues
@@ -67,9 +68,13 @@ contract DeployConsol is DeployUSDX, DeployForfeitedAssetsPool, DeploySubConsols
     // Grant withdraw role to forfeitedAssetsQueue
     Consol(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(forfeitedAssetsQueue));
 
+    // Grant withdraw role to conversion queues
     for (uint256 i = 0; i < conversionQueues.length; i++) {
       Consol(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(conversionQueues[i]));
     }
+
+    // Grant IGNORE_CAP_ROLE to the General Manager
+    Consol(address(consol)).grantRole(Roles.IGNORE_CAP_ROLE, address(generalManager));
 
     // Renounce roles
     Consol(address(consol)).renounceRole(Roles.SUPPORTED_TOKEN_ROLE, deployerAddress);
