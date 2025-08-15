@@ -35,6 +35,7 @@ contract LocalhostSetupPart2 is BaseScript {
   uint256[] public collateralAmounts = [2_000 * 1e18];
   bytes public swapData;
   address[] public originationPools;
+  address[] public conversionQueues;
 
   function setUp() public override(BaseScript) {
     BaseScript.setUp();
@@ -59,6 +60,7 @@ contract LocalhostSetupPart2 is BaseScript {
     pyth = MockPyth(contractAddresses.pythAddress);
     originationPool2 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(2).deploymentAddress);
     originationPools = [address(originationPool2)];
+    conversionQueues = [address(conversionQueue)];
   }
 
   function run() public override(BaseScript) {
@@ -91,23 +93,24 @@ contract LocalhostSetupPart2 is BaseScript {
           collateralAmounts: collateralAmounts,
           totalPeriods: 36,
           originationPools: originationPools,
-          conversionQueue: address(conversionQueue),
           isCompounding: false,
           expiration: block.timestamp + 60
         }),
         mortgageId: mortgageId,
         collateral: address(collateral0),
         subConsol: address(subConsol0),
+        conversionQueues: conversionQueues,
         hasPaymentPlan: true
       })
     );
 
     // Fulfill the order on the order pool
     uint256[] memory indices = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
+    uint256[][] memory hintPrevIdsList = new uint256[][](1);
     indices[0] = 0;
-    hintPrevIds[0] = 0;
-    orderPool.processOrders(indices, hintPrevIds);
+    hintPrevIdsList[0] = new uint256[](1);
+    hintPrevIdsList[0][0] = 0;
+    orderPool.processOrders(indices, hintPrevIdsList);
 
     // Stop broadcasting
     vm.stopBroadcast();

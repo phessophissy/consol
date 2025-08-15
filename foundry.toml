@@ -2,13 +2,33 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-optimizer-runs = 10_000
+optimizer_runs = 10_000
+
+# Create additional compiler profiles to satisfy compilation restrictions
+additional_compiler_profiles = [
+    { name = "low-opt", optimizer = true, optimizer_runs = 1_000 }
+]
+
+compilation_restrictions = [
+    { paths = "src/LoanManager.sol", optimizer_runs = 1_000 },
+    { paths = "src/GeneralManager.sol", optimizer_runs = 1_000 },
+]
+
 fs_permissions = [
   { access = "read-write", path = "./addresses/tests/"},
   { access = "read-write", path = "./addresses/addresses-31337.json"},
   { access = "read-write", path = "./addresses/addresses-998.json"},
   { access = "read", path = "./script/artifacts/WHYPE9.json"}
 ]
+
+[profile.coverage]
+via_ir = false
+optimizer = false
+optimizer_runs = 1_000
+
+# IMPORTANT: disable mixed compiles for coverage
+additional_compiler_profiles = []
+compilation_restrictions = []
 
 [fmt]
 tab_width = 2

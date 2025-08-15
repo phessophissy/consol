@@ -24,13 +24,18 @@ import {OrderAmounts} from "../src/types/orders/OrderAmounts.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
 contract OrderPoolTest is BaseTest, IOrderPoolEvents {
+  // Helper conversion queues and hintPrevIdsList
+  address[] public conversionQueues;
+  uint256[][] public hintPrevIdsList;
+
   function createMortgageParams(
     uint256 tokenId,
     uint256 collateralAmount,
     uint16 interestRate,
+    uint16 conversionPremiumRate,
     uint256 amountBorrowed,
     bool hasPaymentPlan
-  ) public view returns (MortgageParams memory) {
+  ) internal view returns (MortgageParams memory) {
     return MortgageParams({
       owner: borrower,
       tokenId: tokenId,
@@ -39,6 +44,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
       collateralAmount: collateralAmount,
       subConsol: address(subConsol),
       interestRate: interestRate,
+      conversionPremiumRate: conversionPremiumRate,
       amountBorrowed: amountBorrowed,
       totalPeriods: DEFAULT_MORTGAGE_PERIODS,
       hasPaymentPlan: hasPaymentPlan
@@ -47,6 +53,9 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
   function setUp() public override {
     super.setUp();
+    conversionQueues = [address(conversionQueue)];
+    hintPrevIdsList = [new uint256[](1)];
+    hintPrevIdsList[0][0] = 0;
   }
 
   function test_constructor() public view {
@@ -141,7 +150,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     borrowAmounts[0] = mortgageParams.amountBorrowed;
     originationPools[0] = address(originationPool);
     orderPool.sendOrder(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -176,7 +185,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.startPrank(address(generalManager));
     vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.InsufficientGasFee.selector, gasFee, gasValue));
     orderPool.sendOrder{value: gasValue}(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -209,7 +218,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.startPrank(address(generalManager));
     vm.expectRevert(abi.encodeWithSelector(IOrderPoolErrors.AlreadyExpired.selector, expiration, block.timestamp));
     orderPool.sendOrder{value: orderPoolGasFee}(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -254,7 +263,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
       )
     );
     orderPool.sendOrder{value: orderPoolGasFee}(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
   }
@@ -263,6 +272,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 tokenId,
     uint256 collateralAmount,
     uint16 interestRate,
+    uint16 conversionPremiumRate,
     uint256 amountBorrowed,
     OrderAmounts memory orderAmounts,
     uint256 expiration,
@@ -278,7 +288,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Create the mortgage params
     MortgageParams memory mortgageParams =
-      createMortgageParams(tokenId, collateralAmount, interestRate, amountBorrowed, true);
+      createMortgageParams(tokenId, collateralAmount, interestRate, conversionPremiumRate, amountBorrowed, true);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -307,7 +317,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     PurchaseOrder memory expectedPurchaseOrder = PurchaseOrder({
       originationPools: originationPools,
       borrowAmounts: borrowAmounts,
-      conversionQueue: address(conversionQueue),
+      conversionQueues: conversionQueues,
       orderAmounts: orderAmounts,
       mortgageParams: mortgageParams,
       timestamp: block.timestamp,
@@ -322,13 +332,14 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderAdded(0, borrower, originationPools, address(wbtc), expectedPurchaseOrder);
     orderPool.sendOrder{value: orderPoolGasFee}(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
 
     // Validate that the order was placed correctly
     assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "originationPools[0] mismatch");
-    assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "Conversion queue mismatch");
+    assertEq(orderPool.orders(0).conversionQueues.length, conversionQueues.length, "ConversionQueues length mismatch");
+    assertEq(orderPool.orders(0).conversionQueues[0], address(conversionQueue), "ConversionQueues[0] mismatch");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, orderAmounts.purchaseAmount, "Purchase amount mismatch");
     assertEq(
       orderPool.orders(0).orderAmounts.collateralCollected,
@@ -357,6 +368,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 tokenId,
     uint256 collateralAmount,
     uint16 interestRate,
+    uint16 conversionPremiumRate,
     uint256 amountBorrowed,
     OrderAmounts memory orderAmounts,
     uint256 expiration,
@@ -372,7 +384,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Create the mortgage params
     MortgageParams memory mortgageParams =
-      createMortgageParams(tokenId, collateralAmount, interestRate, amountBorrowed, true);
+      createMortgageParams(tokenId, collateralAmount, interestRate, conversionPremiumRate, amountBorrowed, true);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -400,7 +412,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     PurchaseOrder memory expectedPurchaseOrder = PurchaseOrder({
       originationPools: originationPools,
       borrowAmounts: borrowAmounts,
-      conversionQueue: address(conversionQueue),
+      conversionQueues: conversionQueues,
       orderAmounts: orderAmounts,
       mortgageParams: mortgageParams,
       timestamp: block.timestamp,
@@ -415,13 +427,14 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderAdded(0, borrower, originationPools, address(wbtc), expectedPurchaseOrder);
     orderPool.sendOrder{value: orderPoolGasFee}(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
 
     // Validate that the order was placed correctly
     assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "originationPools[0] mismatch");
-    assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "Conversion queue mismatch");
+    assertEq(orderPool.orders(0).conversionQueues.length, conversionQueues.length, "ConversionQueues length mismatch");
+    assertEq(orderPool.orders(0).conversionQueues[0], address(conversionQueue), "ConversionQueues[0] mismatch");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, orderAmounts.purchaseAmount, "Purchase amount mismatch");
     assertEq(
       orderPool.orders(0).orderAmounts.collateralCollected,
@@ -449,7 +462,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
   function test_processOrders_revertsWhenDoesNotHaveFulfillmentRole(
     address caller,
     uint256[] memory orderIndices,
-    uint256[] memory hintPrevIds
+    uint256[][] memory randomHintPrevIdsList
   ) public {
     // Ensure the caller does not have the fulfillment role
     vm.assume(!IAccessControl(address(orderPool)).hasRole(Roles.FULFILLMENT_ROLE, caller));
@@ -459,13 +472,14 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     vm.expectRevert(
       abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.FULFILLMENT_ROLE)
     );
-    orderPool.processOrders(orderIndices, hintPrevIds);
+    orderPool.processOrders(orderIndices, randomHintPrevIdsList);
     vm.stopPrank();
   }
 
   function test_processOrders_orderIsExpired(
     uint256 collateralAmount,
     uint16 interestRate,
+    uint16 conversionPremiumRate,
     uint256 amountBorrowed,
     OrderAmounts memory orderAmounts,
     uint256 expiration,
@@ -489,7 +503,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Create the mortgage params
     MortgageParams memory mortgageParams =
-      createMortgageParams(tokenId, collateralAmount, interestRate, amountBorrowed, true);
+      createMortgageParams(tokenId, collateralAmount, interestRate, conversionPremiumRate, amountBorrowed, true);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -523,7 +537,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Mock the general manager to send the order
     vm.startPrank(address(generalManager));
     orderPool.sendOrder{value: orderPoolGasFee + mortgageGasFee}(
-      originationPools, borrowAmounts, address(conversionQueue), orderAmounts, mortgageParams, expiration, expansion
+      originationPools, borrowAmounts, conversionQueues, orderAmounts, mortgageParams, expiration, expansion
     );
     vm.stopPrank();
 
@@ -534,17 +548,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Record the fulfiller's current starting native balance
     uint256 fulfillerStartingNativeBalance = address(fulfiller).balance;
 
-    // Set up the orderIndices and hintPrevIds arrays
+    // Set up the orderIndices array (using the global hintPrevIdsList)
     uint256[] memory orderIndices = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIndices[0] = 0;
-    hintPrevIds[0] = 0;
 
     // Process the order as the fulfiller
     vm.startPrank(fulfiller);
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderExpired(0);
-    orderPool.processOrders(orderIndices, hintPrevIds);
+    orderPool.processOrders(orderIndices, hintPrevIdsList);
     vm.stopPrank();
 
     // Record the fulfiller's current native balance
@@ -566,7 +578,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Validate that the order was deleted
     assertEq(orderPool.orders(0).originationPools.length, 0, "originationPools length should be 0");
-    assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
+    assertEq(orderPool.orders(0).conversionQueues.length, 0, "Conversion queues length should be 0");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, 0, "purchaseAmount should be 0");
     assertEq(orderPool.orders(0).orderAmounts.collateralCollected, 0, "Collateral collected mismatch");
     assertEq(orderPool.orders(0).orderAmounts.usdxCollected, 0, "Usdx collected mismatch");
@@ -591,6 +603,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 tokenId,
     uint256 collateralAmount,
     uint16 interestRate,
+    uint16 conversionPremiumRate,
     uint256 amountBorrowed,
     OrderAmounts memory orderAmounts,
     uint256 expiration,
@@ -621,7 +634,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Create the mortgage params
     MortgageParams memory mortgageParams =
-      createMortgageParams(tokenId, collateralAmount, interestRate, amountBorrowed, true);
+      createMortgageParams(tokenId, collateralAmount, interestRate, conversionPremiumRate, amountBorrowed, true);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -667,7 +680,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderPool.sendOrder{value: orderPoolGasFee + mortgageGasFee}(
       originationPools,
       borrowAmounts,
-      address(conversionQueue),
+      conversionQueues,
       orderAmounts,
       mortgageParams,
       expiration,
@@ -687,17 +700,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Record the fulfiller's current starting native balance
     uint256 fulfillerStartingNativeBalance = address(fulfiller).balance;
 
-    // Set up the orderIndices and hintPrevIds arrays
+    // Set up the orderIndices array (using the global hintPrevIdsList)
     uint256[] memory orderIndices = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIndices[0] = 0;
-    hintPrevIds[0] = 0;
 
     // Process the order as the fulfiller
     vm.startPrank(fulfiller);
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderFilled(0);
-    orderPool.processOrders(orderIndices, hintPrevIds);
+    orderPool.processOrders(orderIndices, hintPrevIdsList);
     vm.stopPrank();
 
     // Record the fulfiller's current native balance
@@ -714,7 +725,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Validate that the order was deleted
     assertEq(orderPool.orders(0).originationPools.length, 0, "originationPools length should be 0");
-    assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
+    assertEq(orderPool.orders(0).conversionQueues.length, 0, "Conversion queues length should be 0");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, 0, "purchaseAmount should be 0");
     assertEq(orderPool.orders(0).orderAmounts.collateralCollected, 0, "Collateral collected mismatch");
     assertEq(orderPool.orders(0).orderAmounts.usdxCollected, 0, "Usdx collected mismatch");
@@ -737,6 +748,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     uint256 tokenId,
     uint256 collateralAmount,
     uint16 interestRate,
+    uint16 conversionPremiumRate,
     uint256 amountBorrowed,
     OrderAmounts memory orderAmounts,
     uint256 expiration,
@@ -767,7 +779,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Create the mortgage params
     MortgageParams memory mortgageParams =
-      createMortgageParams(tokenId, collateralAmount, interestRate, amountBorrowed, true);
+      createMortgageParams(tokenId, collateralAmount, interestRate, conversionPremiumRate, amountBorrowed, true);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -812,7 +824,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderPool.sendOrder{value: orderPoolGasFee + mortgageGasFee}(
       originationPools,
       borrowAmounts,
-      address(conversionQueue),
+      conversionQueues,
       orderAmounts,
       mortgageParams,
       expiration,
@@ -832,17 +844,15 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Record the fulfiller's current starting native balance
     uint256 fulfillerStartingNativeBalance = address(fulfiller).balance;
 
-    // Set up the orderIndices and hintPrevIds arrays
+    // Set up the orderIndices array (using the global hintPrevIdsList)
     uint256[] memory orderIndices = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIndices[0] = 0;
-    hintPrevIds[0] = 0;
 
     // Process the order as the fulfiller
     vm.startPrank(fulfiller);
     vm.expectEmit(true, true, true, true);
     emit IOrderPoolEvents.PurchaseOrderFilled(0);
-    orderPool.processOrders(orderIndices, hintPrevIds);
+    orderPool.processOrders(orderIndices, hintPrevIdsList);
     vm.stopPrank();
 
     // Record the fulfiller's current native balance
@@ -859,7 +869,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
 
     // Validate that the order was deleted
     assertEq(orderPool.orders(0).originationPools.length, 0, "originationPools length should be 0");
-    assertEq(orderPool.orders(0).conversionQueue, address(0), "Conversion queue should be 0");
+    assertEq(orderPool.orders(0).conversionQueues.length, 0, "Conversion queues length should be 0");
     assertEq(orderPool.orders(0).orderAmounts.purchaseAmount, 0, "purchaseAmount should be 0");
     assertEq(orderPool.orders(0).orderAmounts.collateralCollected, 0, "Collateral collected mismatch");
     assertEq(orderPool.orders(0).orderAmounts.usdxCollected, 0, "Usdx collected mismatch");

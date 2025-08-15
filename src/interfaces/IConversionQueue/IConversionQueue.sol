@@ -32,30 +32,17 @@ interface IConversionQueue is IMortgageQueue, ILenderQueue, IPausable, IConversi
   function subConsol() external view returns (address);
 
   /**
-   * @notice Sets the price multiplier for calculating the conversion price of a mortgage position in basis points
-   * @param priceMultiplierBps_ The price multiplier in basis points
-   */
-  function setPriceMultiplierBps(uint256 priceMultiplierBps_) external;
-
-  /**
-   * @notice The price multiplier for calculating the conversion price of a mortgage position in basis points
-   * @return The price multiplier in basis points
-   */
-  function priceMultiplierBps() external view returns (uint256);
-
-  /**
-   * @notice The current conversion price of the collateral in USD
+   * @notice The current price of the collateral in USD
    * @return The price of the collateral in USD
    */
-  function conversionPrice() external view returns (uint256);
+  function convertingPrice() external view returns (uint256);
 
   /**
-   * @notice Enqueues a mortgage position into the conversion queue
+   * @notice Enqueues a mortgage position into the conversion queue. If the mortgage position is already in the queue, it will be removed and enqueued again with a potentially new price.
    * @param mortgageTokenId The tokenId of the mortgage position
    * @param hintPrevId The hintPrevId of the mortgage position
-   * @param reenqueue If true, the mortgage position is already enqueued and the trigger price will be updated
    */
-  function enqueueMortgage(uint256 mortgageTokenId, uint256 hintPrevId, bool reenqueue) external payable;
+  function enqueueMortgage(uint256 mortgageTokenId, uint256 hintPrevId) external payable;
 
   /**
    * @notice Dequeues a mortgage position from the conversion queue. Only callable on an inactive mortgage position.

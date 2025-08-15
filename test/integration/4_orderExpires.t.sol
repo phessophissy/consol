@@ -96,13 +96,13 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
             collateralAmounts: collateralAmounts,
             totalPeriods: 36,
             originationPools: originationPools,
-            conversionQueue: address(conversionQueue),
             isCompounding: false,
             expiration: block.timestamp + 5 minutes
           }),
           mortgageId: mortgageId,
           collateral: address(btc),
           subConsol: address(btcSubConsol),
+          conversionQueues: conversionQueues,
           hasPaymentPlan: true
         })
       );
@@ -115,7 +115,9 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
 
     // Validate that the orderPool has the order
     assertEq(orderPool.orders(0).originationPools[0], address(originationPool), "orderPool.orders(0).originationPool");
-    assertEq(orderPool.orders(0).conversionQueue, address(conversionQueue), "orderPool.orders(0).conversionQueue");
+    assertEq(
+      orderPool.orders(0).conversionQueues[0], address(conversionQueue), "orderPool.orders(0).conversionQueues[0]"
+    );
     assertEq(
       orderPool.orders(0).orderAmounts.purchaseAmount, 200_000e18, "orderPool.orders(0).orderAmounts.purchaseAmount"
     );
@@ -160,7 +162,7 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
 
     // Fulfiller removes the expired order from the order pool
     vm.startPrank(fulfiller);
-    orderPool.processOrders(new uint256[](1), new uint256[](1));
+    orderPool.processOrders(new uint256[](1), hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the order has been removed from the order pool

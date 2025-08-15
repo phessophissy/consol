@@ -97,13 +97,13 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
           collateralAmounts: collateralAmounts,
           totalPeriods: 36,
           originationPools: originationPools,
-          conversionQueue: address(conversionQueue),
           isCompounding: false,
           expiration: block.timestamp
         }),
         mortgageId: mortgageId,
         collateral: address(btc),
         subConsol: address(btcSubConsol),
+        conversionQueues: conversionQueues,
         hasPaymentPlan: true
       })
     );
@@ -116,7 +116,7 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
 
     // Fulfiller fulfills the order on the order pool
     vm.startPrank(fulfiller);
-    orderPool.processOrders(new uint256[](1), new uint256[](1));
+    orderPool.processOrders(new uint256[](1), hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the borrower has the mortgageNFT
@@ -124,31 +124,32 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
 
     // Validate the mortgagePosition is active and correct
     MortgagePosition memory mortgagePosition = loanManager.getMortgagePosition(1);
-    assertEq(mortgagePosition.tokenId, 1, "tokenId");
-    assertEq(mortgagePosition.collateral, address(btc), "collateral");
-    assertEq(mortgagePosition.collateralDecimals, 8, "collateralDecimals");
-    assertEq(mortgagePosition.collateralAmount, 2e8, "collateralAmount");
-    assertEq(mortgagePosition.collateralConverted, 0, "collateralConverted");
-    assertEq(mortgagePosition.subConsol, address(btcSubConsol), "subConsol");
-    assertEq(mortgagePosition.interestRate, 346, "interestRate");
-    assertEq(mortgagePosition.dateOriginated, block.timestamp, "dateOriginated");
-    assertEq(mortgagePosition.termOriginated, block.timestamp, "termOriginated");
-    assertEq(mortgagePosition.termBalance, 132456000000000000000024, "termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 120_000e18, "amountBorrowed");
-    assertEq(mortgagePosition.amountPrior, 0, "amountPrior");
-    assertEq(mortgagePosition.termPaid, 0, "termPaid");
-    assertEq(mortgagePosition.termConverted, 0, "termConverted");
-    assertEq(mortgagePosition.amountConverted, 0, "amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 0, "penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 0, "penaltyPaid");
-    assertEq(mortgagePosition.paymentsMissed, 0, "paymentsMissed");
-    assertEq(mortgagePosition.periodDuration, 30 days, "periodDuration");
-    assertEq(mortgagePosition.totalPeriods, 36, "totalPeriods");
-    assertEq(mortgagePosition.hasPaymentPlan, true, "hasPaymentPlan");
-    assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "status");
+    assertEq(mortgagePosition.tokenId, 1, "[1] tokenId");
+    assertEq(mortgagePosition.collateral, address(btc), "[1] collateral");
+    assertEq(mortgagePosition.collateralDecimals, 8, "[1] collateralDecimals");
+    assertEq(mortgagePosition.collateralAmount, 2e8, "[1] collateralAmount");
+    assertEq(mortgagePosition.collateralConverted, 0, "[1] collateralConverted");
+    assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[1] subConsol");
+    assertEq(mortgagePosition.interestRate, 346, "[1] interestRate");
+    assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
+    assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
+    assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
+    assertEq(mortgagePosition.termBalance, 132456000000000000000024, "[1] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 120_000e18, "[1] amountBorrowed");
+    assertEq(mortgagePosition.amountPrior, 0, "[1] amountPrior");
+    assertEq(mortgagePosition.termPaid, 0, "[1] termPaid");
+    assertEq(mortgagePosition.termConverted, 0, "[1] termConverted");
+    assertEq(mortgagePosition.amountConverted, 0, "[1] amountConverted");
+    assertEq(mortgagePosition.penaltyAccrued, 0, "[1] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[1] penaltyPaid");
+    assertEq(mortgagePosition.paymentsMissed, 0, "[1] paymentsMissed");
+    assertEq(mortgagePosition.totalPeriods, 36, "[1] totalPeriods");
+    assertEq(mortgagePosition.hasPaymentPlan, true, "[1] hasPaymentPlan");
+    assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[1] status");
 
     // Validate that the purchase price is $120k
-    assertEq(mortgagePosition.purchasePrice(), 120_000e18, "purchasePrice");
+    assertEq(mortgagePosition.purchasePrice(), 120_000e18, "[1] purchasePrice");
+    assertEq(mortgagePosition.conversionTriggerPrice(), 180_000e18, "[1] conversionTriggerPrice");
 
     // Validate the mortgage position is enqueued into the conversion queue with the correct trigger price and other fields
     assertEq(conversionQueue.mortgageHead(), mortgagePosition.tokenId, "mortgageHead");

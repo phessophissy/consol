@@ -53,6 +53,7 @@ contract GeneralManager is
    * @param _consol Address of the Consol token contract
    * @param _penaltyRate Late payment penalty rate in basis points (BPS)
    * @param _refinanceRate Refinancing fee rate in basis points (BPS)
+   * @param _conversionPremiumRate Conversion premium rate in basis points (BPS)
    * @param _insuranceFund Address of the insurance fund
    * @param _interestRateOracle Address of the interest rate oracle contract
    * @param _originationPoolScheduler Address of the origination pool scheduler contract
@@ -62,6 +63,8 @@ contract GeneralManager is
    * @param _priceOracles Mapping of collateral address to price oracle address
    * @param _minimumCaps Mapping of collateral address to minimum cap
    * @param _maximumCaps Mapping of collateral address to maximum cap
+   * @param _conversionQueues Mapping of collateral address to conversion queues
+   * @param _mortgageEnqueued Mapping of tokenId to conversion queue to enqueued status
    * @param _paused Whether the contract is paused
    */
   struct GeneralManagerStorage {
@@ -69,6 +72,7 @@ contract GeneralManager is
     address _consol;
     uint16 _penaltyRate;
     uint16 _refinanceRate;
+    uint16 _conversionPremiumRate;
     address _insuranceFund;
     address _interestRateOracle;
     address _originationPoolScheduler;
@@ -78,6 +82,8 @@ contract GeneralManager is
     mapping(address => address) _priceOracles;
     mapping(address => uint256) _minimumCaps;
     mapping(address => uint256) _maximumCaps;
+    mapping(uint256 => address[]) _conversionQueues;
+    mapping(uint256 => mapping(address => bool)) _mortgageEnqueued;
     bool _paused;
   }
 
@@ -106,6 +112,7 @@ contract GeneralManager is
    * @param consol_ The address of the Consol token
    * @param penaltyRate_ The penalty rate
    * @param refinanceRate_ The refinancing rate
+   * @param conversionPremiumRate_ The conversion premium rate
    * @param insuranceFund_ The address of the insurance fund
    * @param interestRateOracle_ The address of the interest rate oracle
    */
@@ -115,10 +122,13 @@ contract GeneralManager is
     address consol_,
     uint16 penaltyRate_,
     uint16 refinanceRate_,
+    uint16 conversionPremiumRate_,
     address insuranceFund_,
     address interestRateOracle_
   ) internal onlyInitializing {
-    __GeneralManager_init_unchained(usdx_, consol_, penaltyRate_, refinanceRate_, insuranceFund_, interestRateOracle_);
+    __GeneralManager_init_unchained(
+      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_
+    );
   }
 
   /**
@@ -127,6 +137,7 @@ contract GeneralManager is
    * @param consol_ The address of the Consol token
    * @param penaltyRate_ The penalty rate
    * @param refinanceRate_ The refinancing rate
+   * @param conversionPremiumRate_ The conversion premium rate
    * @param insuranceFund_ The address of the insurance fund
    * @param interestRateOracle_ The address of the interest rate oracle
    */
@@ -136,6 +147,7 @@ contract GeneralManager is
     address consol_,
     uint16 penaltyRate_,
     uint16 refinanceRate_,
+    uint16 conversionPremiumRate_,
     address insuranceFund_,
     address interestRateOracle_
   ) internal onlyInitializing {
@@ -144,6 +156,7 @@ contract GeneralManager is
     $._consol = consol_;
     $._penaltyRate = penaltyRate_;
     $._refinanceRate = refinanceRate_;
+    $._conversionPremiumRate = conversionPremiumRate_;
     $._insuranceFund = insuranceFund_;
     $._interestRateOracle = interestRateOracle_;
     // Give Consol approval to spend the USDX from the GeneralManager
@@ -156,6 +169,7 @@ contract GeneralManager is
    * @param consol_ The address of the Consol token
    * @param penaltyRate_ The penalty rate
    * @param refinanceRate_ The refinancing rate
+   * @param conversionPremiumRate_ The conversion premium rate
    * @param insuranceFund_ The address of the insurance fund
    * @param interestRateOracle_ The address of the interest rate oracle
    */
@@ -164,10 +178,13 @@ contract GeneralManager is
     address consol_,
     uint16 penaltyRate_,
     uint16 refinanceRate_,
+    uint16 conversionPremiumRate_,
     address insuranceFund_,
     address interestRateOracle_
   ) external initializer {
-    __GeneralManager_init(usdx_, consol_, penaltyRate_, refinanceRate_, insuranceFund_, interestRateOracle_);
+    __GeneralManager_init(
+      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_
+    );
     _grantRole(Roles.DEFAULT_ADMIN_ROLE, _msgSender());
   }
 
@@ -213,12 +230,33 @@ contract GeneralManager is
   }
 
   /**
+   * @dev Appends the conversionQueueList to the recorded conversion queues for a mortgage position
+   * @param tokenId The tokenId of the mortgage position
+   * @param conversionQueueList The list of conversion queues to update
+   */
+  function _addConversionQueues(uint256 tokenId, address[] memory conversionQueueList) internal {
+    // Fetch storage
+    GeneralManagerStorage storage $ = _getGeneralManagerStorage();
+
+    // Iterate through the conversionQueueList and add into the conversionQueues mapping for the mortgage position
+    for (uint256 i = 0; i < conversionQueueList.length; i++) {
+      // Check if the mortgage is already enqueued in the conversion queue
+      if ($._mortgageEnqueued[tokenId][conversionQueueList[i]]) {
+        revert MortgageAlreadyEnqueuedInConversionQueue(tokenId, conversionQueueList[i]);
+      }
+      // Add the tokenId - conversionQueue pair into the mappings
+      $._conversionQueues[tokenId].push(conversionQueueList[i]);
+      $._mortgageEnqueued[tokenId][conversionQueueList[i]] = true;
+    }
+  }
+
+  /**
    * @dev Calculates the required gas fee for the caller
    * @param usingOrderPool Whether the caller is using the order pool
-   * @param conversionQueue The address of the conversion queue
+   * @param tokenId The tokenId of the mortgage position
    * @return requiredGasFee The required gas fee
    */
-  function _calculateRequiredGasFee(bool usingOrderPool, address conversionQueue)
+  function _calculateRequiredGasFee(bool usingOrderPool, uint256 tokenId)
     internal
     view
     returns (uint256 requiredGasFee)
@@ -228,9 +266,12 @@ contract GeneralManager is
       requiredGasFee += IOrderPool(orderPool()).gasFee();
     }
 
-    // Add in the required gas fee for the conversion queue
-    if (conversionQueue != address(0)) {
-      requiredGasFee += IConversionQueue(conversionQueue).mortgageGasFee();
+    // Fetch the conversion queues for the mortgage position
+    address[] memory conversionQueueList = conversionQueues(tokenId);
+
+    // Add in the required gas fee for the conversion queues
+    for (uint256 i = 0; i < conversionQueueList.length; i++) {
+      requiredGasFee += IConversionQueue(conversionQueueList[i]).mortgageGasFee();
     }
   }
 
@@ -257,18 +298,6 @@ contract GeneralManager is
         revert FailedToWithdrawNativeGas(surplus);
       }
     }
-  }
-
-  /**
-   * @dev Modifier to both check if the caller has sent enough gas and to refund the surplus
-   * @param usingOrderPool Whether the caller is using the order pool
-   * @param conversionQueue The address of the conversion queue
-   */
-  modifier sufficientGasFeeAndRefund(bool usingOrderPool, address conversionQueue) {
-    uint256 requiredGasFee = _calculateRequiredGasFee(usingOrderPool, conversionQueue);
-    _checkSufficientGas(requiredGasFee);
-    _;
-    _refundSurplusGas(requiredGasFee);
   }
 
   /**
@@ -348,6 +377,19 @@ contract GeneralManager is
     for (uint256 i = 0; i < originationPools.length; i++) {
       if (!IOriginationPoolScheduler($._originationPoolScheduler).isRegistered(originationPools[i])) {
         revert InvalidOriginationPool(originationPools[i]);
+      }
+    }
+  }
+
+  /**
+   * @dev Validates that the conversion queues have the CONVERSION_ROLE role
+   * @param conversionQueueList The list of conversion queues to validate
+   */
+  function _validateConversionQueues(address[] memory conversionQueueList) internal view {
+    // Validate that the conversion queues are registered (if none are passed, this is a no-op)
+    for (uint256 i = 0; i < conversionQueueList.length; i++) {
+      if (!hasRole(Roles.CONVERSION_ROLE, conversionQueueList[i])) {
+        revert InvalidConversionQueue(conversionQueueList[i]);
       }
     }
   }
@@ -456,14 +498,27 @@ contract GeneralManager is
    * @inheritdoc IGeneralManager
    */
   function interestRate(address collateral, uint8 totalPeriods, bool hasPaymentPlan) public view returns (uint16) {
-    // Fetch storage
-    GeneralManagerStorage storage $ = _getGeneralManagerStorage();
-
     // Validate that the total periods is supported for the collateral
     _validateTotalPeriods(collateral, totalPeriods);
 
     // Fetch the interest rate from the interest rate oracle
-    return IInterestRateOracle($._interestRateOracle).interestRate(totalPeriods, hasPaymentPlan);
+    return
+      IInterestRateOracle(_getGeneralManagerStorage()._interestRateOracle).interestRate(totalPeriods, hasPaymentPlan);
+  }
+
+  /**
+   * @inheritdoc IGeneralManager
+   */
+  function conversionPremiumRate(address, uint8, bool) public view returns (uint16) {
+    return _getGeneralManagerStorage()._conversionPremiumRate;
+  }
+
+  /**
+   * @inheritdoc IGeneralManager
+   */
+  function setConversionPremiumRate(uint16 conversionPremiumRate_) external onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
+    emit ConversionPremiumRateSet(_getGeneralManagerStorage()._conversionPremiumRate, conversionPremiumRate_);
+    _getGeneralManagerStorage()._conversionPremiumRate = conversionPremiumRate_;
   }
 
   /**
@@ -616,6 +671,13 @@ contract GeneralManager is
   }
 
   /**
+   * @inheritdoc IGeneralManager
+   */
+  function conversionQueues(uint256 tokenId) public view returns (address[] memory) {
+    return _getGeneralManagerStorage()._conversionQueues[tokenId];
+  }
+
+  /**
    * @dev Calculates the cost of the collateral
    * @param collateral The address of the collateral token
    * @param collateralAmount The amount of collateral to calculate the cost for
@@ -627,11 +689,9 @@ contract GeneralManager is
     view
     returns (uint256 cost, uint8 collateralDecimals)
   {
-    // Fetch storage
-    GeneralManagerStorage storage $ = _getGeneralManagerStorage();
-
     // Calculate the cost of the collateral
-    (cost, collateralDecimals) = IPriceOracle($._priceOracles[collateral]).cost(collateralAmount);
+    (cost, collateralDecimals) =
+      IPriceOracle(_getGeneralManagerStorage()._priceOracles[collateral]).cost(collateralAmount);
   }
 
   /**
@@ -695,6 +755,7 @@ contract GeneralManager is
       collateralAmount: mortgageParams.collateralAmount,
       subConsol: subConsol,
       interestRate: interestRate(collateral, baseRequest.totalPeriods, hasPaymentPlan),
+      conversionPremiumRate: conversionPremiumRate(collateral, baseRequest.totalPeriods, hasPaymentPlan),
       amountBorrowed: mortgageParams.amountBorrowed,
       totalPeriods: baseRequest.totalPeriods,
       hasPaymentPlan: hasPaymentPlan
@@ -707,6 +768,7 @@ contract GeneralManager is
    * @param mortgageParams The mortgage parameters
    * @param orderAmounts The order amounts
    * @param baseRequest The base request for the mortgage
+   * @param conversionQueueList The addresses of the conversion queues to use
    * @param expansion Whether the request is a new mortgage creation or a balance sheet expansion
    */
   function _sendOrder(
@@ -714,6 +776,7 @@ contract GeneralManager is
     MortgageParams memory mortgageParams,
     OrderAmounts memory orderAmounts,
     BaseRequest calldata baseRequest,
+    address[] memory conversionQueueList,
     bool expansion
   ) internal {
     // Fetch storage
@@ -733,10 +796,10 @@ contract GeneralManager is
     }
 
     // Send the order to the order pool
-    IOrderPool($._orderPool).sendOrder{value: _calculateRequiredGasFee(true, baseRequest.conversionQueue)}(
+    IOrderPool($._orderPool).sendOrder{value: _calculateRequiredGasFee(true, mortgageParams.tokenId)}(
       baseRequest.originationPools,
       borrowAmounts,
-      baseRequest.conversionQueue,
+      conversionQueueList,
       orderAmounts,
       mortgageParams,
       baseRequest.expiration,
@@ -750,6 +813,7 @@ contract GeneralManager is
    * @param tokenId The ID of the mortgage NFT
    * @param collateral The address of the collateral token
    * @param subConsol The address of the subConsol contract
+   * @param conversionQueueList The addresses of the conversion queues to use
    * @param hasPaymentPlan Whether the mortgage has a payment plan
    * @param expansion Whether the request is a new mortgage creation or a balance sheet expansion
    */
@@ -758,6 +822,7 @@ contract GeneralManager is
     uint256 tokenId,
     address collateral,
     address subConsol,
+    address[] memory conversionQueueList,
     bool hasPaymentPlan,
     bool expansion
   ) internal {
@@ -767,10 +832,8 @@ contract GeneralManager is
     // Validate that the origination pools used are registered
     _validateOriginationPools(baseRequest.originationPools);
 
-    // Validate that the conversion queue is registered
-    if (baseRequest.conversionQueue != address(0) && !hasRole(Roles.CONVERSION_ROLE, baseRequest.conversionQueue)) {
-      revert InvalidConversionQueue(baseRequest.conversionQueue);
-    }
+    // Validate that the conversion queues are registered (if there are any)
+    _validateConversionQueues(conversionQueueList);
 
     // Validate that the subConsol is supported by the consol and is backed by the collateral
     if (!IConsol($._consol).isTokenSupported(subConsol) || ISubConsol(subConsol).collateral() != collateral) {
@@ -782,7 +845,7 @@ contract GeneralManager is
       _prepareOrder(tokenId, baseRequest, collateral, subConsol, hasPaymentPlan);
 
     // Send the order to the order pool
-    _sendOrder(borrowAmounts, mortgageParams, orderAmounts, baseRequest, expansion);
+    _sendOrder(borrowAmounts, mortgageParams, orderAmounts, baseRequest, conversionQueueList, expansion);
   }
 
   /**
@@ -792,11 +855,13 @@ contract GeneralManager is
     external
     payable
     whenNotPaused
-    sufficientGasFeeAndRefund(true, creationRequest.base.conversionQueue)
-    returns (uint256 tokenId)
+    returns (
+      // sufficientGasFeeAndRefund(true, creationRequest.base.conversionQueues)
+      uint256 tokenId
+    )
   {
     // If compounding, a conversion queue must be provided
-    if (creationRequest.base.isCompounding && creationRequest.base.conversionQueue == address(0)) {
+    if (creationRequest.base.isCompounding && creationRequest.conversionQueues.length == 0) {
       revert CompoundingMustConvert(creationRequest);
     }
     // If non-compounding, the mortgage must have a payment plan
@@ -807,14 +872,26 @@ contract GeneralManager is
     // Mint the mortgage NFT to the _msgSender()
     tokenId = IMortgageNFT(mortgageNFT()).mint(_msgSender(), creationRequest.mortgageId);
 
+    // Set the conversion queues for the mortgage position
+    _addConversionQueues(tokenId, creationRequest.conversionQueues);
+
+    // Check if the caller has sent enough gas and refund the surplus
+    uint256 requiredGasFee = _calculateRequiredGasFee(true, tokenId);
+    _checkSufficientGas(requiredGasFee);
+
+    // Send the request to the order pool
     _sendRequest(
       creationRequest.base,
       tokenId,
       creationRequest.collateral,
       creationRequest.subConsol,
+      creationRequest.conversionQueues,
       creationRequest.hasPaymentPlan,
       false
     );
+
+    // Refund the surplus gas
+    _refundSurplusGas(requiredGasFee);
   }
 
   /**
@@ -825,9 +902,15 @@ contract GeneralManager is
     payable
     onlyRole(Roles.EXPANSION_ROLE)
     whenNotPaused
-    sufficientGasFeeAndRefund(true, expansionRequest.base.conversionQueue)
+    // sufficientGasFeeAndRefund(true, expansionRequest.base.conversionQueues)
     onlyMortgageOwner(expansionRequest.tokenId)
   {
+    // Calculate the required gas fee
+    uint256 requiredGasFee = _calculateRequiredGasFee(true, expansionRequest.tokenId);
+
+    // Check if the caller has sent enough gas and refund the surplus
+    _checkSufficientGas(requiredGasFee);
+
     // Fetch the mortgagePosition from the loan manager
     MortgagePosition memory mortgagePosition = ILoanManager(loanManager()).getMortgagePosition(expansionRequest.tokenId);
 
@@ -842,9 +925,13 @@ contract GeneralManager is
       expansionRequest.tokenId,
       mortgagePosition.collateral,
       mortgagePosition.subConsol,
+      conversionQueues(expansionRequest.tokenId),
       mortgagePosition.hasPaymentPlan,
       true
     );
+
+    // Refund the surplus gas
+    _refundSurplusGas(requiredGasFee);
   }
 
   /**
@@ -922,29 +1009,15 @@ contract GeneralManager is
         );
       } else {
         // Create a new mortgage position
-        ILoanManager($._loanManager).createMortgage(
-          originationParameters.mortgageParams.owner,
-          originationParameters.mortgageParams.tokenId,
-          originationParameters.mortgageParams.collateral,
-          originationParameters.mortgageParams.collateralDecimals,
-          originationParameters.mortgageParams.collateralAmount,
-          originationParameters.mortgageParams.subConsol,
-          originationParameters.mortgageParams.interestRate,
-          originationParameters.mortgageParams.amountBorrowed,
-          originationParameters.mortgageParams.totalPeriods,
-          originationParameters.mortgageParams.hasPaymentPlan
-        );
+        ILoanManager($._loanManager).createMortgage(originationParameters.mortgageParams);
       }
 
       // Enqueue the mortgage position into the conversion queue
-      if (originationParameters.conversionQueue != address(0)) {
-        _enqueueMortgage(
-          originationParameters.mortgageParams.tokenId,
-          originationParameters.conversionQueue,
-          originationParameters.hintPrevId,
-          originationParameters.expansion
-        );
-      }
+      _enqueueMortgage(
+        originationParameters.mortgageParams.tokenId,
+        $._conversionQueues[originationParameters.mortgageParams.tokenId],
+        originationParameters.hintPrevIds
+      );
     }
 
     // Deposit `returnAmount - amount` of USDX into Consol to pay the originationFee
@@ -959,33 +1032,49 @@ contract GeneralManager is
   /**
    * @dev Enqueues a mortgage position into a conversion queue
    * @param tokenId The ID of the mortgage NFT
-   * @param conversionQueue The address of the conversion queue
-   * @param hintPrevId The ID of the previous mortgage position in the conversion queue
-   * @param reenqueue Whether to re-enqueue the mortgage position
+   * @param conversionQueueList The list of conversion queues
+   * @param hintPrevIds The IDs of the previous mortgage position in the respective conversion queue
    */
-  function _enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId, bool reenqueue) internal {
-    // Validate that the conversion queue is registered
-    if (!hasRole(Roles.CONVERSION_ROLE, conversionQueue)) {
-      revert InvalidConversionQueue(conversionQueue);
-    }
+  function _enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds)
+    internal
+  {
+    for (uint256 i = 0; i < conversionQueueList.length; i++) {
+      // Validate that conversionQueueList[i] is a registered conversion queue
+      if (!hasRole(Roles.CONVERSION_ROLE, conversionQueueList[i])) {
+        revert InvalidConversionQueue(conversionQueueList[i]);
+      }
 
-    // Enqueue the mortgage position into the conversion queue
-    IConversionQueue(conversionQueue).enqueueMortgage{value: IConversionQueue(conversionQueue).mortgageGasFee()}(
-      tokenId, hintPrevId, reenqueue
-    );
+      // Enqueue the mortgage position into conversionQueueList[i]
+      IConversionQueue(conversionQueueList[i]).enqueueMortgage{
+        value: IConversionQueue(conversionQueueList[i]).mortgageGasFee()
+      }(tokenId, hintPrevIds[i]);
+    }
   }
 
   /**
    * @inheritdoc IGeneralManager
    */
-  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId)
+  function enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds)
     external
     payable
     whenNotPaused
-    sufficientGasFeeAndRefund(false, conversionQueue)
+    // sufficientGasFeeAndRefund(false, conversionQueueList)
     onlyMortgageOwner(tokenId)
   {
-    _enqueueMortgage(tokenId, conversionQueue, hintPrevId, false);
+    // Add the conversion queues for the mortgage position
+    _addConversionQueues(tokenId, conversionQueueList);
+
+    // Calculate the required gas fee
+    uint256 requiredGasFee = _calculateRequiredGasFee(false, tokenId);
+
+    // Check if the caller has sent enough gas and refund the surplus
+    _checkSufficientGas(requiredGasFee);
+
+    // Enqueue the mortgage position into the conversion queues
+    _enqueueMortgage(tokenId, conversionQueueList, hintPrevIds);
+
+    // Refund the surplus gas
+    _refundSurplusGas(requiredGasFee);
   }
 
   /**
@@ -1002,8 +1091,14 @@ contract GeneralManager is
     // Approve loanManager for the amount of Consol
     IConsol($._consol).approve(address(ILoanManager($._loanManager)), amount);
 
+    // Fetch the asset of the mortgage position
+    address asset = ILoanManager($._loanManager).getMortgagePosition(tokenId).collateral;
+
+    // Fetch the current price of the collateral
+    uint256 currentPrice = IPriceOracle($._priceOracles[asset]).price();
+
     // Convert the mortgage position
-    ILoanManager($._loanManager).convertMortgage(tokenId, amount, collateralAmount, receiver);
+    ILoanManager($._loanManager).convertMortgage(tokenId, currentPrice, amount, collateralAmount, receiver);
   }
 
   /**

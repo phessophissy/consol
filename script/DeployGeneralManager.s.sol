@@ -28,13 +28,22 @@ contract DeployGeneralManager is DeployPriceOracles, DeployConsol {
   function deployGeneralManager() public {
     uint16 penaltyRate = uint16(vm.envUint("PENALTY_RATE"));
     uint16 refinanceRate = uint16(vm.envUint("REFINANCE_RATE"));
+    uint16 conversionPremiumRate = uint16(vm.envUint("CONVERSION_PREMIUM_RATE"));
     address insuranceFund = vm.envAddress("INSURANCE_FUND");
 
     generalManagerImplementation = new GeneralManager();
 
     bytes memory initializerData = abi.encodeCall(
       GeneralManager.initialize,
-      (address(usdx), address(consol), penaltyRate, refinanceRate, insuranceFund, address(interestRateOracle))
+      (
+        address(usdx),
+        address(consol),
+        penaltyRate,
+        refinanceRate,
+        conversionPremiumRate,
+        insuranceFund,
+        address(interestRateOracle)
+      )
     );
     ERC1967Proxy proxy = new ERC1967Proxy(address(generalManagerImplementation), initializerData);
     generalManager = GeneralManager(payable(address(proxy)));

@@ -7,6 +7,7 @@ import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILoanManager} from "./interfaces/ILoanManager/ILoanManager.sol";
 import {MortgagePosition, MortgageStatus} from "./types/MortgagePosition.sol";
+import {MortgageParams} from "./types/orders/MortgageParams.sol";
 import {IConsol} from "./interfaces/IConsol/IConsol.sol";
 import {IGeneralManager} from "./interfaces/IGeneralManager/IGeneralManager.sol";
 import {IMortgageNFT} from "./interfaces/IMortgageNFT/IMortgageNFT.sol";
@@ -25,7 +26,7 @@ import {Constants} from "./libraries/Constants.sol";
  * @dev In order to minimize smart contract risk, we are hedging towards immutability.
  */
 contract LoanManager is ILoanManager, ERC165, Context {
-  using SafeERC20 for IConsol;
+  using SafeERC20 for IERC20;
   using MortgageMath for MortgagePosition;
 
   // Storage variables
@@ -207,7 +208,7 @@ contract LoanManager is ILoanManager, ERC165, Context {
    * @param amount The amount of Consol to transfer
    */
   function _consolTransferFrom(address from, address to, uint256 amount) internal {
-    IConsol(consol).safeTransferFrom(from, to, amount);
+    IERC20(consol).safeTransferFrom(from, to, amount);
   }
 
   /**
@@ -241,7 +242,24 @@ contract LoanManager is ILoanManager, ERC165, Context {
     // Send all minted Consol to the general manager
     uint256 balance = IConsol(consol).balanceOf(address(this));
     if (balance > 0) {
-      IConsol(consol).safeTransfer(generalManager, balance);
+      IERC20(consol).safeTransfer(generalManager, balance);
+    }
+  }
+
+  /**
+   * @dev Forfeits the Consol in the LoanManager contract
+   */
+  function _forfeitConsol() internal {
+    IConsol(consol).forfeit(IConsol(consol).balanceOf(address(this)));
+  }
+
+  /**
+   * @dev Validates that the amount borrowed is above a minimum threshold
+   * @param amountBorrowed The amount borrowed
+   */
+  function _validateMinimumAmountBorrowed(uint256 amountBorrowed) internal pure {
+    if (amountBorrowed < Constants.MINIMUM_AMOUNT_BORROWED) {
+      revert AmountBorrowedBelowMinimum(amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED);
     }
   }
 
@@ -255,41 +273,40 @@ contract LoanManager is ILoanManager, ERC165, Context {
   /**
    * @inheritdoc ILoanManager
    */
-  function createMortgage(
-    address owner,
-    uint256 tokenId,
-    address collateral,
-    uint8 collateralDecimals,
-    uint256 collateralAmount,
-    address subConsol,
-    uint16 interestRate,
-    uint256 amountBorrowed,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
-  ) external override onlyGeneralManager {
+  function createMortgage(MortgageParams memory mortgageParams) external override onlyGeneralManager {
     // Validate that the amount borrowed is above a minimum threshold
-    if (amountBorrowed < Constants.MINIMUM_AMOUNT_BORROWED) {
-      revert AmountBorrowedBelowMinimum(amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED);
-    }
+    _validateMinimumAmountBorrowed(mortgageParams.amountBorrowed);
 
     // Create a new mortgage position
-    mortgagePositions[tokenId] = MortgageMath.createNewMortgagePosition(
-      tokenId,
-      collateral,
-      collateralDecimals,
-      subConsol,
-      collateralAmount,
-      amountBorrowed,
-      interestRate,
-      totalPeriods,
-      hasPaymentPlan
+    mortgagePositions[mortgageParams.tokenId] = MortgageMath.createNewMortgagePosition(
+      mortgageParams.tokenId,
+      mortgageParams.collateral,
+      mortgageParams.collateralDecimals,
+      mortgageParams.subConsol,
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed,
+      mortgageParams.interestRate,
+      mortgageParams.conversionPremiumRate,
+      mortgageParams.totalPeriods,
+      mortgageParams.hasPaymentPlan
     );
 
     // Deposit the collateral -> subConsol -> Consol into the general manager
-    _depositCollateralToConsolForGeneralManager(collateral, subConsol, collateralAmount, amountBorrowed);
+    _depositCollateralToConsolForGeneralManager(
+      mortgageParams.collateral,
+      mortgageParams.subConsol,
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
+    );
 
     // Emit a create mortgage event
-    emit CreateMortgage(tokenId, owner, collateral, collateralAmount, amountBorrowed);
+    emit CreateMortgage(
+      mortgageParams.tokenId,
+      mortgageParams.owner,
+      mortgageParams.collateral,
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
+    );
   }
 
   /**
@@ -336,7 +353,7 @@ contract LoanManager is ILoanManager, ERC165, Context {
     _withdrawSubConsol(mortgagePositions[tokenId].subConsol, principalPayment);
 
     // Burn the surplus tokens accumulated in the loan manager (this represents interest getting redistributed to existing Consol holders)
-    IConsol(consol).forfeit(IConsol(consol).balanceOf(address(this)));
+    _forfeitConsol();
 
     // Emit a period pay event
     emit PeriodPay(tokenId, amount - refund, mortgagePositions[tokenId].periodsPaid());
@@ -359,7 +376,7 @@ contract LoanManager is ILoanManager, ERC165, Context {
     _consolTransferFrom(_msgSender(), address(this), amount - refund);
 
     // Forfeit the tokens in the Consol contract (distributed as interest to Consol holders)
-    IConsol(consol).forfeit(IConsol(consol).balanceOf(address(this)));
+    _forfeitConsol();
 
     // Emit a penalty pay event
     emit PenaltyPay(tokenId, amount - refund);
@@ -467,8 +484,8 @@ contract LoanManager is ILoanManager, ERC165, Context {
    */
   function flashSwapCallback(address inputToken, address outputToken, uint256 amount, bytes calldata data) external {
     // Validate that the caller is the Consol contract
-    if (_msgSender() != address(consol)) {
-      revert OnlyConsol(_msgSender(), address(consol));
+    if (_msgSender() != consol) {
+      revert OnlyConsol(_msgSender(), consol);
     }
 
     // Decode the callback data
@@ -502,22 +519,22 @@ contract LoanManager is ILoanManager, ERC165, Context {
       }
 
       // Transfer the forfeited assets pool tokens directly to the Consol contract
-      IERC20(forfeitedAssetsPool).transfer(address(consol), amount);
+      IERC20(forfeitedAssetsPool).safeTransfer(consol, amount);
     }
   }
 
   /**
    * @inheritdoc ILoanManager
    */
-  function convertMortgage(uint256 tokenId, uint256 amount, uint256 collateralAmount, address receiver)
-    external
-    override
-    mortgageExistsAndActive(tokenId)
-    imposePenaltyBefore(tokenId)
-    onlyGeneralManager
-  {
+  function convertMortgage(
+    uint256 tokenId,
+    uint256 currentPrice,
+    uint256 amount,
+    uint256 collateralAmount,
+    address receiver
+  ) external override mortgageExistsAndActive(tokenId) imposePenaltyBefore(tokenId) onlyGeneralManager {
     mortgagePositions[tokenId] =
-      mortgagePositions[tokenId].convert(amount, collateralAmount, Constants.LATE_PAYMENT_WINDOW);
+      mortgagePositions[tokenId].convert(currentPrice, amount, collateralAmount, Constants.LATE_PAYMENT_WINDOW);
 
     // Cache the SubConsol
     address subConsol = mortgagePositions[tokenId].subConsol;
@@ -546,9 +563,7 @@ contract LoanManager is ILoanManager, ERC165, Context {
     onlyGeneralManager
   {
     // Validate that amountIn (the new amount being borrowed) is above a minimum threshold
-    if (amountIn < Constants.MINIMUM_AMOUNT_BORROWED) {
-      revert AmountBorrowedBelowMinimum(amountIn, Constants.MINIMUM_AMOUNT_BORROWED);
-    }
+    _validateMinimumAmountBorrowed(amountIn);
 
     // Update the mortgage position to be expanded
     mortgagePositions[tokenId] =

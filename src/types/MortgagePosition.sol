@@ -12,6 +12,7 @@ import {MortgageStatus} from "./enums/MortgageStatus.sol";
  * @param collateralConverted The amount of collateral that has been withdrawn as a result of a conversion
  * @param subConsol The address of the SubConsol contract holding the collateral
  * @param interestRate The interest rate of the mortgage, determined at time of initialization
+ * @param conversionPremiumRate The rate at which the value of the collateral must grow before being convertible.
  * @param dateOriginated The date the mortgage was originated
  * @param termOriginated The beginning of the term of the mortgage. Will differ from `dateOriginated` if the mortgage is refinanced.
  * @param termBalance The total balance of the mortgage for the current term.
@@ -23,7 +24,6 @@ import {MortgageStatus} from "./enums/MortgageStatus.sol";
  * @param penaltyAccrued Sum of penalties accrued. This number is never decremented.
  * @param penaltyPaid The penalty paid by the borrower. Incremented with every call to penaltyPay()
  * @param paymentsMissed The number of payments missed by the borrower. Reset to 0 when penaltyPaid == penaltyAccrued
- * @param periodDuration The duration of each period in the mortgage
  * @param totalPeriods The total number of periods that the mortgage will last
  * @param hasPaymentPlan Whether the mortgage has a payment plan
  * @param status The status of the mortgage
@@ -36,6 +36,7 @@ struct MortgagePosition {
   uint256 collateralConverted;
   address subConsol;
   uint16 interestRate;
+  uint16 conversionPremiumRate;
   uint32 dateOriginated;
   uint32 termOriginated;
   uint256 termBalance;
@@ -47,7 +48,6 @@ struct MortgagePosition {
   uint256 penaltyAccrued;
   uint256 penaltyPaid;
   uint8 paymentsMissed;
-  uint256 periodDuration;
   uint8 totalPeriods;
   bool hasPaymentPlan;
   MortgageStatus status;

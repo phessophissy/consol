@@ -12,6 +12,7 @@ import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MortgageMath} from "../src/libraries/MortgageMath.sol";
 import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.sol";
+import {MortgageParams} from "../src/types/orders/MortgageParams.sol";
 import {IConsol} from "../src/interfaces/IConsol/IConsol.sol";
 import {MortgageMath} from "../src/libraries/MortgageMath.sol";
 import {IGeneralManager} from "../src/interfaces/IGeneralManager/IGeneralManager.sol";
@@ -20,6 +21,22 @@ import {Constants} from "../src/libraries/Constants.sol";
 
 contract LoanManagerTest is BaseTest {
   using MortgageMath for MortgagePosition;
+
+  function fuzzMortgageParams(MortgageParams memory mortgageParamsSeed) internal view returns (MortgageParams memory) {
+    return MortgageParams({
+      owner: mortgageParamsSeed.owner,
+      tokenId: uint256(bound(mortgageParamsSeed.tokenId, 1, type(uint256).max)),
+      collateral: address(wbtc),
+      collateralDecimals: 8,
+      collateralAmount: 0,
+      subConsol: address(subConsol),
+      interestRate: 0,
+      conversionPremiumRate: 0,
+      amountBorrowed: 0,
+      totalPeriods: 0,
+      hasPaymentPlan: false
+    });
+  }
 
   function setUp() public override {
     super.setUp();
@@ -37,142 +54,152 @@ contract LoanManagerTest is BaseTest {
     assertEq(loanManager.supportsInterface(type(IERC165).interfaceId), true, "Supports IERC165 interface");
   }
 
-  function test_createMortgage_notGeneralManager(
-    address caller,
-    uint256 tokenId,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
-  ) public {
+  function test_createMortgage_notGeneralManager(address caller, MortgageParams memory mortgageParams) public {
     // Ensure the caller is not the general manager
     vm.assume(caller != address(generalManager));
+
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+    mortgageParams.owner = caller;
 
     // Attempt to create a mortgage as not the general manager
     vm.startPrank(caller);
     vm.expectRevert(
       abi.encodeWithSelector(ILoanManagerErrors.OnlyGeneralManager.selector, caller, address(generalManager))
     );
-    loanManager.createMortgage(
-      caller, tokenId, address(wbtc), 8, 1000, address(subConsol), 1000, 1000, totalPeriods, hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
   }
 
-  function test_createMortgage_revertIfAmountBorrowedBelowMinimum(
-    address owner,
-    uint256 tokenId,
-    address collateral,
-    uint8 collateralDecimals,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
-  ) public {
+  function test_createMortgage_revertIfAmountBorrowedBelowMinimum(MortgageParams memory mortgageParams) public {
     // Ensure that owner is not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the amountBorrowed is below the minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 0, Constants.MINIMUM_AMOUNT_BORROWED - 1));
+    mortgageParams.amountBorrowed =
+      uint128(bound(mortgageParams.amountBorrowed, 0, Constants.MINIMUM_AMOUNT_BORROWED - 1));
 
     // Attempt to create a mortgage with an amountBorrowed below the minimum threshold
     vm.startPrank(address(generalManager));
     vm.expectRevert(
       abi.encodeWithSelector(
-        ILoanManagerErrors.AmountBorrowedBelowMinimum.selector, amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED
+        ILoanManagerErrors.AmountBorrowedBelowMinimum.selector,
+        mortgageParams.amountBorrowed,
+        Constants.MINIMUM_AMOUNT_BORROWED
       )
     );
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      collateral,
-      collateralDecimals,
-      collateralAmount,
-      address(subConsol),
-      1000,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
   }
 
-  function test_createMortgage(
-    address owner,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
-  ) public {
+  function test_createMortgage(MortgageParams memory mortgageParams) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner is not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.CreateMortgage(tokenId, owner, address(wbtc), collateralAmount, amountBorrowed);
-    loanManager.createMortgage(
-      owner,
-      tokenId,
+    emit ILoanManagerEvents.CreateMortgage(
+      mortgageParams.tokenId,
+      mortgageParams.owner,
       address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
     );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Validate that the mortgage position was created correctly
-    assertEq(loanManager.getMortgagePosition(tokenId).tokenId, tokenId, "MortgageId is not set correctly");
-    assertEq(loanManager.getMortgagePosition(tokenId).collateral, address(wbtc), "Collateral is not set correctly");
     assertEq(
-      loanManager.getMortgagePosition(tokenId).collateralAmount,
-      collateralAmount,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).tokenId,
+      mortgageParams.tokenId,
+      "MortgageId is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).collateral,
+      address(wbtc),
+      "Collateral is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).collateralAmount,
+      mortgageParams.collateralAmount,
       "Collateral amount is not set correctly"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).collateralConverted, 0, "Collateral converted is not set correctly"
-    );
-    assertEq(loanManager.getMortgagePosition(tokenId).subConsol, address(subConsol), "SubConsol is not set correctly");
-    assertEq(loanManager.getMortgagePosition(tokenId).interestRate, interestRate, "Interest rate is not set correctly");
-    assertEq(
-      loanManager.getMortgagePosition(tokenId).dateOriginated, block.timestamp, "Date originated is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).collateralConverted,
+      0,
+      "Collateral converted is not set correctly"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).termOriginated, block.timestamp, "Term originated is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).subConsol,
+      address(subConsol),
+      "SubConsol is not set correctly"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).amountBorrowed, amountBorrowed, "amountBorrowed is not set correctly"
-    );
-    assertEq(loanManager.getMortgagePosition(tokenId).amountPrior, 0, "Amount prior should be 0");
-    assertEq(loanManager.getMortgagePosition(tokenId).termPaid, 0, "Term paid is not set correctly");
-    assertEq(loanManager.getMortgagePosition(tokenId).amountConverted, 0, "Amount converted is not set correctly");
-    assertEq(loanManager.getMortgagePosition(tokenId).penaltyAccrued, 0, "Penalty accrued is not set correctly");
-    assertEq(loanManager.getMortgagePosition(tokenId).penaltyPaid, 0, "Penalty paid is not set correctly");
-    assertEq(loanManager.getMortgagePosition(tokenId).paymentsMissed, 0, "Payments missed is not set correctly");
-    assertEq(
-      loanManager.getMortgagePosition(tokenId).periodDuration,
-      Constants.PERIOD_DURATION,
-      "Period duration is not set correctly"
-    );
-    assertEq(loanManager.getMortgagePosition(tokenId).totalPeriods, totalPeriods, "Total periods is not set correctly");
-    assertEq(
-      loanManager.getMortgagePosition(tokenId).hasPaymentPlan, hasPaymentPlan, "hasPaymentPlan is not set correctly"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).interestRate,
+      mortgageParams.interestRate,
+      "Interest rate is not set correctly"
     );
     assertEq(
-      uint8(loanManager.getMortgagePosition(tokenId).status),
+      loanManager.getMortgagePosition(mortgageParams.tokenId).conversionPremiumRate,
+      mortgageParams.conversionPremiumRate,
+      "Conversion premium rate is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).dateOriginated,
+      block.timestamp,
+      "Date originated is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termOriginated,
+      block.timestamp,
+      "Term originated is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed,
+      mortgageParams.amountBorrowed,
+      "amountBorrowed is not set correctly"
+    );
+    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).amountPrior, 0, "Amount prior should be 0");
+    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).termPaid, 0, "Term paid is not set correctly");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountConverted,
+      0,
+      "Amount converted is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued, 0, "Penalty accrued is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid, 0, "Penalty paid is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 0, "Payments missed is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods,
+      mortgageParams.totalPeriods,
+      "Total periods is not set correctly"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).hasPaymentPlan,
+      mortgageParams.hasPaymentPlan,
+      "hasPaymentPlan is not set correctly"
+    );
+    assertEq(
+      uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status),
       uint8(MortgageStatus.ACTIVE),
       "Status is not set correctly"
     );
@@ -180,7 +207,9 @@ contract LoanManagerTest is BaseTest {
     assertEq(consol.balanceOf(address(loanManager)), 0, "Loan manager should not have collected any consol");
     // Validate that the general manager has collected the consol
     assertEq(
-      consol.balanceOf(address(generalManager)), amountBorrowed, "General manager should have collected the consol"
+      consol.balanceOf(address(generalManager)),
+      mortgageParams.amountBorrowed,
+      "General manager should have collected the consol"
     );
   }
 
@@ -190,48 +219,31 @@ contract LoanManagerTest is BaseTest {
     loanManager.imposePenalty(tokenId);
   }
 
-  function test_imposePenalty_noPenaltyImposed(
-    address owner,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
-    uint32 timeskip
-  ) public {
+  function test_imposePenalty_noPenaltyImposed(MortgageParams memory mortgageParams, uint32 timeskip) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner is not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
 
     // Ensure that the amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure that the timeskip is less than 30 days + 72 hours
     timeskip = uint32(bound(timeskip, 0, 30 days + 72 hours - 1));
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Timeskip
@@ -239,49 +251,54 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that no penalty has been pre-calculated
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyAccrued, 0, "[1] Penalty accrued should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      0,
+      "[1] Penalty accrued should not have been updated"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed, 0, "[1] Payments missed should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      0,
+      "[1] Payments missed should not have been updated"
     );
 
     // Call imposePenalty
-    loanManager.imposePenalty(tokenId);
+    loanManager.imposePenalty(mortgageParams.tokenId);
 
     // Validate that no penalty was imposed and no missed payments were recorded
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyAccrued, 0, "[2] Penalty accrued should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      0,
+      "[2] Penalty accrued should not have been updated"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed, 0, "[2] Payments missed should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      0,
+      "[2] Payments missed should not have been updated"
     );
   }
 
   function test_imposePenalty_penaltyImposed(
-    address owner,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
+    MortgageParams memory mortgageParams,
     uint8 periodsMissed,
     uint16 penaltyRate
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner is not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
 
     // Ensure that the amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure that the periods missed is over 1 period
-    periodsMissed = uint8(bound(periodsMissed, 1, type(uint8).max - totalPeriods));
+    periodsMissed = uint8(bound(periodsMissed, 1, type(uint8).max - mortgageParams.totalPeriods));
 
     // Set the penalty rate in the general manager
     vm.startPrank(admin);
@@ -289,58 +306,49 @@ contract LoanManagerTest is BaseTest {
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Timeskip the entire term (minus 1 period since payment is due at the end of the term)
-    if (!hasPaymentPlan) {
-      skip(uint256(totalPeriods - 1) * (30 days));
+    if (!mortgageParams.hasPaymentPlan) {
+      skip(uint256(mortgageParams.totalPeriods - 1) * (30 days));
     }
     skip(uint256(periodsMissed) * (30 days) + 72 hours + 1 seconds);
 
     uint256 expectedPenaltyAccrued = Math.mulDiv(
-      loanManager.getMortgagePosition(tokenId).termBalance,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance,
       uint256(periodsMissed) * penaltyRate,
-      uint256(totalPeriods) * 1e4,
+      uint256(mortgageParams.totalPeriods) * 1e4,
       Math.Rounding.Ceil
     );
 
     // Validate that no penalty has been pre-calculated
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed, periodsMissed, "Payments missed should have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      periodsMissed,
+      "Payments missed should have been updated"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyAccrued,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
       expectedPenaltyAccrued,
       "Penalty accrued should have been updated"
     );
 
     // Call imposePenalty
-    loanManager.imposePenalty(tokenId);
+    loanManager.imposePenalty(mortgageParams.tokenId);
 
     // Validate that no penalty was imposed and no missed payments were recorded
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
       periodsMissed,
       "Payments missed should have stayed the same as the pre-calculation"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyAccrued,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
       expectedPenaltyAccrued,
       "Penalty accrued should have stayed the same as the pre-calculation"
     );
@@ -353,28 +361,25 @@ contract LoanManagerTest is BaseTest {
   }
 
   function test_periodPay_revertIfHasMissedPayments(
-    address owner,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
+    MortgageParams memory mortgageParams,
     uint8 missedPayments,
     uint16 penaltyRate,
     uint256 amount
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner is not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure that the penalty rate is greater than 0
     penaltyRate = uint16(bound(penaltyRate, 1, type(uint16).max));
@@ -388,138 +393,134 @@ contract LoanManagerTest is BaseTest {
     vm.stopPrank();
 
     // Ensure that missedPayments is gte 1
-    missedPayments = uint8(bound(missedPayments, 1, type(uint8).max - totalPeriods));
+    missedPayments = uint8(bound(missedPayments, 1, type(uint8).max - mortgageParams.totalPeriods));
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // If does not have a payment plan, skip the entire term (minus 1 period since we're about to do it again)
-    if (!hasPaymentPlan) {
-      skip(uint256(totalPeriods - 1) * (30 days));
+    if (!mortgageParams.hasPaymentPlan) {
+      skip(uint256(mortgageParams.totalPeriods - 1) * (30 days));
     }
 
     // Skip missedPayments * (30 days) + 72 hours + 1 seconds to ensure the correct number of missed payments
     skip(uint256(missedPayments) * (30 days) + 72 hours + 1 seconds);
 
     // If does not have a payment plan, the amount being paid must equal the termBalance to avoid triggering a different error
-    if (!hasPaymentPlan) {
-      amount = loanManager.getMortgagePosition(tokenId).termBalance;
+    if (!mortgageParams.hasPaymentPlan) {
+      amount = loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance;
     }
 
     // Validate that the correct number of payments have been missed
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
       missedPayments,
       "Payments missed should be the correct number"
     );
 
     // Attempt to make a period payment
     vm.expectRevert(
-      abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(tokenId))
+      abi.encodeWithSelector(
+        MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
+      )
     );
-    loanManager.periodPay(tokenId, amount);
+    loanManager.periodPay(mortgageParams.tokenId, amount);
   }
 
-  function test_periodPay_onePeriodWithPaymentPlan(
-    address owner,
-    address caller,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods
-  ) public {
+  function test_periodPay_onePeriodWithPaymentPlan(MortgageParams memory mortgageParams, address caller) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+    mortgageParams.hasPaymentPlan = true;
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
     vm.assume(caller != address(0));
 
     // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      true // hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Deal consol to the caller and approve the collateral to the loan manager
-    _mintConsolViaUsdx(caller, loanManager.getMortgagePosition(tokenId).monthlyPayment());
+    _mintConsolViaUsdx(caller, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
     vm.startPrank(caller);
-    consol.approve(address(loanManager), loanManager.getMortgagePosition(tokenId).monthlyPayment());
+    consol.approve(address(loanManager), loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
     vm.stopPrank();
 
     // Call periodPay
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.PeriodPay(tokenId, loanManager.getMortgagePosition(tokenId).monthlyPayment(), 1);
-    loanManager.periodPay(tokenId, loanManager.getMortgagePosition(tokenId).monthlyPayment());
+    emit ILoanManagerEvents.PeriodPay(
+      mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment(), 1
+    );
+    loanManager.periodPay(
+      mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()
+    );
     vm.stopPrank();
 
-    loanManager.getMortgagePosition(tokenId);
+    loanManager.getMortgagePosition(mortgageParams.tokenId);
 
     // Validate that the term paid has been recorded
     assertEq(
-      loanManager.getMortgagePosition(tokenId).termPaid,
-      loanManager.getMortgagePosition(tokenId).termBalance / totalPeriods,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termPaid,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance / mortgageParams.totalPeriods,
       "Term paid should have been recorded"
     );
     // Validate that subConsol has been escrowed inside the loan manager
     assertEq(
       subConsol.balanceOf(address(loanManager)),
-      loanManager.getMortgagePosition(tokenId).convertPaymentToPrincipal(
-        loanManager.getMortgagePosition(tokenId).monthlyPayment()
+      loanManager.getMortgagePosition(mortgageParams.tokenId).convertPaymentToPrincipal(
+        loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()
       ),
       "SubConsol escrow should have been stored inside the loan manager"
     );
     // Validate that the amountBorrowed has not changed
     assertEq(
-      loanManager.getMortgagePosition(tokenId).amountBorrowed, amountBorrowed, "amountBorrowed should not have changed"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed,
+      mortgageParams.amountBorrowed,
+      "amountBorrowed should not have changed"
     );
     // Validate that the periodsPaid has increased by 1
-    assertEq(loanManager.getMortgagePosition(tokenId).periodsPaid(), 1, "Periods paid should have been increased by 1");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).periodsPaid(),
+      1,
+      "Periods paid should have been increased by 1"
+    );
     // Validate that total periods has not been updated
     assertEq(
-      loanManager.getMortgagePosition(tokenId).totalPeriods, totalPeriods, "Total periods should not have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods,
+      mortgageParams.totalPeriods,
+      "Total periods should not have been updated"
     );
     // Validate that the penalty accrued has not been updated
-    assertEq(loanManager.getMortgagePosition(tokenId).penaltyAccrued, 0, "Penalty accrued should not have been updated");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      0,
+      "Penalty accrued should not have been updated"
+    );
     // Validate that the penalty paid has not been updated
-    assertEq(loanManager.getMortgagePosition(tokenId).penaltyPaid, 0, "Penalty paid should not have been updated");
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid,
+      0,
+      "Penalty paid should not have been updated"
+    );
     // Validate that the loan manager has not collected any consol
     assertEq(consol.balanceOf(address(loanManager)), 0, "Loan manager should not have collected any consol");
   }
@@ -531,85 +532,64 @@ contract LoanManagerTest is BaseTest {
   }
 
   function test_penaltyPay_revertIfNoMissedPayments(
-    address owner,
+    MortgageParams memory mortgageParams,
     address caller,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
     uint256 amount
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
     vm.assume(caller != address(0));
 
     // Ensure amount is greater than 0
     amount = uint256(bound(amount, 1, type(uint256).max));
 
     // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to pay a penalty with no missed payments
     vm.startPrank(caller);
     vm.expectRevert(
       abi.encodeWithSelector(
-        MortgageMath.CannotOverpayPenalty.selector, loanManager.getMortgagePosition(tokenId), amount
+        MortgageMath.CannotOverpayPenalty.selector, loanManager.getMortgagePosition(mortgageParams.tokenId), amount
       )
     );
-    loanManager.penaltyPay(tokenId, amount);
+    loanManager.penaltyPay(mortgageParams.tokenId, amount);
     vm.stopPrank();
   }
 
-  function test_penaltyPay_onePeriod(
-    address owner,
-    address caller,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
-    uint16 penaltyRate
-  ) public {
+  function test_penaltyPay_onePeriod(MortgageParams memory mortgageParams, address caller, uint16 penaltyRate) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
     vm.assume(caller != address(0));
 
     // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure that the penalty rate is greater than 0
     penaltyRate = uint16(bound(penaltyRate, 1, type(uint16).max));
@@ -620,27 +600,16 @@ contract LoanManagerTest is BaseTest {
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // If does not have a payment plan, skip the entire term (minus 1 period since we're about to do it again)
-    if (!hasPaymentPlan) {
-      skip(uint256(totalPeriods - 1) * (30 days));
+    if (!mortgageParams.hasPaymentPlan) {
+      skip(uint256(mortgageParams.totalPeriods - 1) * (30 days));
     }
 
     // Skip ahead 1 period (and late payment window) to ensure the correct number of missed payments
@@ -648,19 +617,26 @@ contract LoanManagerTest is BaseTest {
 
     // Calculate the expected penalty amount
     uint256 penaltyAmount = Math.mulDiv(
-      loanManager.getMortgagePosition(tokenId).termBalance, penaltyRate, uint256(totalPeriods) * 1e4, Math.Rounding.Ceil
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance,
+      penaltyRate,
+      uint256(mortgageParams.totalPeriods) * 1e4,
+      Math.Rounding.Ceil
     );
 
     // Ensure that a missed payment has been recorded
-    assertEq(loanManager.getMortgagePosition(tokenId).paymentsMissed, 1, "One missed payment should have been recorded");
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyAccrued,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      1,
+      "One missed payment should have been recorded"
+    );
+    assertEq(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
       penaltyAmount,
       "Penalty accrued should be equal to the penalty amount"
     );
     assertEq(
-      loanManager.getMortgagePosition(tokenId).periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
-      hasPaymentPlan ? 1 : totalPeriods,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
+      mortgageParams.hasPaymentPlan ? 1 : mortgageParams.totalPeriods,
       "Periods since term origination should be 1 if hasPaymentPlan, or totalPeriods if does not have a payment plan"
     );
 
@@ -673,35 +649,41 @@ contract LoanManagerTest is BaseTest {
     // Call penaltyPay
     vm.startPrank(caller);
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.PenaltyPay(tokenId, penaltyAmount);
-    loanManager.penaltyPay(tokenId, penaltyAmount);
+    emit ILoanManagerEvents.PenaltyPay(mortgageParams.tokenId, penaltyAmount);
+    loanManager.penaltyPay(mortgageParams.tokenId, penaltyAmount);
     vm.stopPrank();
 
     // Validate that the term paid has not changed
-    assertEq(loanManager.getMortgagePosition(tokenId).termPaid, 0, "Term paid should not have changed");
+    assertEq(loanManager.getMortgagePosition(mortgageParams.tokenId).termPaid, 0, "Term paid should not have changed");
     // Validate that the principalRemaining has not changed
     assertEq(
-      loanManager.getMortgagePosition(tokenId).principalRemaining(),
-      amountBorrowed,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).principalRemaining(),
+      mortgageParams.amountBorrowed,
       "Amount outstanding should not have changed"
     );
     // Validate that the amountBorrowed has not changed
     assertEq(
-      loanManager.getMortgagePosition(tokenId).amountBorrowed, amountBorrowed, "amountBorrowed should not have changed"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).amountBorrowed,
+      mortgageParams.amountBorrowed,
+      "amountBorrowed should not have changed"
     );
     // Validate that the periods since term origination has not changed
     assertEq(
-      loanManager.getMortgagePosition(tokenId).periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
-      hasPaymentPlan ? 1 : totalPeriods,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
+      mortgageParams.hasPaymentPlan ? 1 : mortgageParams.totalPeriods,
       "Periods since term origination should not have changed since the penalty was imposed"
     );
     // Validate that the penalty accrued has been updated
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyAccrued, penaltyAmount, "Penalty accrued should have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
+      penaltyAmount,
+      "Penalty accrued should have been updated"
     );
     // Validate that the penalty paid has been updated
     assertEq(
-      loanManager.getMortgagePosition(tokenId).penaltyPaid, penaltyAmount, "Penalty paid should have been updated"
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyPaid,
+      penaltyAmount,
+      "Penalty paid should have been updated"
     );
   }
 
@@ -712,183 +694,149 @@ contract LoanManagerTest is BaseTest {
   }
 
   function test_redeemMortgage_revertIfNotMortgageOwner(
-    address owner,
+    MortgageParams memory mortgageParams,
     address caller,
-    string calldata mortgageId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
+    string calldata mortgageId
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
     vm.assume(caller != address(0));
 
     // Also ensure that owner and caller are not the same
-    vm.assume(owner != caller);
+    vm.assume(mortgageParams.owner != caller);
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, mortgageId);
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to redeem the mortgage as a non-owner
     vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(ILoanManagerErrors.OnlyMortgageOwner.selector, tokenId, owner, caller));
-    loanManager.redeemMortgage(tokenId, false);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ILoanManagerErrors.OnlyMortgageOwner.selector, mortgageParams.tokenId, mortgageParams.owner, caller
+      )
+    );
+    loanManager.redeemMortgage(mortgageParams.tokenId, false);
     vm.stopPrank();
   }
 
   function test_redeemMortgage_revertIfMortgageNotRepaid(
-    address owner,
-    string calldata mortgageId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
+    MortgageParams memory mortgageParams,
+    string calldata mortgageId
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, mortgageId);
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to redeem the mortgage without repaying the loan
-    vm.startPrank(owner);
+    vm.startPrank(mortgageParams.owner);
     vm.expectRevert(
-      abi.encodeWithSelector(MortgageMath.UnpaidPayments.selector, loanManager.getMortgagePosition(tokenId))
+      abi.encodeWithSelector(
+        MortgageMath.UnpaidPayments.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
+      )
     );
-    loanManager.redeemMortgage(tokenId, false);
+    loanManager.redeemMortgage(mortgageParams.tokenId, false);
     vm.stopPrank();
   }
 
-  // ToDo: test_redeemMortgage_revertIfMortgageHasPaymentsMissed
+  // // ToDo: test_redeemMortgage_revertIfMortgageHasPaymentsMissed
 
-  function test_redeemMortgage(
-    address owner,
-    string calldata mortgageId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
-  ) public {
+  function test_redeemMortgage(MortgageParams memory mortgageParams, string calldata mortgageId) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
-    vm.label(owner, "Owner");
+    vm.assume(mortgageParams.owner != address(0));
+    vm.label(mortgageParams.owner, "Owner");
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, mortgageId);
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Deal entire payment of consol to the owner and approve the loan manager to spend it
-    uint256 totalPayment = loanManager.getMortgagePosition(1).termBalance;
-    _mintConsolViaUsdx(owner, totalPayment);
-    vm.startPrank(owner);
+    uint256 totalPayment = loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance;
+    _mintConsolViaUsdx(mortgageParams.owner, totalPayment);
+    vm.startPrank(mortgageParams.owner);
     consol.approve(address(loanManager), totalPayment);
     vm.stopPrank();
 
     // Have owner pay the entire mortgage
-    vm.startPrank(owner);
+    vm.startPrank(mortgageParams.owner);
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.PeriodPay(1, totalPayment, totalPeriods);
-    loanManager.periodPay(1, totalPayment);
+    emit ILoanManagerEvents.PeriodPay(mortgageParams.tokenId, totalPayment, mortgageParams.totalPeriods);
+    loanManager.periodPay(mortgageParams.tokenId, totalPayment);
     vm.stopPrank();
 
     // Have the owner redeem the mortgage
-    vm.startPrank(owner);
+    vm.startPrank(mortgageParams.owner);
     // Check that the NFT burn emits an event
     vm.expectEmit(true, true, true, true, address(mortgageNFT));
-    emit IERC721.Transfer(address(owner), address(0), 1);
+    emit IERC721.Transfer(address(mortgageParams.owner), address(0), mortgageParams.tokenId);
     // Check that redeemMortgage event is emitted
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.RedeemMortgage(1);
-    loanManager.redeemMortgage(1, false);
+    emit ILoanManagerEvents.RedeemMortgage(mortgageParams.tokenId);
+    loanManager.redeemMortgage(mortgageParams.tokenId, false);
     vm.stopPrank();
 
     // Validate that the mortgage position status is redeemed
     assertEq(
-      uint8(loanManager.getMortgagePosition(1).status), uint8(MortgageStatus.REDEEMED), "Status is not set correctly"
+      uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status),
+      uint8(MortgageStatus.REDEEMED),
+      "Status is not set correctly"
     );
 
     // Validate that the mortgage NFT has been burned
@@ -896,8 +844,8 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that the collateral token has been transferred to the owner
     assertEq(
-      IERC20(address(wbtc)).balanceOf(owner),
-      collateralAmount,
+      IERC20(address(wbtc)).balanceOf(mortgageParams.owner),
+      mortgageParams.collateralAmount,
       "Collateral token should have been transferred to the owner"
     );
   }
@@ -909,74 +857,65 @@ contract LoanManagerTest is BaseTest {
   }
 
   function test_refinanceMortgage_revertIfNotMortgageOwner(
-    address owner,
+    MortgageParams memory mortgageParams,
     address caller,
-    string calldata mortgageId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
+    string calldata mortgageId
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
     vm.assume(caller != address(0));
 
     // Also ensure that owner and caller are not the same
-    vm.assume(owner != caller);
+    vm.assume(mortgageParams.owner != caller);
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, mortgageId);
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Attempt to refinance the mortgage as a non-owner
     vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(ILoanManagerErrors.OnlyMortgageOwner.selector, tokenId, owner, caller));
-    loanManager.refinanceMortgage(tokenId, totalPeriods);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        ILoanManagerErrors.OnlyMortgageOwner.selector, mortgageParams.tokenId, mortgageParams.owner, caller
+      )
+    );
+    loanManager.refinanceMortgage(mortgageParams.tokenId, mortgageParams.totalPeriods);
     vm.stopPrank();
   }
 
   function test_refinanceMortgage_revertIfPenaltiesNotPaid(
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
+    MortgageParams memory mortgageParams,
     uint16 newInterestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
     uint16 penaltyRate,
     uint256 timeSkip
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+    mortgageParams.owner = borrower;
+
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure that the penalty rate is greater than 0
     penaltyRate = uint16(bound(penaltyRate, 1, type(uint16).max));
@@ -985,7 +924,7 @@ contract LoanManagerTest is BaseTest {
     timeSkip = uint256(
       bound(
         timeSkip,
-        uint256(hasPaymentPlan ? 1 : totalPeriods + 1) * (30 days) + 72 hours + 1 seconds,
+        uint256(mortgageParams.hasPaymentPlan ? 1 : mortgageParams.totalPeriods + 1) * (30 days) + 72 hours + 1 seconds,
         6000 days + 72 hours + 1 seconds
       )
     );
@@ -997,26 +936,15 @@ contract LoanManagerTest is BaseTest {
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    mortgageNFT.mint(borrower, "MortgageId"); // (Hardcoding tokenId=1 + mortgageId="MortgageId" to avoid stack too deep)
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, "MortgageId"); // (Hardcoding tokenId=1 + mortgageId="MortgageId" to avoid stack too deep)
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage (hardcoding collateralDecimals=8 to avoid stack too deep)
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      borrower,
-      1,
-      address(wbtc),
-      8,
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -1024,8 +952,8 @@ contract LoanManagerTest is BaseTest {
 
     // Calculate the expected payments missed
     uint16 expectedPaymentsMissed = uint16(timeSkip / 30 days);
-    if (!hasPaymentPlan) {
-      expectedPaymentsMissed -= totalPeriods - 1;
+    if (!mortgageParams.hasPaymentPlan) {
+      expectedPaymentsMissed -= mortgageParams.totalPeriods - 1;
     }
     if (timeSkip % 30 days <= 72 hours) {
       expectedPaymentsMissed--;
@@ -1033,15 +961,15 @@ contract LoanManagerTest is BaseTest {
 
     // Calculate the expected penalty accrued
     uint256 expectedPenaltyAccrued = Math.mulDiv(
-      loanManager.getMortgagePosition(1).termBalance * expectedPaymentsMissed,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).termBalance * expectedPaymentsMissed,
       penaltyRate,
-      uint256(loanManager.getMortgagePosition(1).totalPeriods) * 1e4,
+      uint256(loanManager.getMortgagePosition(mortgageParams.tokenId).totalPeriods) * 1e4,
       Math.Rounding.Ceil
     );
 
     // Validate that there is penalty accrued
     assertEq(
-      loanManager.getMortgagePosition(1).penaltyAccrued,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).penaltyAccrued,
       expectedPenaltyAccrued,
       "Penalty accrued should be equal to the expected penalty amount"
     );
@@ -1054,55 +982,50 @@ contract LoanManagerTest is BaseTest {
     );
 
     // Attempt to refinance the mortgage without repaying the loan
-    vm.startPrank(borrower);
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(1)));
-    loanManager.refinanceMortgage(1, totalPeriods);
+    vm.startPrank(mortgageParams.owner);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
+      )
+    );
+    loanManager.refinanceMortgage(mortgageParams.tokenId, mortgageParams.totalPeriods);
     vm.stopPrank();
   }
 
-  // ToDo: test_refinanceMortgage_revertIfMortgageHaspaymentsMissed
+  // // ToDo: test_refinanceMortgage_revertIfMortgageHaspaymentsMissed
 
   function test_refinanceMortgage_withPaymentPlan(
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint8 originalTotalPeriods,
+    MortgageParams memory mortgageParams,
     uint8 newTotalPeriods,
-    uint16 interestRate,
     uint16 newInterestRate,
     uint8 periodsPaid
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+    mortgageParams.hasPaymentPlan = true;
+    mortgageParams.owner = borrower;
+
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    originalTotalPeriods = uint8(bound(originalTotalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
     newTotalPeriods = uint8(bound(newTotalPeriods, 36, 120));
 
-    // Ensure the periods paid is greater than 0 but lte originalTotalPeriods - 1
-    periodsPaid = uint8(bound(periodsPaid, 1, originalTotalPeriods - 1));
+    // Ensure the periods paid is greater than 0 but lte mortgageParams.totalPeriods - 1
+    periodsPaid = uint8(bound(periodsPaid, 1, mortgageParams.totalPeriods - 1));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager (hardcoding mortgageId to avoid stack too deep)
     vm.startPrank(address(generalManager));
-    mortgageNFT.mint(borrower, "mortgageId"); // (Hardcoding tokenId to 1 to avoid stack too deep)
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, "mortgageId");
     vm.stopPrank();
 
     // Deal the collateralAmount to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage (hardcoding collateral decimals to 8 to avoid stack too deep)
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      borrower,
-      1,
-      address(wbtc),
-      8,
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      originalTotalPeriods,
-      true // hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // New scope to avoid stack too deep
@@ -1211,48 +1134,32 @@ contract LoanManagerTest is BaseTest {
   }
 
   function test_forecloseMortgage_revertIfMortagePositionNotForeclosable(
-    address owner,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
+    MortgageParams memory mortgageParams,
     uint256 timeSkip
   ) public {
-    // Ensure that owner and caller are not the zero address
-    vm.assume(owner != address(0));
-
-    // Ensure that the tokenId > 0
-    tokenId = uint256(bound(tokenId, 1, type(uint256).max));
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure the timeskip is less than (hasPaymentPlan ? 3 : totalPeriods - 1 + 3) periods + late payment window
-    timeSkip =
-      bound(timeSkip, 0 seconds, uint256(hasPaymentPlan ? 3 : totalPeriods - 1 + 3) * (30 days) + 72 hours - 1 seconds);
+    timeSkip = bound(
+      timeSkip,
+      0 seconds,
+      uint256(mortgageParams.hasPaymentPlan ? 3 : mortgageParams.totalPeriods - 1 + 3) * (30 days) + 72 hours
+        - 1 seconds
+    );
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -1265,71 +1172,62 @@ contract LoanManagerTest is BaseTest {
     }
 
     // Validate the missed payments is less than 4
-    assertLt(loanManager.getMortgagePosition(tokenId).paymentsMissed, 3, "Missed payments should be less than 3");
+    assertLt(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed, 3, "Missed payments should be less than 3"
+    );
 
     // Attempt to refinance the mortgage without repaying the loan
-    vm.startPrank(owner);
+    vm.startPrank(mortgageParams.owner);
     vm.expectRevert(
       abi.encodeWithSelector(
         MortgageMath.NotForeclosable.selector,
-        loanManager.getMortgagePosition(tokenId),
+        loanManager.getMortgagePosition(mortgageParams.tokenId),
         Constants.MAXIMUM_MISSED_PAYMENTS
       )
     );
-    loanManager.forecloseMortgage(tokenId);
+    loanManager.forecloseMortgage(mortgageParams.tokenId);
     vm.stopPrank();
   }
 
   function test_forecloseMortgage(
     string calldata ownerName,
     string calldata mortgageId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan,
+    MortgageParams memory mortgageParams,
     uint256 timeSkip
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner is a new address that doesn't conflict with any other addresses
-    address owner = makeAddr(ownerName);
+    mortgageParams.owner = makeAddr(ownerName);
+    vm.label(mortgageParams.owner, ownerName);
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure the timeskip is greater than 4 periods + late payment window but less than 100 periods + late payment window
     timeSkip = uint256(bound(timeSkip, 4 * 30 days + 72 hours + 1 seconds, 100 * 30 days + 72 hours + 1 seconds));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, mortgageId);
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
     // If does not have a payment plan, skip the entire term first too (minus 1 period since payment is due at the end of the term)
-    if (!hasPaymentPlan) {
-      skip(uint256(totalPeriods - 1) * (30 days));
+    if (!mortgageParams.hasPaymentPlan) {
+      skip(uint256(mortgageParams.totalPeriods - 1) * (30 days));
     }
     skip(timeSkip);
 
@@ -1340,33 +1238,39 @@ contract LoanManagerTest is BaseTest {
     }
 
     // Validate the missed payments is greater than 3
-    assertGt(loanManager.getMortgagePosition(tokenId).paymentsMissed, 3, "Missed payments should be greater than 3");
+    assertGt(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      3,
+      "Missed payments should be greater than 3"
+    );
     // Validate missed payments matched expected
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
       expectedPaymentsMissed,
       "Missed payments should be equal to the expected number"
     );
 
     // Foreclose the mortgage
-    vm.startPrank(owner);
-    loanManager.forecloseMortgage(tokenId);
+    vm.startPrank(mortgageParams.owner);
+    loanManager.forecloseMortgage(mortgageParams.tokenId);
     vm.stopPrank();
 
     // Validate that the mortage status has been updated
     assertEq(
-      uint8(loanManager.getMortgagePosition(tokenId).status),
+      uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status),
       uint8(MortgageStatus.FORECLOSED),
       "Mortgage status should have been updated to foreclosed"
     );
 
     // Validate that the forfeited assets pool has the collateral (wbtc)
     assertEq(
-      wbtc.balanceOf(address(forfeitedAssetsPool)), collateralAmount, "Forfeited assets pool should have the collateral"
+      wbtc.balanceOf(address(forfeitedAssetsPool)),
+      mortgageParams.collateralAmount,
+      "Forfeited assets pool should have the collateral"
     );
 
     // Validate that the mortgage NFT has been burned
-    assertEq(mortgageNFT.balanceOf(owner), 0, "Mortgage NFT should have been burned");
+    assertEq(mortgageNFT.balanceOf(mortgageParams.owner), 0, "Mortgage NFT should have been burned");
 
     // Validate all balances of loan manager are 0
     assertEq(wbtc.balanceOf(address(loanManager)), 0, "wbtc balance of loan manager should be 0");
@@ -1383,53 +1287,46 @@ contract LoanManagerTest is BaseTest {
   function test_forecloseMortgage_onePeriodPayment(
     string calldata ownerName,
     string calldata mortgageId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
-    uint16 interestRate,
-    uint8 totalPeriods,
+    MortgageParams memory mortgageParams,
     uint256 timeSkip
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+    mortgageParams.hasPaymentPlan = true; // hasPaymentPlan is true for this test
+
     // Ensure that owner is a new address that doesn't conflict with any other addresses
-    address owner = makeAddr(ownerName);
+    mortgageParams.owner = makeAddr(ownerName);
+    vm.label(mortgageParams.owner, ownerName);
 
     // Ensure that amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, 1e18, type(uint128).max));
+    mortgageParams.amountBorrowed = uint128(bound(mortgageParams.amountBorrowed, 1e18, type(uint128).max));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Ensure the timeskip is greater than 5 periods + late payment window but less than 100 periods + late payment window
     timeSkip = uint256(bound(timeSkip, 5 * 30 days + 72 hours + 1 seconds, 100 * 30 days + 72 hours + 1 seconds));
 
     // Mint a mortgage NFT to emulate an mortgage created via the generalManager
     vm.startPrank(address(generalManager));
-    uint256 tokenId = mortgageNFT.mint(owner, mortgageId);
+    mortgageParams.tokenId = mortgageNFT.mint(mortgageParams.owner, mortgageId);
     vm.stopPrank();
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
-    loanManager.createMortgage(
-      owner,
-      tokenId,
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      true // hasPaymentPlan
-    );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Deal Consol and usdx to the owner to make a period payment
-    _mintConsolViaUsdx(owner, loanManager.getMortgagePosition(1).monthlyPayment());
-    vm.startPrank(owner);
-    consol.approve(address(loanManager), loanManager.getMortgagePosition(1).monthlyPayment());
-    loanManager.periodPay(1, loanManager.getMortgagePosition(1).monthlyPayment());
+    _mintConsolViaUsdx(mortgageParams.owner, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
+    vm.startPrank(mortgageParams.owner);
+    consol.approve(address(loanManager), loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment());
+    loanManager.periodPay(
+      mortgageParams.tokenId, loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()
+    );
     vm.stopPrank();
 
     // Skip ahead the timeskip to accrue penalties
@@ -1442,33 +1339,39 @@ contract LoanManagerTest is BaseTest {
     }
 
     // Validate the missed payments is greater than 3
-    assertGt(loanManager.getMortgagePosition(tokenId).paymentsMissed, 3, "Missed payments should be greater than 3");
+    assertGt(
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
+      3,
+      "Missed payments should be greater than 3"
+    );
     // Validate missed payments matched expected
     assertEq(
-      loanManager.getMortgagePosition(tokenId).paymentsMissed,
+      loanManager.getMortgagePosition(mortgageParams.tokenId).paymentsMissed,
       expectedPaymentsMissed,
       "Missed payments should be equal to the expected number"
     );
 
     // Foreclose the mortgage
-    vm.startPrank(owner);
-    loanManager.forecloseMortgage(tokenId);
+    vm.startPrank(mortgageParams.owner);
+    loanManager.forecloseMortgage(mortgageParams.tokenId);
     vm.stopPrank();
 
     // Validate that the mortage status has been updated
     assertEq(
-      uint8(loanManager.getMortgagePosition(tokenId).status),
+      uint8(loanManager.getMortgagePosition(mortgageParams.tokenId).status),
       uint8(MortgageStatus.FORECLOSED),
       "Mortgage status should have been updated to foreclosed"
     );
 
     // Validate that the forfeited assets pool has the collateral (wbtc)
     assertEq(
-      wbtc.balanceOf(address(forfeitedAssetsPool)), collateralAmount, "Forfeited assets pool should have the collateral"
+      wbtc.balanceOf(address(forfeitedAssetsPool)),
+      mortgageParams.collateralAmount,
+      "Forfeited assets pool should have the collateral"
     );
 
     // Validate that the mortgage NFT has been burned
-    assertEq(mortgageNFT.balanceOf(owner), 0, "Mortgage NFT should have been burned");
+    assertEq(mortgageNFT.balanceOf(mortgageParams.owner), 0, "Mortgage NFT should have been burned");
 
     // Validate all balances of loan manager are 0
     assertEq(wbtc.balanceOf(address(loanManager)), 0, "wbtc balance of loan manager should be 0");
@@ -1486,13 +1389,15 @@ contract LoanManagerTest is BaseTest {
 
     // Validate that all of the collateral is in the forfeited assets pool
     assertEq(
-      wbtc.balanceOf(address(forfeitedAssetsPool)), collateralAmount, "Forfeited assets pool should have the collateral"
+      wbtc.balanceOf(address(forfeitedAssetsPool)),
+      mortgageParams.collateralAmount,
+      "Forfeited assets pool should have the collateral"
     );
 
     // Validate that the forfeited assets pool has total supply equal to the liabilities (principalRemaining)
     assertEq(
       forfeitedAssetsPool.totalSupply(),
-      loanManager.getMortgagePosition(tokenId).principalRemaining(),
+      loanManager.getMortgagePosition(mortgageParams.tokenId).principalRemaining(),
       "Forfeited assets pool total supply should be equal to the amount outstanding"
     );
 
@@ -1522,55 +1427,49 @@ contract LoanManagerTest is BaseTest {
   }
 
   function test_expandBalanceSheet_revertsWhenAmountInBelowMinimum(
-    address owner,
-    uint256 tokenId,
-    uint128 collateralAmount,
-    uint128 amountBorrowed,
+    MortgageParams memory mortgageParams,
     uint128 amountIn,
     uint128 collateralAmountIn,
-    uint16 interestRate,
-    uint8 totalPeriods,
-    bool hasPaymentPlan
+    uint16 interestRate
   ) public {
+    // Fuzz the mortgage params
+    mortgageParams = fuzzMortgageParams(mortgageParams);
+
     // Ensure that owner is not the zero address
-    vm.assume(owner != address(0));
+    vm.assume(mortgageParams.owner != address(0));
 
     // Ensure that the tokenId is not 0
-    vm.assume(tokenId != 0);
+    vm.assume(mortgageParams.tokenId != 0);
 
     // Ensure that the amountBorrowed is above a minimum threshold
-    amountBorrowed = uint128(bound(amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED, type(uint128).max));
+    mortgageParams.amountBorrowed =
+      uint128(bound(mortgageParams.amountBorrowed, Constants.MINIMUM_AMOUNT_BORROWED, type(uint128).max));
 
     // Ensure amountIn < the minimum threshold
     amountIn = uint128(bound(amountIn, 0, Constants.MINIMUM_AMOUNT_BORROWED - 1));
 
     // Ensure total periods is set to something reasonable (3 - 10 year terms)
-    totalPeriods = uint8(bound(totalPeriods, 36, 120));
+    mortgageParams.totalPeriods = uint8(bound(mortgageParams.totalPeriods, 36, 120));
 
     // Deal collateralAmount of wbtc to the loan manager
-    ERC20Mock(address(wbtc)).mint(address(loanManager), collateralAmount);
+    ERC20Mock(address(wbtc)).mint(address(loanManager), mortgageParams.collateralAmount);
 
     // Create a mortgage
     vm.startPrank(address(generalManager));
     vm.expectEmit(true, true, true, true, address(loanManager));
-    emit ILoanManagerEvents.CreateMortgage(tokenId, owner, address(wbtc), collateralAmount, amountBorrowed);
-    loanManager.createMortgage(
-      owner,
-      tokenId,
+    emit ILoanManagerEvents.CreateMortgage(
+      mortgageParams.tokenId,
+      mortgageParams.owner,
       address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      collateralAmount,
-      address(subConsol),
-      interestRate,
-      amountBorrowed,
-      totalPeriods,
-      hasPaymentPlan
+      mortgageParams.collateralAmount,
+      mortgageParams.amountBorrowed
     );
+    loanManager.createMortgage(mortgageParams);
     vm.stopPrank();
 
     // Validate that the mortgage was created
-    MortgagePosition memory mortgagePosition = loanManager.getMortgagePosition(tokenId);
-    assertEq(mortgagePosition.tokenId, tokenId, "tokenId");
+    MortgagePosition memory mortgagePosition = loanManager.getMortgagePosition(mortgageParams.tokenId);
+    assertEq(mortgagePosition.tokenId, mortgageParams.tokenId, "tokenId");
 
     vm.startPrank(address(generalManager));
     vm.expectRevert(
@@ -1578,7 +1477,7 @@ contract LoanManagerTest is BaseTest {
         ILoanManagerErrors.AmountBorrowedBelowMinimum.selector, amountIn, Constants.MINIMUM_AMOUNT_BORROWED
       )
     );
-    loanManager.expandBalanceSheet(tokenId, amountIn, collateralAmountIn, interestRate);
+    loanManager.expandBalanceSheet(mortgageParams.tokenId, amountIn, collateralAmountIn, interestRate);
     vm.stopPrank();
   }
 }

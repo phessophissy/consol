@@ -89,6 +89,24 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
   function interestRate(address collateral, uint8 totalPeriods, bool hasPaymentPlan) external view returns (uint16);
 
   /**
+   * @notice Returns the conversion premium rate (in basis points)
+   * @param collateral The address of the collateral
+   * @param totalPeriods The total number of periods for the mortgage
+   * @param hasPaymentPlan Whether the mortgage has a payment plan
+   * @return The conversion premium rate
+   */
+  function conversionPremiumRate(address collateral, uint8 totalPeriods, bool hasPaymentPlan)
+    external
+    view
+    returns (uint16);
+
+  /**
+   * @notice Sets the conversion premium rate (in basis points)
+   * @param conversionPremiumRate_ The conversion premium rate
+   */
+  function setConversionPremiumRate(uint16 conversionPremiumRate_) external;
+
+  /**
    * @notice Sets the origination pool scheduler address
    * @param originationPoolScheduler_ The origination pool scheduler address
    */
@@ -189,6 +207,13 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
   function setMaximumCap(address collateral, uint256 maximumCap_) external;
 
   /**
+   * @notice Returns the conversion queues a given mortgage position is registered with
+   * @param tokenId The tokenId of the mortgage position
+   * @return The conversion queues
+   */
+  function conversionQueues(uint256 tokenId) external view returns (address[] memory);
+
+  /**
    * @notice Requests a new mortgage creation
    * @param creationRequest The parameters of the mortgage creation being requested
    * @return tokenId The tokenId of the mortgage NFT that was created
@@ -210,10 +235,12 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
   /**
    * @notice Enqueues a mortgage position into a conversion queue
    * @param tokenId The tokenId of the mortgage position
-   * @param conversionQueue The address of the conversion queue to use
-   * @param hintPrevId The hint for the previous mortgage position in the conversion queue
+   * @param conversionQueueList The list of conversion queues to use
+   * @param hintPrevIds The hint for the previous mortgage position in the conversion queue
    */
-  function enqueueMortgage(uint256 tokenId, address conversionQueue, uint256 hintPrevId) external payable;
+  function enqueueMortgage(uint256 tokenId, address[] memory conversionQueueList, uint256[] memory hintPrevIds)
+    external
+    payable;
 
   /**
    * @notice Converts a mortgage position

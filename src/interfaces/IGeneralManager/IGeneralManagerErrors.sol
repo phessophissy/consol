@@ -56,6 +56,13 @@ interface IGeneralManagerErrors {
   error InvalidConversionQueue(address conversionQueue);
 
   /**
+   * @notice The mortgage is already enqueued in the conversion queue
+   * @param tokenId The tokenId of the mortgage
+   * @param conversionQueue The address of the conversion queue
+   */
+  error MortgageAlreadyEnqueuedInConversionQueue(uint256 tokenId, address conversionQueue);
+
+  /**
    * @notice Thrown when the caller is not the owner of the mortgageNFT
    * @param caller The caller of the function
    * @param owner The owner of the mortgageNFT

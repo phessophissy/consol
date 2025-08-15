@@ -57,6 +57,12 @@ abstract contract IntegrationBaseTest is DeployAllTest {
   IPyth public pyth;
   bytes32 public pythPriceIdBTC = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
 
+  // Helpers
+  address[] public conversionQueues;
+  address[] public emptyConversionQueues;
+  uint256[][] public hintPrevIdsList;
+  uint256[][] public emptyHintPrevIdsList;
+
   function integrationTestId() public pure virtual returns (string memory);
 
   function testId() public view virtual override(DeployAllTest) returns (string memory) {
@@ -82,7 +88,15 @@ abstract contract IntegrationBaseTest is DeployAllTest {
     usdxQueue = deployAll.usdxQueue();
     forfeitedAssetsQueue = deployAll.forfeitedAssetsQueue();
     conversionQueue = deployAll.conversionQueues(1);
+    conversionQueues = [address(conversionQueue)];
     pyth = deployAll.pyth();
+
+    // Set up hintPrevIdsList and emptyHintPrevIdsList
+    hintPrevIdsList = new uint256[][](1);
+    hintPrevIdsList[0] = new uint256[](1);
+    hintPrevIdsList[0][0] = 0;
+    emptyHintPrevIdsList = new uint256[][](1);
+    emptyHintPrevIdsList[0] = new uint256[](0);
 
     // Grant the fulfiller the FULFILLMENT_ROLE so that they can fulfill orders from the order pool
     vm.startPrank(admin1);

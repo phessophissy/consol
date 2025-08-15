@@ -15,7 +15,6 @@ import {IConversionQueue, ILenderQueue} from "./interfaces/IConversionQueue/ICon
 import {IPriceOracle} from "./interfaces/IPriceOracle.sol";
 import {MortgageMath} from "./libraries/MortgageMath.sol";
 import {Roles} from "./libraries/Roles.sol";
-import {Constants} from "./libraries/Constants.sol";
 // solhint-disable-next-line no-unused-import
 import {IPausable} from "./interfaces/IPausable/IPausable.sol";
 // solhint-disable-next-line no-unused-import
@@ -44,10 +43,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
    */
   address public immutable override subConsol;
   /**
-   * @inheritdoc IConversionQueue
-   */
-  uint256 public override priceMultiplierBps;
-  /**
    * @inheritdoc IPausable
    */
   bool public paused;
@@ -57,7 +52,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
    * @param asset_ The address of the asset to convert
    * @param decimals_ The number of decimals of the asset
    * @param subConsol_ The address of the subConsol contract
-   * @param priceMultiplierBps_ The price multiplier basis points
    * @param consol_ The address of the Consol contract
    * @param generalManager_ The address of the GeneralManager contract
    * @param admin_ The address of the admin
@@ -66,7 +60,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     address asset_,
     uint8 decimals_,
     address subConsol_,
-    uint256 priceMultiplierBps_,
     address consol_,
     address generalManager_,
     address admin_
@@ -74,7 +67,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     generalManager = generalManager_;
     decimals = decimals_;
     subConsol = subConsol_;
-    priceMultiplierBps = priceMultiplierBps_;
   }
 
   /**
@@ -104,27 +96,8 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
   /**
    * @inheritdoc IConversionQueue
    */
-  function setPriceMultiplierBps(uint256 priceMultiplierBps_) external override onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
-    priceMultiplierBps = priceMultiplierBps_;
-    emit PriceMultiplierBpsSet(priceMultiplierBps_);
-  }
-
-  /**
-   * @inheritdoc IConversionQueue
-   */
-  function conversionPrice() public view override returns (uint256) {
+  function convertingPrice() public view override returns (uint256) {
     return IPriceOracle(IGeneralManager(generalManager).priceOracles(asset)).price();
-  }
-
-  /**
-   * @dev Calculates the trigger price for a mortgage position
-   * @param mortgagePosition The mortgage position to calculate the trigger price for
-   * @return The trigger price
-   */
-  function _calculateTriggerPrice(MortgagePosition memory mortgagePosition) internal view returns (uint256) {
-    return Math.mulDiv(
-      mortgagePosition.purchasePrice(), Constants.BPS + priceMultiplierBps, Constants.BPS, Math.Rounding.Floor
-    );
   }
 
   /**
@@ -147,11 +120,12 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
   /**
    * @inheritdoc IConversionQueue
    */
-  function enqueueMortgage(uint256 mortgageTokenId, uint256 hintPrevId, bool reenqueue)
+  function enqueueMortgage(uint256 mortgageTokenId, uint256 hintPrevId)
     external
     payable
     override
     whenNotPaused
+    nonReentrant
   {
     // Validate that the caller is the general manager
     if (_msgSender() != generalManager) {
@@ -164,11 +138,8 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     // Fetch the mortgagePosition
     MortgagePosition memory mortgagePosition = loanManager.getMortgagePosition(mortgageTokenId);
 
-    // Calculate the trigger price
-    uint256 triggerPrice = _calculateTriggerPrice(mortgagePosition);
-
-    // If the mortgage is being re-enqueued, remove it from the mortgage queue first to re-insert it at the correct position
-    if (reenqueue) {
+    // If the mortgage is already enqueued, remove it from the mortgage queue first to re-insert it at the correct position
+    if (_mortgageNodes[mortgageTokenId].tokenId != 0) {
       // Remove the mortgage from the mortgage queue and record the gas fee to refund
       uint256 collectedGasFees = _removeMortgage(mortgageTokenId);
 
@@ -186,7 +157,7 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     }
 
     // Insert the mortgage into the mortgage queue
-    _insertMortgage(mortgageTokenId, triggerPrice, hintPrevId);
+    _insertMortgage(mortgageTokenId, mortgagePosition.conversionTriggerPrice(), hintPrevId);
   }
 
   /**
@@ -199,9 +170,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     whenNotPaused
     onlyRole(Roles.PROCESSOR_ROLE)
   {
-    // Store the conversion price in memory for efficiency
-    uint256 currentConversionPrice = conversionPrice();
-
     // Store the LoanManager reference in memory for efficiency
     ILoanManager loanManager = ILoanManager(IGeneralManager(generalManager).loanManager());
 
@@ -209,7 +177,7 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     uint256 collectedGasFees;
 
     // Find the start of qualified mortgages in the mortageQueue
-    uint256 mortgageTokenId = _findFirstTriggered(currentConversionPrice);
+    uint256 mortgageTokenId = _findFirstTriggered(convertingPrice());
 
     // Start a count (gets incremented when a mortgage is popped or when a request is popped)
     uint256 count = 0;

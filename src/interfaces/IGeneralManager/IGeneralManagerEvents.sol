@@ -36,6 +36,13 @@ interface IGeneralManagerEvents {
   event InterestRateOracleSet(address oldInterestRateOracle, address newInterestRateOracle);
 
   /**
+   * @notice Emitted when the conversion premium rate is set
+   * @param oldConversionPremiumRate The old conversion premium rate
+   * @param newConversionPremiumRate The new conversion premium rate
+   */
+  event ConversionPremiumRateSet(uint16 oldConversionPremiumRate, uint16 newConversionPremiumRate);
+
+  /**
    * @notice Emitted when the origination pool scheduler address is set
    * @param oldOriginationPoolScheduler The old origination pool scheduler address
    * @param newOriginationPoolScheduler The new origination pool scheduler address

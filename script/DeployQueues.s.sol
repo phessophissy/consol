@@ -74,7 +74,6 @@ contract DeployQueues is DeployGeneralManager {
   }
 
   function deployConversionQueues() public {
-    uint16 priceMultiplierBps = uint16(vm.envUint("CONVERSION_PRICE_MULTIPLIER_BPS"));
     uint256 conversionMortgageGasFee = vm.envUint("CONVERSION_MORTGAGE_GAS_FEE");
     uint256 conversionWithdrawalGasFee = vm.envUint("CONVERSION_WITHDRAWAL_GAS_FEE");
 
@@ -84,7 +83,6 @@ contract DeployQueues is DeployGeneralManager {
         address(collateralTokens[i]),
         collateralTokens[i].decimals(),
         address(subConsols[i]),
-        priceMultiplierBps,
         address(consol),
         address(generalManager),
         deployerAddress

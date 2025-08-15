@@ -99,13 +99,13 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
             collateralAmounts: collateralAmounts,
             totalPeriods: 36,
             originationPools: originationPools,
-            conversionQueue: address(0),
             isCompounding: false,
             expiration: block.timestamp
           }),
           mortgageId: mortgageId,
           collateral: address(btc),
           subConsol: address(btcSubConsol),
+          conversionQueues: emptyConversionQueues,
           hasPaymentPlan: true
         })
       );
@@ -125,7 +125,7 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
 
     // Fulfiller fulfills the order on the order pool
     vm.startPrank(fulfiller);
-    orderPool.processOrders(new uint256[](1), new uint256[](1));
+    orderPool.processOrders(new uint256[](1), emptyHintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the origination pool has 101k Consol

@@ -59,6 +59,7 @@ contract DeployAllTest is Test {
     vm.setEnv("CONSOL_DECIMALS_OFFSET", "8");
     vm.setEnv("PENALTY_RATE", "200");
     vm.setEnv("REFINANCE_RATE", "300");
+    vm.setEnv("CONVERSION_PREMIUM_RATE", "5000");
     vm.setEnv("SUPPORTED_PERIOD_TERMS_LENGTH", "2");
     vm.setEnv("SUPPORTED_PERIOD_TERM_0", "36");
     vm.setEnv("SUPPORTED_PERIOD_TERM_1", "60");
@@ -96,7 +97,6 @@ contract DeployAllTest is Test {
     vm.setEnv("PYTH_PRICE_ID_1", "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43");
     vm.setEnv("PYTH_PRICE_MAX_CONFIDENCE_0", "100000000000000000");
     vm.setEnv("PYTH_PRICE_MAX_CONFIDENCE_1", "100000000000000000000");
-    vm.setEnv("CONVERSION_PRICE_MULTIPLIER_BPS", "5000");
     vm.setEnv("ORDER_POOL_GAS_FEE", "10000000000000000");
     vm.setEnv("ORDER_POOL_MAXIMUM_ORDER_DURATION", "300");
     vm.setEnv("CONVERSION_MORTGAGE_GAS_FEE", "10000000000000000");

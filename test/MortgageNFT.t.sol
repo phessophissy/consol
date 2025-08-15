@@ -138,7 +138,7 @@ contract MortgageNFTTest is BaseTest {
           penaltyAccrued: 0,
           penaltyPaid: 0,
           paymentsMissed: 0,
-          periodDuration: 0,
+          conversionPremiumRate: 0,
           totalPeriods: 0,
           hasPaymentPlan: true,
           status: MortgageStatus.ACTIVE

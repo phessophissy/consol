@@ -41,4 +41,14 @@ interface IOrderPoolErrors {
    * @param maximumOrderDuration The maximum order duration
    */
   error ExpirationTooFar(uint256 expiration, uint256 blockTimestamp, uint256 maximumOrderDuration);
+
+  /**
+   * @notice Thrown when the hintPrevIds list is not the same length as the conversion queues list.
+   * @param orderIndex The index of the order
+   * @param hintPrevIdsListLength The length of the hintPrevIds list
+   * @param conversionQueuesListLength The length of the conversion queues list
+   */
+  error HintPrevIdsListLengthMismatch(
+    uint256 orderIndex, uint256 hintPrevIdsListLength, uint256 conversionQueuesListLength
+  );
 }

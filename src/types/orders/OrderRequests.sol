@@ -6,7 +6,6 @@ pragma solidity ^0.8.0;
  * @param collateralAmounts The amounts of collateral to borrow against for each origination pool. This will be escrowed in the Consol contract.
  * @param totalPeriods The total number of periods that the mortgage will last
  * @param originationPools The addresses of the origination pools to use
- * @param conversionQueue The address of the conversion queue to use (ignored if equal to address(0))
  * @param isCompounding Whether the mortgage is compounding
  * @param expiration The expiration of the mortgage
  */
@@ -14,7 +13,6 @@ struct BaseRequest {
   uint256[] collateralAmounts;
   uint8 totalPeriods;
   address[] originationPools;
-  address conversionQueue;
   bool isCompounding;
   uint256 expiration;
 }
@@ -25,6 +23,7 @@ struct BaseRequest {
  * @param mortgageId The mortgageId of the mortgage NFT to be created
  * @param collateral The address of the collateral token
  * @param subConsol The address of the SubConsol contract holding the collateral
+ * @param conversionQueues The addresses of the conversion queues to use. Ignored in expansion requests.
  * @param hasPaymentPlan Whether the mortgage is hasPaymentPlan (periodic payment plan vs single payment)
  */
 struct CreationRequest {
@@ -32,6 +31,7 @@ struct CreationRequest {
   string mortgageId;
   address collateral;
   address subConsol;
+  address[] conversionQueues;
   bool hasPaymentPlan;
 }
 

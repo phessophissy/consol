@@ -41,8 +41,15 @@ import {Constants} from "../src/libraries/Constants.sol";
 contract GeneralManagerTest is BaseTest {
   using MortgageMath for MortgagePosition;
 
+  // Helper conversion queues and hintPrevIdsList
+  address[] public conversionQueues;
+  uint256[][] public hintPrevIdsList;
+
   function setUp() public override {
     super.setUp();
+    conversionQueues = [address(conversionQueue)];
+    hintPrevIdsList = [new uint256[](1)];
+    hintPrevIdsList[0][0] = 0;
   }
 
   function fuzzCreateRequestFromSeed(CreationRequest memory createRequestSeed)
@@ -56,12 +63,13 @@ contract GeneralManagerTest is BaseTest {
     createRequestSeed.base.totalPeriods = DEFAULT_MORTGAGE_PERIODS;
     createRequestSeed.base.originationPools = new address[](1);
     createRequestSeed.base.originationPools[0] = address(originationPool);
-    createRequestSeed.base.conversionQueue = address(conversionQueue);
     createRequestSeed.base.expiration = uint32(
       bound(createRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration())
     );
     createRequestSeed.collateral = address(wbtc);
     createRequestSeed.subConsol = address(subConsol);
+    createRequestSeed.conversionQueues = new address[](1);
+    createRequestSeed.conversionQueues[0] = address(conversionQueue);
 
     // Ensure the create request is valid (if non-compounding, the mortgage must have a payment plan)
     if (!createRequestSeed.base.isCompounding) {
@@ -82,7 +90,6 @@ contract GeneralManagerTest is BaseTest {
     expansionRequestSeed.base.totalPeriods = DEFAULT_MORTGAGE_PERIODS;
     expansionRequestSeed.base.originationPools = new address[](1);
     expansionRequestSeed.base.originationPools[0] = address(originationPool);
-    expansionRequestSeed.base.conversionQueue = address(conversionQueue);
     expansionRequestSeed.base.expiration = uint32(
       bound(expansionRequestSeed.base.expiration, block.timestamp, block.timestamp + orderPool.maximumOrderDuration())
     );
@@ -96,6 +103,11 @@ contract GeneralManagerTest is BaseTest {
     assertEq(generalManager.insuranceFund(), insuranceFund, "Insurance fund should be set correctly");
     assertEq(
       generalManager.interestRateOracle(), address(interestRateOracle), "Interest rate oracle should be set correctly"
+    );
+    assertEq(
+      generalManager.conversionPremiumRate(address(wbtc), DEFAULT_MORTGAGE_PERIODS, true),
+      conversionPremiumRate,
+      "Conversion premium rate should be set correctly"
     );
     assertEq(
       generalManager.originationPoolScheduler(),
@@ -252,6 +264,40 @@ contract GeneralManagerTest is BaseTest {
 
     // Validate the interest rate was set correctly
     assertEq(interestRate, expectedInterestRate, "Interest rate should be set correctly");
+  }
+
+  function test_setConversionPremiumRate_shouldRevertIfNotAdmin(address caller, uint16 newConversionPremiumRate) public {
+    // Ensure the caller doesn't have the admin role
+    vm.assume(!GeneralManager(address(generalManager)).hasRole(Roles.DEFAULT_ADMIN_ROLE, caller));
+
+    // Attempt to set the conversion premium rate without the admin role
+    vm.startPrank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.DEFAULT_ADMIN_ROLE)
+    );
+    generalManager.setConversionPremiumRate(newConversionPremiumRate);
+    vm.stopPrank();
+  }
+
+  function test_setConversionPremiumRate(
+    uint16 newConversionPremiumRate,
+    address collateral,
+    uint8 totalPeriods,
+    bool hasPaymentPlan
+  ) public {
+    // Set the conversion premium rate as admin
+    vm.startPrank(admin);
+    vm.expectEmit(true, true, true, true);
+    emit IGeneralManagerEvents.ConversionPremiumRateSet(conversionPremiumRate, newConversionPremiumRate);
+    generalManager.setConversionPremiumRate(newConversionPremiumRate);
+    vm.stopPrank();
+
+    // Validate the conversion premium rate was set correctly
+    assertEq(
+      generalManager.conversionPremiumRate(collateral, totalPeriods, hasPaymentPlan),
+      newConversionPremiumRate,
+      "Conversion premium rate should be set correctly"
+    );
   }
 
   function test_setOriginationPoolScheduler_shouldRevertIfNotAdmin(address caller, address newOriginationPoolScheduler)
@@ -423,7 +469,7 @@ contract GeneralManagerTest is BaseTest {
     // Fuzz the create request with compounding and no conversion queue
     CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
     creationRequest.base.isCompounding = true;
-    creationRequest.base.conversionQueue = address(0);
+    creationRequest.conversionQueues = new address[](0);
 
     // Attempt to request a mortgage as compounding and no conversion queue
     vm.expectRevert(abi.encodeWithSelector(IGeneralManagerErrors.CompoundingMustConvert.selector, creationRequest));
@@ -866,8 +912,8 @@ contract GeneralManagerTest is BaseTest {
     );
   }
 
-  // ToDo: test_requestMortgageCreation_compoundingWithoutPaymentPlan
-  // ToDo: test_requestMortgageCreation_nonCompoundingWithoutPaymentPlan
+  // // ToDo: test_requestMortgageCreation_compoundingWithoutPaymentPlan
+  // // ToDo: test_requestMortgageCreation_nonCompoundingWithoutPaymentPlan
 
   function test_originate_compoundingShouldRevertIfOriginationPoolsEmpty(
     OriginationParameters memory originationParameters
@@ -969,13 +1015,11 @@ contract GeneralManagerTest is BaseTest {
     // Attempt to have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
     vm.expectRevert(
       abi.encodeWithSelector(IGeneralManagerErrors.InvalidOriginationPool.selector, address(originationPool))
     );
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
   }
 
@@ -1066,15 +1110,13 @@ contract GeneralManagerTest is BaseTest {
     // Attempt to have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
     vm.expectRevert(
       abi.encodeWithSelector(
         IGeneralManagerErrors.InvalidTotalPeriods.selector, address(wbtc), DEFAULT_MORTGAGE_PERIODS
       )
     );
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
   }
 
@@ -1169,13 +1211,11 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller attempt to process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
     vm.expectRevert(
       abi.encodeWithSelector(IGeneralManagerErrors.MinimumCapNotMet.selector, address(wbtc), amountBorrowed, minimumCap)
     );
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
   }
 
@@ -1270,15 +1310,13 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller attempt to process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
     vm.expectRevert(
       abi.encodeWithSelector(
         IGeneralManagerErrors.MaximumCapExceeded.selector, address(wbtc), amountBorrowed, maximumCap
       )
     );
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
   }
 
@@ -1364,10 +1402,8 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the mortgage was created
@@ -1487,10 +1523,8 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the mortgage was created
@@ -1528,7 +1562,7 @@ contract GeneralManagerTest is BaseTest {
     assertEq(wbtc.balanceOf(address(generalManager)), 0, "GeneralManager should have 0 Collateral");
   }
 
-  // ToDo: test_originate_nonCompoundingWithoutPaymentPlanExpansion
+  // // ToDo: test_originate_nonCompoundingWithoutPaymentPlanExpansion
 
   function test_originationPoolDeployCallback_revertsIfNotRegisteredOriginationPool(
     address caller,
@@ -1556,7 +1590,7 @@ contract GeneralManagerTest is BaseTest {
     // Ensure the caller doesn't have the conversion role
     vm.assume(!GeneralManager(address(generalManager)).hasRole(Roles.CONVERSION_ROLE, caller));
 
-    // Attempt to update a price oracle without the admin role
+    // Attempt to convert without the conversion role
     vm.startPrank(caller);
     vm.expectRevert(
       abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.CONVERSION_ROLE)
@@ -1569,6 +1603,7 @@ contract GeneralManagerTest is BaseTest {
     address caller,
     CreationRequest memory createRequestSeed,
     uint256 collateralAmount,
+    uint64 currentPrice,
     uint256 principalConverting,
     uint256 collateralConversionAmount,
     address receiver
@@ -1636,10 +1671,8 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the borrower has 1 mortgage at this point and that the tokenId is 1
@@ -1651,6 +1684,8 @@ contract GeneralManagerTest is BaseTest {
 
     // Make sure the conversion amount is less than or equal to the principalRemaining
     principalConverting = bound(principalConverting, 1, mortgagePosition.principalRemaining());
+    // Make sure the collateral conversion amount is less than or equal to the collateral amount
+    collateralConversionAmount = bound(collateralConversionAmount, 1, creationRequest.base.collateralAmounts[0]);
 
     // Deal amountConverting amount of consol to the generalManager to emulate having it sent by the ConversionQueue
     {
@@ -1668,6 +1703,11 @@ contract GeneralManagerTest is BaseTest {
 
     // Calculate expectedTermConverted
     uint256 expectedTermConverted = mortgagePosition.convertPrincipalToPayment(principalConverting);
+
+    // // Set the oracle values while ensuring currentPrice is greater than or equal to the conversion trigger price
+    currentPrice =
+      uint64(bound(currentPrice, mortgagePosition.conversionTriggerPrice() / 1e10 + 1, uint64(type(int64).max)));
+    mockPyth.setPrice(BTC_PRICE_ID, int64(currentPrice), 4349253107, -8, block.timestamp);
 
     // Have the caller convert the mortgage
     vm.startPrank(caller);
@@ -1873,11 +1913,13 @@ contract GeneralManagerTest is BaseTest {
     uint256 mortgageGasFee
   ) public {
     // Ensuring the gas fees don't overflow
-    orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
+    mortgageGasFee = bound(mortgageGasFee, 0, type(uint256).max / 2);
+    orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - (2 * mortgageGasFee));
 
     // Fuzz the expansion request
     ExpansionRequest memory expansionRequest = fuzzExpansionRequestFromSeed(expansionRequestSeed);
     expansionRequest.base.isCompounding = true;
+    expansionRequest.tokenId = bound(expansionRequest.tokenId, 1, type(uint256).max);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -1890,7 +1932,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Deal the balanceSheetExpander the gas fee
-    vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee);
+    vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee + mortgageGasFee);
 
     // Update the interest rate oracle to the new base rate of 7.69%
     vm.startPrank(admin);
@@ -1915,9 +1957,11 @@ contract GeneralManagerTest is BaseTest {
 
     // Mock the loan manager to return a blank mortgage position with some prefilled values
     MortgagePosition memory mortgagePosition;
+    mortgagePosition.tokenId = expansionRequest.tokenId;
     mortgagePosition.collateral = address(wbtc);
     mortgagePosition.subConsol = address(subConsol);
     mortgagePosition.totalPeriods = expansionRequest.base.totalPeriods;
+    mortgagePosition.collateralAmount = 1e8;
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),
@@ -1930,6 +1974,11 @@ contract GeneralManagerTest is BaseTest {
       abi.encodeWithSelector(IERC721.ownerOf.selector, expansionRequest.tokenId),
       abi.encode(balanceSheetExpander)
     );
+
+    // Enqueue the mortgage position into the conversion queue before attempting to expand the balance sheet
+    vm.startPrank(balanceSheetExpander);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(expansionRequest.tokenId, conversionQueues, new uint256[](1));
+    vm.stopPrank();
 
     // Request a compounding balance sheet expansion
     vm.startPrank(balanceSheetExpander);
@@ -2002,11 +2051,13 @@ contract GeneralManagerTest is BaseTest {
     uint256 mortgageGasFee
   ) public {
     // Ensuring the gas fees don't overflow
-    orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - mortgageGasFee);
+    mortgageGasFee = bound(mortgageGasFee, 0, type(uint256).max / 2);
+    orderPoolGasFee = bound(orderPoolGasFee, 0, type(uint256).max - (2 * mortgageGasFee));
 
     // Fuzz the expansion request
     ExpansionRequest memory expansionRequest = fuzzExpansionRequestFromSeed(expansionRequestSeed);
     expansionRequest.base.isCompounding = false;
+    expansionRequest.tokenId = bound(expansionRequest.tokenId, 1, type(uint256).max);
 
     // Have the admin set the gas fee on the conversion queue
     vm.startPrank(admin);
@@ -2018,8 +2069,8 @@ contract GeneralManagerTest is BaseTest {
     orderPool.setGasFee(orderPoolGasFee);
     vm.stopPrank();
 
-    // Deal the balanceSheetExpander the gas fee
-    vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee);
+    // Deal the balanceSheetExpander the gas fees (2x mortgageGasFee to cover the enqueue and requestBalanceSheetExpansion)
+    vm.deal(balanceSheetExpander, orderPoolGasFee + mortgageGasFee + mortgageGasFee);
 
     // Update the interest rate oracle to the new base rate of 7.69%
     vm.startPrank(admin);
@@ -2045,9 +2096,11 @@ contract GeneralManagerTest is BaseTest {
 
     // Mock the loan manager to return a blank mortgage position with some prefilled values
     MortgagePosition memory mortgagePosition;
+    mortgagePosition.tokenId = expansionRequest.tokenId;
     mortgagePosition.collateral = address(wbtc);
     mortgagePosition.subConsol = address(subConsol);
     mortgagePosition.totalPeriods = expansionRequest.base.totalPeriods;
+    mortgagePosition.collateralAmount = 1e8;
     vm.mockCall(
       address(loanManager),
       abi.encodeWithSelector(ILoanManager.getMortgagePosition.selector, expansionRequest.tokenId),
@@ -2060,6 +2113,11 @@ contract GeneralManagerTest is BaseTest {
       abi.encodeWithSelector(IERC721.ownerOf.selector, expansionRequest.tokenId),
       abi.encode(balanceSheetExpander)
     );
+
+    // Enqueue the mortgage position into the conversion queue before attempting to expand the balance sheet
+    vm.startPrank(balanceSheetExpander);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(expansionRequest.tokenId, conversionQueues, new uint256[](1));
+    vm.stopPrank();
 
     // Request a non-compounding balance sheet expansion
     vm.startPrank(balanceSheetExpander);
@@ -2201,10 +2259,8 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     uint256[] memory orderIds = new uint256[](1);
-    uint256[] memory hintPrevIds = new uint256[](1);
     orderIds[0] = 0;
-    hintPrevIds[0] = 0;
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
 
     // Deploy a new origination pool with the same config
@@ -2268,10 +2324,8 @@ contract GeneralManagerTest is BaseTest {
     // Have the fulfiller process the order on the OrderPool
     vm.startPrank(fulfiller);
     orderIds = new uint256[](1);
-    hintPrevIds = new uint256[](1);
     orderIds[0] = 1;
-    hintPrevIds[0] = 0;
-    orderPool.processOrders(orderIds, hintPrevIds);
+    orderPool.processOrders(orderIds, hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the mortgage belongs to the original owner
@@ -2324,7 +2378,7 @@ contract GeneralManagerTest is BaseTest {
     creationRequest.base.collateralAmounts[0] = collateralAmount;
     creationRequest.base.isCompounding = false;
     creationRequest.hasPaymentPlan = true;
-    creationRequest.base.conversionQueue = address(0);
+    creationRequest.conversionQueues = new address[](0);
 
     // Have the admin set the gas fee on the order pool
     vm.startPrank(admin);
@@ -2373,8 +2427,8 @@ contract GeneralManagerTest is BaseTest {
       fulfiller: fulfiller,
       originationPools: purchaseOrder.originationPools,
       borrowAmounts: purchaseOrder.borrowAmounts,
-      conversionQueue: purchaseOrder.conversionQueue,
-      hintPrevId: 0,
+      conversionQueues: purchaseOrder.conversionQueues,
+      hintPrevIds: new uint256[](1),
       expansion: purchaseOrder.expansion,
       purchaseAmount: purchaseOrder.orderAmounts.purchaseAmount
     });
@@ -2412,7 +2466,7 @@ contract GeneralManagerTest is BaseTest {
 
     // Have the borrower enqueue the mortgage into the conversion queue
     vm.startPrank(borrower);
-    generalManager.enqueueMortgage{value: mortgageGasFee}(1, address(conversionQueue), 0);
+    generalManager.enqueueMortgage{value: mortgageGasFee}(1, conversionQueues, new uint256[](1));
     vm.stopPrank();
 
     // Validate that the mortgage was enqueued into the conversion queue

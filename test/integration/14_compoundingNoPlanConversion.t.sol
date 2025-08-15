@@ -92,13 +92,13 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
           collateralAmounts: collateralAmounts,
           totalPeriods: 36,
           originationPools: originationPools,
-          conversionQueue: address(conversionQueue),
           isCompounding: true,
           expiration: block.timestamp
         }),
         mortgageId: mortgageId,
         collateral: address(btc),
         subConsol: address(btcSubConsol),
+        conversionQueues: conversionQueues,
         hasPaymentPlan: false
       })
     );
@@ -111,7 +111,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
 
     // Fulfiller fulfills the order on the order pool
     vm.startPrank(fulfiller);
-    orderPool.processOrders(new uint256[](1), new uint256[](1));
+    orderPool.processOrders(new uint256[](1), hintPrevIdsList);
     vm.stopPrank();
 
     // Validate that the borrower has the mortgageNFT
@@ -126,6 +126,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.collateralConverted, 0, "[1] collateralConverted");
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[1] subConsol");
     assertEq(mortgagePosition.interestRate, 969, "[1] interestRate"); // Because there is no payment plan, the spread is 100 bps higher
+    assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
     assertEq(mortgagePosition.termBalance, 129070000000000000000008, "[1] termBalance"); // Owe more money because there is no payment plan
@@ -136,13 +137,13 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.penaltyAccrued, 0, "[1] penaltyAccrued");
     assertEq(mortgagePosition.penaltyPaid, 0, "[1] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[1] paymentsMissed");
-    assertEq(mortgagePosition.periodDuration, 30 days, "[1] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[1] totalPeriods");
     assertEq(mortgagePosition.hasPaymentPlan, false, "[1] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[1] status");
 
     // Validate the purchase price is $100k
-    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "purchasePrice");
+    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "[1] purchasePrice");
+    assertEq(mortgagePosition.conversionTriggerPrice(), 150_000e18, "[1] conversionTriggerPrice");
 
     // Validate that the mortgage position is in the conversion queue
     assertEq(conversionQueue.mortgageHead(), mortgagePosition.tokenId, "mortgageHead");
@@ -202,6 +203,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.collateralConverted, convertedBTC, "[2] collateralConverted");
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[2] subConsol");
     assertEq(mortgagePosition.interestRate, 969, "[2] interestRate");
+    assertEq(mortgagePosition.conversionPremiumRate, 5000, "[2] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[2] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[2] termOriginated");
     assertEq(mortgagePosition.termBalance, 129070000000000000000008, "[2] termBalance");
@@ -213,7 +215,6 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.penaltyAccrued, 0, "[2] penaltyAccrued");
     assertEq(mortgagePosition.penaltyPaid, 0, "[2] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[2] paymentsMissed");
-    assertEq(mortgagePosition.periodDuration, 30 days, "[2] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[2] totalPeriods");
     assertEq(mortgagePosition.hasPaymentPlan, false, "[2] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[2] status");
@@ -242,6 +243,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.collateralConverted, convertedBTC, "[3] collateralConverted");
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[3] subConsol");
     assertEq(mortgagePosition.interestRate, 969, "[3] interestRate");
+    assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[3] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[3] termOriginated");
     assertEq(mortgagePosition.termBalance, 129070000000000000000008, "[3] termBalance");
@@ -253,7 +255,6 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.penaltyAccrued, 0, "[3] penaltyAccrued");
     assertEq(mortgagePosition.penaltyPaid, 0, "[3] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[3] paymentsMissed");
-    assertEq(mortgagePosition.periodDuration, 30 days, "[3] periodDuration");
     assertEq(mortgagePosition.totalPeriods, 36, "[3] totalPeriods");
     assertEq(mortgagePosition.hasPaymentPlan, false, "[3] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.REDEEMED), "[3] status");

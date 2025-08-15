@@ -70,7 +70,7 @@ interface IOrderPool is IOrderPoolEvents, IOrderPoolErrors {
    * @notice Adds a PurchaseOrder to the OrderPool. Only callable by the general manager.
    * @param originationPools The addresses of the origination pools to deploy funds from
    * @param borrowAmounts The amounts being borrowed from each origination pool
-   * @param conversionQueue The address of the conversion queue to use
+   * @param conversionQueues The addresses of the conversion queues to use
    * @param orderAmounts The amounts being collected from the borrower
    * @param mortgageParams The parameters for the mortgage being created
    * @param expiration The expiration timestamp of the order
@@ -80,7 +80,7 @@ interface IOrderPool is IOrderPoolEvents, IOrderPoolErrors {
   function sendOrder(
     address[] memory originationPools,
     uint256[] memory borrowAmounts,
-    address conversionQueue,
+    address[] memory conversionQueues,
     OrderAmounts memory orderAmounts,
     MortgageParams memory mortgageParams,
     uint256 expiration,
@@ -90,7 +90,7 @@ interface IOrderPool is IOrderPoolEvents, IOrderPoolErrors {
   /**
    * @notice Processes the purchase orders at the given indices by fulfilling them or removing expired orders. Only callable by the FULFILLMENT_ROLE.
    * @param indices The indices of the purchase orders to process
-   * @param hintPrevIds The hintPrevIds of the purchase orders to process
+   * @param hintPrevIdsList The list of hintPrevIds for each purchase order. Each hintPrevIds is a list of hint of the previous mortgage position in the respective conversion queue.
    */
-  function processOrders(uint256[] memory indices, uint256[] memory hintPrevIds) external;
+  function processOrders(uint256[] memory indices, uint256[][] memory hintPrevIdsList) external;
 }
