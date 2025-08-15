@@ -222,14 +222,13 @@ contract MultiTokenVault is Context, ERC165, AccessControl, RebasingERC20, IMult
     uint256 sharesMinted =
       SharesMath.convertToShares(amount, totalShares - shares, _totalSupply() - amount, decimalsOffset);
 
-    // Ensure the amount of shares minted is not greater than the amount of shares being burned
-    if (sharesMinted > shares) {
-      revert SharesMintedExceedsBurned(shares, sharesMinted);
+    // Ensure the amount of shares minted is not greater than the amount of shares being burned.
+    // This way, shares are only burnt if they have increased in value.
+    if (sharesMinted <= shares) {
+      // Burn the excess shares
+      sharesOf[_msgSender()] -= shares - sharesMinted;
+      totalShares -= shares - sharesMinted;
     }
-
-    // Burn the excess shares
-    sharesOf[_msgSender()] -= shares - sharesMinted;
-    totalShares -= shares - sharesMinted;
   }
 
   /**

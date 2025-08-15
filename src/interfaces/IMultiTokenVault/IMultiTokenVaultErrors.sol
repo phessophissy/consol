@@ -26,13 +26,6 @@ interface IMultiTokenVaultErrors {
   error AmountTooSmall(uint256 amount);
 
   /**
-   * @notice Thrown during burnExcessShares when the amount of shares being minted is larger than the amount of tokens being burned
-   * @param sharesBurned The amount of shares being burned
-   * @param sharesMinted The amount of shares being minted
-   */
-  error SharesMintedExceedsBurned(uint256 sharesBurned, uint256 sharesMinted);
-
-  /**
    * @notice Thrown when a token's maximum cap is exceeded
    * @param token The address of the token that exceeded its cap
    * @param amount The total amount of tokens deposited

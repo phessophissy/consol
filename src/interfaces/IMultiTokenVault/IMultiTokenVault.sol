@@ -74,7 +74,7 @@ interface IMultiTokenVault is IRebasingERC20, IMultiTokenVaultEvents, IMultiToke
 
   /**
    * @notice Given shares and an amount, this will burn shares until the amount is reached.
-   * @dev This is achieved by burning all of the shares and minting the amount. Will revert if attempting to mint more than the shares correspond to.
+   * @dev This is achieved by burning all of the shares and minting the amount. Will no-op if attempting to mint more than the shares correspond to.
    * @param shares The amount of shares to burn
    * @param amount The amount of tokens to mint
    */

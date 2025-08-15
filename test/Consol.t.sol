@@ -137,4 +137,59 @@ contract ConsolTest is Test, IConsolEvents, IMultiTokenVaultEvents {
     // Validate that the forfeited assets pool has been set
     assertEq(consol.forfeitedAssetsPool(), newForfeitedAssetsPool, "Forfeited assets pool mismatch");
   }
+
+  function test_burnExcessShares(
+    string calldata callerName,
+    bytes32 tokenSalt,
+    uint256 amount,
+    uint256 extraAmount
+  ) public {
+    // Create a new caller
+    address caller = makeAddr(callerName);
+
+    // Make sure amount and extraAmount are at least 1 Consol
+    amount = bound(amount, 1e18, type(uint224).max);
+    // Make sure extraAmount is not significantly greater than amount
+    extraAmount = bound(extraAmount, 1e18, amount * 1e9);
+
+    // Create a new token
+    ERC20Mock token = new ERC20Mock{salt: tokenSalt}();
+
+    // Have the supported token manager add the token first
+    vm.startPrank(supportedTokenManager);
+    consol.addSupportedToken(address(token));
+    vm.stopPrank();
+
+    // Mint one consol to the consol contract
+    token.mint(address(this), 1e18);
+    token.approve(address(consol), 1e18);
+    consol.deposit(address(token), 1e18);
+    consol.transfer(address(consol), 1e18);
+
+    // Have the caller deposit the token
+    vm.startPrank(caller);
+    token.mint(caller, amount);
+    token.approve(address(consol), amount);
+    consol.deposit(address(token), amount);
+    vm.stopPrank();
+
+    // Validate that the caller has the correct amount of Consol
+    assertEq(consol.balanceOf(caller), amount, "Caller should have the correct amount of Consol");
+  
+
+    // Donate the extra tokens to Consol
+    token.mint(address(consol), extraAmount);
+
+    // Validate that the caller has a positive rebase
+    assertGt(consol.balanceOf(caller), amount, "Caller should have the extra amount of Consol too");
+
+    // Burn the excess shares
+    vm.startPrank(caller);
+    consol.burnExcessShares(consol.sharesOf(caller), amount);
+    vm.stopPrank();
+
+    // Validate that the caller has the correct amount of Consol (rounded down)
+    assertApproxEqRel(consol.balanceOf(caller), amount, 0.0001e18, "Caller should have the original amount of Consol");
+    assertLe(consol.balanceOf(caller), amount, "Balance should be rounded down");
+  }
 }
