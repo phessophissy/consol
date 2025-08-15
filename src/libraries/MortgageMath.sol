@@ -387,10 +387,6 @@ library MortgageMath {
     if (amount == 0) {
       revert ZeroAmount(mortgagePosition);
     }
-    // Revert if there are unpaid penalties
-    if (mortgagePosition.penaltyAccrued > mortgagePosition.penaltyPaid) {
-      revert UnpaidPenalties(mortgagePosition);
-    }
     // Ensure that the amount is not greater than the termBalance. Refund the surplus.
     uint256 _termRemaining = mortgagePosition.termRemaining();
     if (_termRemaining == 0 && amount > 0) {

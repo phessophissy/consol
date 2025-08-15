@@ -360,7 +360,8 @@ contract LoanManagerTest is BaseTest {
     loanManager.periodPay(tokenId, amount);
   }
 
-  function test_periodPay_revertIfHasMissedPayments(
+  function test_periodPay_doesNotRevertIfHasMissedPayments(
+    address caller,
     MortgageParams memory mortgageParams,
     uint8 missedPayments,
     uint16 penaltyRate,
@@ -369,8 +370,9 @@ contract LoanManagerTest is BaseTest {
     // Fuzz the mortgage params
     mortgageParams = fuzzMortgageParams(mortgageParams);
 
-    // Ensure that owner is not the zero address
+    // Ensure that owner and caller are not the zero address
     vm.assume(mortgageParams.owner != address(0));
+    vm.assume(caller != address(0));
 
     // Ensure that the tokenId > 0
     mortgageParams.tokenId = uint256(bound(mortgageParams.tokenId, 1, type(uint256).max));
@@ -423,13 +425,16 @@ contract LoanManagerTest is BaseTest {
       "Payments missed should be the correct number"
     );
 
-    // Attempt to make a period payment
-    vm.expectRevert(
-      abi.encodeWithSelector(
-        MortgageMath.UnpaidPenalties.selector, loanManager.getMortgagePosition(mortgageParams.tokenId)
-      )
-    );
+    // Deal consol to the caller and approve the collateral to the loan manager
+    _mintConsolViaUsdx(caller, amount);
+    vm.startPrank(caller);
+    consol.approve(address(loanManager), amount);
+    vm.stopPrank();
+
+    // Attempt to make a period payment and should not revert
+    vm.startPrank(caller);
     loanManager.periodPay(mortgageParams.tokenId, amount);
+    vm.stopPrank();
   }
 
   function test_periodPay_onePeriodWithPaymentPlan(MortgageParams memory mortgageParams, address caller) public {

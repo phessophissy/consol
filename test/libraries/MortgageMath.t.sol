@@ -222,13 +222,13 @@ contract MortgageMathTest is Test {
   }
 
   /// forge-config: default.allow_internal_expect_revert = true
-  function test_periodPay_revertsWhenHasPaymentPlanAndUnpaidPenalties(
+  function test_periodPay_doesNotRevertWhenHasPaymentPlanAndUnpaidPenalties(
     MortgagePositionSeed memory mortgagePositionSeed,
     uint256 penaltyAccrued,
     uint256 penaltyPaid,
     uint256 latePaymentWindow,
     uint256 amount
-  ) public validLatePenaltyWindow(latePaymentWindow) nonZeroAmount(amount) {
+  ) public view validLatePenaltyWindow(latePaymentWindow) nonZeroAmount(amount) {
     // Set penaltyAccrued to be greater than penaltyPaid
     penaltyAccrued = bound(penaltyAccrued, 1, type(uint256).max);
     penaltyPaid = bound(penaltyPaid, 0, penaltyAccrued - 1);
@@ -241,8 +241,7 @@ contract MortgageMathTest is Test {
     mortgagePosition.penaltyAccrued = penaltyAccrued;
     mortgagePosition.penaltyPaid = penaltyPaid;
 
-    // Attempt to make a payment on the mortgage without paying the penalties and expect a revert
-    vm.expectRevert(abi.encodeWithSelector(MortgageMath.UnpaidPenalties.selector, mortgagePosition));
+    // Make a payment on the mortgage without paying the penalties. This should not revert.
     (mortgagePosition,,) = mortgagePosition.periodPay(amount, latePaymentWindow);
   }
 
