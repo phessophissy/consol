@@ -138,12 +138,9 @@ contract ConsolTest is Test, IConsolEvents, IMultiTokenVaultEvents {
     assertEq(consol.forfeitedAssetsPool(), newForfeitedAssetsPool, "Forfeited assets pool mismatch");
   }
 
-  function test_burnExcessShares(
-    string calldata callerName,
-    bytes32 tokenSalt,
-    uint256 amount,
-    uint256 extraAmount
-  ) public {
+  function test_burnExcessShares(string calldata callerName, bytes32 tokenSalt, uint256 amount, uint256 extraAmount)
+    public
+  {
     // Create a new caller
     address caller = makeAddr(callerName);
 
@@ -175,7 +172,6 @@ contract ConsolTest is Test, IConsolEvents, IMultiTokenVaultEvents {
 
     // Validate that the caller has the correct amount of Consol
     assertEq(consol.balanceOf(caller), amount, "Caller should have the correct amount of Consol");
-  
 
     // Donate the extra tokens to Consol
     token.mint(address(consol), extraAmount);
