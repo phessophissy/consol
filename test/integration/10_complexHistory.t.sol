@@ -604,49 +604,49 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
     // Update the mortgagePosition details
     mortgagePosition = loanManager.getMortgagePosition(1);
 
-      // Check mortgagePosition fields one more time
-      assertEq(mortgagePosition.tokenId, 1, "[9] tokenId");
-      assertEq(mortgagePosition.collateral, address(btc), "[9] collateral");
-      assertEq(mortgagePosition.collateralDecimals, 8, "[9] collateralDecimals");
-      assertEq(mortgagePosition.collateralAmount, 2e8, "[9] collateralAmount");
-      assertEq(mortgagePosition.collateralConverted, expectedCollateralConverted, "[9] collateralConverted");
-      assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[9] subConsol");
-      assertEq(mortgagePosition.interestRate, 500, "[9] interestRate");
-      assertEq(mortgagePosition.conversionPremiumRate, 5000, "[9] conversionPremiumRate");
-      assertEq(mortgagePosition.dateOriginated, originalDateOriginated, "[9] dateOriginated");
-      assertEq(mortgagePosition.termOriginated, refinanceTimestamp, "[9] termOriginated");
-      assertEq(mortgagePosition.termBalance, 9679166666666666666676, "[9] termBalance");
-      assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[9] amountBorrowed");
-      assertEq(mortgagePosition.amountPrior, 67333333333333333333333, "[9] amountPrior");
-      assertEq(mortgagePosition.termPaid, 4839583333333333333338, "[9] termPaid");
-      assertEq(mortgagePosition.termConverted, 0, "[9] termConverted");
-      assertEq(mortgagePosition.amountConverted, 25_250e18, "[9] amountConverted");
-      assertEq(mortgagePosition.penaltyAccrued, 998310185185185185186, "[9] penaltyAccrued");
-      assertEq(mortgagePosition.penaltyPaid, 987555555555555555556, "[9] penaltyPaid");
-      assertEq(mortgagePosition.paymentsMissed, 2, "[9] paymentsMissed");
-      assertEq(mortgagePosition.totalPeriods, 36, "[9] totalPeriods");
-      assertEq(mortgagePosition.hasPaymentPlan, true, "[9] hasPaymentPlan");
-      assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[9] status");
-      assertEq(mortgagePosition.periodsPaid(), 18, "[9] periodsPaid");
-      assertEq(
-        mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termPaid),
-        4208333333333333333333,
-        "[9] convertPaymentToPrincipal"
-      );
-      assertEq(mortgagePosition.principalRemaining(), 4208333333333333333334, "[9] principalRemaining");
-      assertEq(
-        btcSubConsol.balanceOf(address(loanManager)), 71541666666666666666666, "[9] btcSubConsol.balanceOf(loanManager)"
-      );
-      assertEq(btcSubConsol.balanceOf(address(consol)), 4208333333333333333334, "[9] btcSubConsol.balanceOf(consol)");
+    // Check mortgagePosition fields one more time
+    assertEq(mortgagePosition.tokenId, 1, "[9] tokenId");
+    assertEq(mortgagePosition.collateral, address(btc), "[9] collateral");
+    assertEq(mortgagePosition.collateralDecimals, 8, "[9] collateralDecimals");
+    assertEq(mortgagePosition.collateralAmount, 2e8, "[9] collateralAmount");
+    assertEq(mortgagePosition.collateralConverted, expectedCollateralConverted, "[9] collateralConverted");
+    assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[9] subConsol");
+    assertEq(mortgagePosition.interestRate, 500, "[9] interestRate");
+    assertEq(mortgagePosition.conversionPremiumRate, 5000, "[9] conversionPremiumRate");
+    assertEq(mortgagePosition.dateOriginated, originalDateOriginated, "[9] dateOriginated");
+    assertEq(mortgagePosition.termOriginated, refinanceTimestamp, "[9] termOriginated");
+    assertEq(mortgagePosition.termBalance, 9679166666666666666676, "[9] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[9] amountBorrowed");
+    assertEq(mortgagePosition.amountPrior, 67333333333333333333333, "[9] amountPrior");
+    assertEq(mortgagePosition.termPaid, 4839583333333333333338, "[9] termPaid");
+    assertEq(mortgagePosition.termConverted, 0, "[9] termConverted");
+    assertEq(mortgagePosition.amountConverted, 25_250e18, "[9] amountConverted");
+    assertEq(mortgagePosition.penaltyAccrued, 998310185185185185186, "[9] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 987555555555555555556, "[9] penaltyPaid");
+    assertEq(mortgagePosition.paymentsMissed, 2, "[9] paymentsMissed");
+    assertEq(mortgagePosition.totalPeriods, 36, "[9] totalPeriods");
+    assertEq(mortgagePosition.hasPaymentPlan, true, "[9] hasPaymentPlan");
+    assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[9] status");
+    assertEq(mortgagePosition.periodsPaid(), 18, "[9] periodsPaid");
+    assertEq(
+      mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termPaid),
+      4208333333333333333333,
+      "[9] convertPaymentToPrincipal"
+    );
+    assertEq(mortgagePosition.principalRemaining(), 4208333333333333333334, "[9] principalRemaining");
+    assertEq(
+      btcSubConsol.balanceOf(address(loanManager)), 71541666666666666666666, "[9] btcSubConsol.balanceOf(loanManager)"
+    );
+    assertEq(btcSubConsol.balanceOf(address(consol)), 4208333333333333333334, "[9] btcSubConsol.balanceOf(consol)");
 
-      // Deal the conversion queue gas fee to the lender
-      vm.deal(address(lender), 0.01e18);
+    // Deal the conversion queue gas fee to the lender
+    vm.deal(address(lender), 0.01e18);
 
-      // Lender enters the conversion queue with the rest of the mortgagePosition principalRemaining (4208333333333333333334)
-      vm.startPrank(lender);
-      consol.approve(address(conversionQueue), 4208333333333333333334);
-      conversionQueue.requestWithdrawal{value: 0.01e18}(4208333333333333333334);
-      vm.stopPrank();
+    // Lender enters the conversion queue with the rest of the mortgagePosition principalRemaining (4208333333333333333334)
+    vm.startPrank(lender);
+    consol.approve(address(conversionQueue), 4208333333333333333334);
+    conversionQueue.requestWithdrawal{value: 0.01e18}(4208333333333333333334);
+    vm.stopPrank();
 
     // Rando processes the conversion request
     vm.startPrank(rando);
@@ -703,7 +703,9 @@ contract Integration_10_ComplexHistoryTest is IntegrationBaseTest {
       "All principal/subConsol has been accounted for"
     );
     assertEq(
-      mortgagePosition.amountConverted + mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termConverted + mortgagePosition.termPaid) + mortgagePosition.amountPrior,
+      mortgagePosition.amountConverted
+        + mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termConverted + mortgagePosition.termPaid)
+        + mortgagePosition.amountPrior,
       mortgagePosition.amountBorrowed,
       "All principal/subConsol has been accounted for"
     );

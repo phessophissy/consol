@@ -58,7 +58,7 @@ contract Integration_5_UsdxMaximumCapTest is IntegrationBaseTest {
     router.approveUsdTokens();
 
     // Mint 101k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 101_000e6);  
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
     // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);

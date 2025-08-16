@@ -6,7 +6,6 @@ import {IPyth} from "@pythnetwork/IPyth.sol";
 import {PythStructs} from "@pythnetwork/PythStructs.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {Constants} from "./libraries/Constants.sol";
 
 /**
  * @title PythPriceOracle
@@ -104,7 +103,7 @@ contract PythPriceOracle is IPriceOracle {
   /**
    * @inheritdoc IPriceOracle
    */
-  function cost(uint256 collateralAmount) public view override returns (uint256 totalCost, uint8 _collateralDecimals) {    
+  function cost(uint256 collateralAmount) public view override returns (uint256 totalCost, uint8 _collateralDecimals) {
     totalCost = Math.mulDiv(collateralAmount, price(), (10 ** collateralDecimals));
     _collateralDecimals = collateralDecimals;
   }

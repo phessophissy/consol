@@ -300,6 +300,31 @@ contract GeneralManagerTest is BaseTest {
     );
   }
 
+  function test_setPriceSpread_shouldRevertIfNotAdmin(address caller, uint16 newPriceSpread) public {
+    // Ensure the caller doesn't have the admin role
+    vm.assume(!GeneralManager(address(generalManager)).hasRole(Roles.DEFAULT_ADMIN_ROLE, caller));
+
+    // Attempt to set the price spread without the admin role
+    vm.startPrank(caller);
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, caller, Roles.DEFAULT_ADMIN_ROLE)
+    );
+    generalManager.setPriceSpread(newPriceSpread);
+    vm.stopPrank();
+  }
+
+  function test_setPriceSpread(uint16 newPriceSpread) public {
+    // Attempt to set the price spread as admin
+    vm.startPrank(admin);
+    vm.expectEmit(true, true, true, true);
+    emit IGeneralManagerEvents.PriceSpreadSet(priceSpread, newPriceSpread);
+    generalManager.setPriceSpread(newPriceSpread);
+    vm.stopPrank();
+
+    // Validate the price spread was set correctly
+    assertEq(generalManager.priceSpread(), newPriceSpread, "Price spread should be set correctly");
+  }
+
   function test_setOriginationPoolScheduler_shouldRevertIfNotAdmin(address caller, address newOriginationPoolScheduler)
     public
   {
@@ -2231,7 +2256,6 @@ contract GeneralManagerTest is BaseTest {
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
     amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + generalManager.priceSpread(), 1e4); // Add the spread to the cost of the collateral
-
 
     // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
