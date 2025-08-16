@@ -30,6 +30,7 @@ import {IOriginationPoolDeployCallback} from "./interfaces/IOriginationPoolDeplo
 import {ISubConsol} from "./interfaces/ISubConsol/ISubConsol.sol";
 import {Roles} from "./libraries/Roles.sol";
 import {Constants} from "./libraries/Constants.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title GeneralManager
@@ -73,6 +74,7 @@ contract GeneralManager is
     uint16 _penaltyRate;
     uint16 _refinanceRate;
     uint16 _conversionPremiumRate;
+    uint16 _priceSpread;
     address _insuranceFund;
     address _interestRateOracle;
     address _originationPoolScheduler;
@@ -113,6 +115,7 @@ contract GeneralManager is
    * @param penaltyRate_ The penalty rate
    * @param refinanceRate_ The refinancing rate
    * @param conversionPremiumRate_ The conversion premium rate
+   * @param priceSpread_ The price spread
    * @param insuranceFund_ The address of the insurance fund
    * @param interestRateOracle_ The address of the interest rate oracle
    */
@@ -123,11 +126,12 @@ contract GeneralManager is
     uint16 penaltyRate_,
     uint16 refinanceRate_,
     uint16 conversionPremiumRate_,
+    uint16 priceSpread_,
     address insuranceFund_,
     address interestRateOracle_
   ) internal onlyInitializing {
     __GeneralManager_init_unchained(
-      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_
+      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, priceSpread_, insuranceFund_, interestRateOracle_
     );
   }
 
@@ -148,6 +152,7 @@ contract GeneralManager is
     uint16 penaltyRate_,
     uint16 refinanceRate_,
     uint16 conversionPremiumRate_,
+    uint16 priceSpread_,
     address insuranceFund_,
     address interestRateOracle_
   ) internal onlyInitializing {
@@ -157,6 +162,7 @@ contract GeneralManager is
     $._penaltyRate = penaltyRate_;
     $._refinanceRate = refinanceRate_;
     $._conversionPremiumRate = conversionPremiumRate_;
+    $._priceSpread = priceSpread_;
     $._insuranceFund = insuranceFund_;
     $._interestRateOracle = interestRateOracle_;
     // Give Consol approval to spend the USDX from the GeneralManager
@@ -170,6 +176,7 @@ contract GeneralManager is
    * @param penaltyRate_ The penalty rate
    * @param refinanceRate_ The refinancing rate
    * @param conversionPremiumRate_ The conversion premium rate
+   * @param priceSpread_ The price spread
    * @param insuranceFund_ The address of the insurance fund
    * @param interestRateOracle_ The address of the interest rate oracle
    */
@@ -179,11 +186,12 @@ contract GeneralManager is
     uint16 penaltyRate_,
     uint16 refinanceRate_,
     uint16 conversionPremiumRate_,
+    uint16 priceSpread_,
     address insuranceFund_,
     address interestRateOracle_
   ) external initializer {
     __GeneralManager_init(
-      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, insuranceFund_, interestRateOracle_
+      usdx_, consol_, penaltyRate_, refinanceRate_, conversionPremiumRate_, priceSpread_, insuranceFund_, interestRateOracle_
     );
     _grantRole(Roles.DEFAULT_ADMIN_ROLE, _msgSender());
   }
@@ -673,6 +681,21 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
+  function setPriceSpread(uint16 priceSpread_) external onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
+    emit PriceSpreadSet(_getGeneralManagerStorage()._priceSpread, priceSpread_);
+    _getGeneralManagerStorage()._priceSpread = priceSpread_;
+  }
+
+  /**
+   * @inheritdoc IGeneralManager
+   */
+  function priceSpread() external view returns (uint16) {
+    return _getGeneralManagerStorage()._priceSpread;
+  }
+
+  /**
+   * @inheritdoc IGeneralManager
+   */
   function conversionQueues(uint256 tokenId) public view returns (address[] memory) {
     return _getGeneralManagerStorage()._conversionQueues[tokenId];
   }
@@ -689,9 +712,15 @@ contract GeneralManager is
     view
     returns (uint256 cost, uint8 collateralDecimals)
   {
+    // Fetch storage
+    GeneralManagerStorage storage $ = _getGeneralManagerStorage();
+
     // Calculate the cost of the collateral
     (cost, collateralDecimals) =
-      IPriceOracle(_getGeneralManagerStorage()._priceOracles[collateral]).cost(collateralAmount);
+      IPriceOracle($._priceOracles[collateral]).cost(collateralAmount);
+
+    // Add the price spread to the cost
+    cost = Math.mulDiv(cost, 1e4 + $._priceSpread, 1e4);
   }
 
   /**

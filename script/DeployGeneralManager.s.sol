@@ -29,6 +29,7 @@ contract DeployGeneralManager is DeployPriceOracles, DeployConsol {
     uint16 penaltyRate = uint16(vm.envUint("PENALTY_RATE"));
     uint16 refinanceRate = uint16(vm.envUint("REFINANCE_RATE"));
     uint16 conversionPremiumRate = uint16(vm.envUint("CONVERSION_PREMIUM_RATE"));
+    uint16 priceSpread = uint16(vm.envUint("PRICE_SPREAD"));
     address insuranceFund = vm.envAddress("INSURANCE_FUND");
 
     generalManagerImplementation = new GeneralManager();
@@ -41,6 +42,7 @@ contract DeployGeneralManager is DeployPriceOracles, DeployConsol {
         penaltyRate,
         refinanceRate,
         conversionPremiumRate,
+        priceSpread,
         insuranceFund,
         address(interestRateOracle)
       )

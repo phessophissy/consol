@@ -91,4 +91,11 @@ interface IGeneralManagerEvents {
    * @param maximumCap The maximum cap
    */
   event MaximumCapSet(address indexed collateral, uint256 maximumCap);
+
+  /**
+   * @notice Emitted when the price spread is set
+   * @param oldPriceSpread The old price spread
+   * @param newPriceSpread The new price spread
+   */
+  event PriceSpreadSet(uint16 oldPriceSpread, uint16 newPriceSpread);
 }

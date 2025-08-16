@@ -38,9 +38,6 @@ contract DeployPriceOracles is DeployInterestOracle, CollateralSetup {
   }
 
   function deployPriceOracles() public {
-    // Get the price spread
-    uint16 priceSpread = uint16(vm.envUint("PRICE_SPREAD"));
-
     // Get the Pyth contract
     pyth = getOrCreatePyth();
 
@@ -49,7 +46,7 @@ contract DeployPriceOracles is DeployInterestOracle, CollateralSetup {
       bytes32 priceId = vm.envBytes32(string.concat("PYTH_PRICE_ID_", vm.toString(i)));
       uint256 maxConfidence = vm.envUint(string.concat("PYTH_PRICE_MAX_CONFIDENCE_", vm.toString(i)));
       uint8 collateralDecimals = uint8(vm.envUint(string.concat("COLLATERAL_DECIMALS_", vm.toString(i))));
-      priceOracles.push(new PythPriceOracle(address(pyth), priceId, maxConfidence, collateralDecimals, priceSpread));
+      priceOracles.push(new PythPriceOracle(address(pyth), priceId, maxConfidence, collateralDecimals));
     }
   }
 

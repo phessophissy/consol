@@ -207,6 +207,18 @@ interface IGeneralManager is IOriginationPoolDeployCallback, IPausable, IGeneral
   function setMaximumCap(address collateral, uint256 maximumCap_) external;
 
   /**
+   * @notice The price spread to incentivize the fulfiller to fill orders
+   * @return priceSpread The price spread
+   */
+  function priceSpread() external view returns (uint16);
+
+  /**
+   * @notice Sets the price spread to incentivize the fulfiller to fill orders
+   * @param priceSpread_ The price spread
+   */
+  function setPriceSpread(uint16 priceSpread_) external;
+
+  /**
    * @notice Returns the conversion queues a given mortgage position is registered with
    * @param tokenId The tokenId of the mortgage position
    * @return The conversion queues

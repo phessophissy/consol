@@ -88,6 +88,7 @@ contract BaseTest is Test {
   uint16 public penaltyRate = 50; // 50 bps
   uint16 public refinanceRate = 50; // 50 bps
   uint16 public conversionPremiumRate = 5000; // 50%
+  uint16 public priceSpread = 100; // 1%
   uint8 public constant DEFAULT_MORTGAGE_PERIODS = 36; // 36 Month mortage
   OriginationPoolConfig public originationPoolConfig;
   uint256 public orderPoolMaximumOrderDuration = 5 minutes;
@@ -102,6 +103,7 @@ contract BaseTest is Test {
         penaltyRate,
         refinanceRate,
         conversionPremiumRate,
+        priceSpread,
         insuranceFund,
         address(interestRateOracle)
       )
@@ -301,7 +303,7 @@ contract BaseTest is Test {
 
     // Grant amountBorrowed (+ commission) usdx to the requester and grant the general manager permission to spend it
     uint256 depositAmount = Math.mulDiv(amountBorrowed, 1e4 + originationPool.poolMultiplierBps(), 1e4);
-    depositAmount = Math.mulDiv(depositAmount, 1e4 + priceOracle.spread(), 1e4);
+    depositAmount = Math.mulDiv(depositAmount, 1e4 + generalManager.priceSpread(), 1e4);
     _mintUsdx(requester, depositAmount);
     vm.startPrank(requester);
     usdx.approve(address(generalManager), depositAmount);
@@ -384,7 +386,7 @@ contract BaseTest is Test {
     // Create the oracles
     mockPyth = new MockPyth();
     interestRateOracle = new StaticInterestRateOracle(INTEREST_RATE_BASE);
-    priceOracle = new PythPriceOracle(address(mockPyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8, PRICE_SPREAD);
+    priceOracle = new PythPriceOracle(address(mockPyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8);
 
     // Create the general manager
     _createGeneralManager();
