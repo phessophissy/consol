@@ -30,13 +30,13 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -50,8 +50,8 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
@@ -61,26 +61,26 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 101k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 101_000e6);
+    // Mint 102_010 usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 102_010e6);
 
-    // Borrower deposits the 101k usdt into USDX
+    // Borrower deposits the 102_010 usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 101_000e6);
-    usdx.deposit(address(usdt), 101_000e6);
+    usdt.approve(address(usdx), 102_010e6);
+    usdx.deposit(address(usdt), 102_010e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k
+    // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 101k usdx
+    // Borrower approves the general manager to take the down payment of 102_010 usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 101_000e18);
+    usdx.approve(address(generalManager), 102_010e18);
     vm.stopPrank();
 
     // Deal 0.01 native tokens to the borrow to pay for the gas fee (not enqueuing into a conversion queue)
@@ -112,11 +112,11 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
       vm.stopPrank();
     }
 
-    // Validate that the borrower has spent 101k USDX
+    // Validate that the borrower has spent 102_010 USDX
     assertEq(usdx.balanceOf(address(borrower)), 0, "usdx.balanceOf(borrower)");
 
-    // Validate that the origination pool has 100k USDX
-    assertEq(usdx.balanceOf(address(originationPool)), 100_000e18, "usdx.balanceOf(originationPool)");
+    // Validate that the origination pool has 101k USDX
+    assertEq(usdx.balanceOf(address(originationPool)), 101_000e18, "usdx.balanceOf(originationPool)");
 
     // Fulfiller approves the order pool to take his 2 btc that he's selling
     vm.startPrank(fulfiller);
@@ -128,8 +128,8 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
     orderPool.processOrders(new uint256[](1), emptyHintPrevIdsList);
     vm.stopPrank();
 
-    // Validate that the origination pool has 101k Consol
-    assertEq(consol.balanceOf(address(originationPool)), 101_000e18, "consol.balanceOf(originationPool)");
+    // Validate that the origination pool has 102_010 Consol
+    assertEq(consol.balanceOf(address(originationPool)), 102_010e18, "consol.balanceOf(originationPool)");
 
     // Validate that the borrower has the mortgageNFT
     assertEq(mortgageNFT.ownerOf(1), address(borrower));
@@ -146,8 +146,8 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
-    assertEq(mortgagePosition.termBalance, 126070000000000000000020, "[1] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[1] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[1] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[1] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[1] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[1] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[1] termConverted");
@@ -178,7 +178,7 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
     mortgagePosition = loanManager.getMortgagePosition(1);
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.FORECLOSED), "status");
     assertEq(mortgagePosition.amountForfeited(), 0, "amountForfeited"); // Downpayment doesn't count as principal
-    assertEq(mortgagePosition.principalRemaining(), 100_000e18, "principalRemaining");
+    assertEq(mortgagePosition.principalRemaining(), 101_000e18, "principalRemaining");
 
     // Validate the mortgageNFT is burned
     vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721NonexistentToken.selector, 1));
@@ -190,28 +190,28 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
     // Validate that the forfeitedAssetsPool has the correct balance of btc
     assertEq(btc.balanceOf(address(forfeitedAssetsPool)), 2e8, "forfeitedAssetsPool.balanceOf(btc)");
 
-    // Mint 100k usdt to the arbitrager
-    MockERC20(address(usdt)).mint(address(arbitrager), 100_000e6);
+    // Mint 101k usdt to the arbitrager
+    MockERC20(address(usdt)).mint(address(arbitrager), 101_000e6);
 
-    // Arbitrager deposits the 100k usdt into USDX
+    // Arbitrager deposits the 101k usdt into USDX
     vm.startPrank(arbitrager);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
-    // Arbitrager deposits 100k usdx into consol (to mint 100k Consol)
+    // Arbitrager deposits 101k usdx into consol (to mint 101k Consol)
     vm.startPrank(arbitrager);
-    usdx.approve(address(consol), 100_000e18);
-    consol.deposit(address(usdx), 100_000e18);
+    usdx.approve(address(consol), 101_000e18);
+    consol.deposit(address(usdx), 101_000e18);
     vm.stopPrank();
 
     // Deal the gas fee to the arbitrager
     vm.deal(address(arbitrager), 0.01e18);
 
-    // Arbitrager approves the forfeitedAssetsQueue to spend the 100k Consol and requests a withdrawal of 100k from the forfeitedAssetsPool
+    // Arbitrager approves the forfeitedAssetsQueue to spend the 101k Consol and requests a withdrawal of 101k from the forfeitedAssetsPool
     vm.startPrank(arbitrager);
-    consol.approve(address(forfeitedAssetsQueue), 100_000e18);
-    forfeitedAssetsQueue.requestWithdrawal{value: 0.01e18}(100_000e18);
+    consol.approve(address(forfeitedAssetsQueue), 101_000e18);
+    forfeitedAssetsQueue.requestWithdrawal{value: 0.01e18}(101_000e18);
     vm.stopPrank();
 
     // Validate that the forfeitedAssetsQueue has one withdrawal request
@@ -229,18 +229,18 @@ contract Integration_1_ForeclosureTest is IntegrationBaseTest {
     assertEq(btc.balanceOf(address(arbitrager)), 2e8, "arbitrager.balanceOf(btc)");
     assertEq(btc.balanceOf(address(forfeitedAssetsPool)), 0, "forfeitedAssetsPool.balanceOf(btc)");
 
-    // Also that there is 101k Consol (still in the origination pool since the lender never took it out)
-    // This is composed of $100k USDX from the arbitrager and $1k USDX from the pool multiplier fees (paid by borrower)
-    assertEq(consol.totalSupply(), 101_000e18, "consol.totalSupply()");
-    assertEq(usdx.balanceOf(address(consol)), 101_000e18, "usdx.balanceOf(consol)");
-    assertEq(consol.balanceOf(address(originationPool)), 101_000e18, "consol.balanceOf(originationPool)");
+    // Also that there is 102_010 Consol (still in the origination pool since the lender never took it out)
+    // This is composed of $101k USDX from the arbitrager and $1k USDX from the pool multiplier fees (paid by borrower)
+    assertEq(consol.totalSupply(), 102_010e18, "consol.totalSupply()");
+    assertEq(usdx.balanceOf(address(consol)), 102_010e18, "usdx.balanceOf(consol)");
+    assertEq(consol.balanceOf(address(originationPool)), 102_010e18, "consol.balanceOf(originationPool)");
 
     // Have the lender withdraw the 101k consol from the origination pool (by burning 100k receipt tokens)
     vm.startPrank(lender);
-    originationPool.redeem(100_000e18);
+    originationPool.redeem(101_000e18);
     vm.stopPrank();
 
-    // Validate that the lender has the 101k consol
-    assertEq(consol.balanceOf(address(lender)), 101_000e18, "consol.balanceOf(lender)");
+    // Validate that the lender has the 102_010 consol
+    assertEq(consol.balanceOf(address(lender)), 102_010e18, "consol.balanceOf(lender)");
   }
 }

@@ -33,13 +33,13 @@ contract Integration_16_RedeemAndDequeueTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -50,37 +50,37 @@ contract Integration_16_RedeemAndDequeueTest is IntegrationBaseTest {
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 2 BTC that he is willing to sell for $200k
+    // Mint the fulfiller 2 BTC that he is willing to sell for $202k
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 101k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 101_000e6);
+    // Mint 102_010 usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 102_010e6);
 
-    // Borrower deposits the 101k usdt into USDX
+    // Borrower deposits the 102_010 usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 101_000e6);
-    usdx.deposit(address(usdt), 101_000e6);
+    usdt.approve(address(usdx), 102_010e6);
+    usdx.deposit(address(usdt), 102_010e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k
+    // Borrower sets the btc price to $100k (spread is 1% so cost will be $101_000 usdx)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 101k usdx
+    // Borrower approves the general manager to take the down payment of 102_010 usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 101_000e18);
+    usdx.approve(address(generalManager), 102_010e18);
     vm.stopPrank();
 
     // Deal 0.02 native tokens to the borrow to pay for the gas fees
@@ -135,8 +135,8 @@ contract Integration_16_RedeemAndDequeueTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
-    assertEq(mortgagePosition.termBalance, 126070000000000000000020, "[1] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[1] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[1] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[1] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[1] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[1] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[1] termConverted");
@@ -149,10 +149,10 @@ contract Integration_16_RedeemAndDequeueTest is IntegrationBaseTest {
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[1] status");
 
     // Validate the purchase price is $100k
-    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "[1] purchasePrice");
+    assertEq(mortgagePosition.purchasePrice(), 101_000e18, "[1] purchasePrice");
 
-    // Validate that the conversion trigger price is $150k
-    assertEq(mortgagePosition.conversionTriggerPrice(), 150_000e18, "[1] conversionTriggerPrice");
+    // Validate that the conversion trigger price is $151_500
+    assertEq(mortgagePosition.conversionTriggerPrice(), 151_500e18, "[1] conversionTriggerPrice");
 
     // Validate that the mortgage position is in the conversion queue
     assertEq(conversionQueue.mortgageHead(), mortgagePosition.tokenId, "mortgageHead");
@@ -163,7 +163,7 @@ contract Integration_16_RedeemAndDequeueTest is IntegrationBaseTest {
     MortgageNode memory mortgageNode = conversionQueue.mortgageNodes(mortgagePosition.tokenId);
     assertEq(mortgageNode.previous, 0, "mortgageNode.Previous");
     assertEq(mortgageNode.next, 0, "mortgageNode.Next");
-    assertEq(mortgageNode.triggerPrice, 150_000e18, "mortgageNode.TriggerPrice");
+    assertEq(mortgageNode.triggerPrice, 151_500e18, "mortgageNode.TriggerPrice");
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "mortgageNode.GasFee");
 

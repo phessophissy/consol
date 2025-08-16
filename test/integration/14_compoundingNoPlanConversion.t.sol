@@ -33,13 +33,13 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -50,14 +50,14 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 1 BTC that he is willing to sell for $100k
+    // Mint the fulfiller 1 BTC that he is willing to sell for $101k
     MockERC20(address(btc)).mint(address(fulfiller), 1e8);
     btc.approve(address(orderPool), 1e8);
 
@@ -67,7 +67,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k and the interest rate to 7.69%
+    // Borrower sets the btc price to $101k (spread is 1% so cost will be $102_010 usdx)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
@@ -129,8 +129,8 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
-    assertEq(mortgagePosition.termBalance, 129070000000000000000008, "[1] termBalance"); // Owe more money because there is no payment plan
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[1] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 130360700000000000000016, "[1] termBalance"); // Owe more money because there is no payment plan
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[1] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[1] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[1] termPaid");
     assertEq(mortgagePosition.amountConverted, 0, "[1] amountConverted");
@@ -141,9 +141,9 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.hasPaymentPlan, false, "[1] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[1] status");
 
-    // Validate the purchase price is $100k
-    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "[1] purchasePrice");
-    assertEq(mortgagePosition.conversionTriggerPrice(), 150_000e18, "[1] conversionTriggerPrice");
+    // Validate the purchase price is $101k and trigger price is $151_500
+    assertEq(mortgagePosition.purchasePrice(), 101_000e18, "[1] purchasePrice");
+    assertEq(mortgagePosition.conversionTriggerPrice(), 151_500e18, "[1] conversionTriggerPrice");
 
     // Validate that the mortgage position is in the conversion queue
     assertEq(conversionQueue.mortgageHead(), mortgagePosition.tokenId, "mortgageHead");
@@ -154,17 +154,17 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     MortgageNode memory mortgageNode = conversionQueue.mortgageNodes(mortgagePosition.tokenId);
     assertEq(mortgageNode.previous, 0, "mortgageNode.Previous");
     assertEq(mortgageNode.next, 0, "mortgageNode.Next");
-    assertEq(mortgageNode.triggerPrice, 150_000e18, "mortgageNode.TriggerPrice");
+    assertEq(mortgageNode.triggerPrice, 151_500e18, "mortgageNode.TriggerPrice");
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "mortgageNode.GasFee");
 
-    // Lender updates the price of BTC up to $150k
+    // Lender updates the price of BTC up to $151.5k
     vm.startPrank(lender);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 150_000e8, 4349253107, -8, block.timestamp);
+    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 151_500e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Lender mints $100k worth of Consol via USDT
-    uint256 usdxAmount = consol.convertUnderlying(address(usdx), 100_000e18);
+    // Lender mints $101k worth of Consol via USDT
+    uint256 usdxAmount = consol.convertUnderlying(address(usdx), 101_000e18);
     uint256 usdtAmount = usdx.convertUnderlying(address(usdt), usdxAmount);
     MockERC20(address(usdt)).mint(address(lender), usdtAmount);
     vm.startPrank(lender);
@@ -177,10 +177,10 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     // Deal the conversion-queue withdrawaal-request gas fee to the lender
     vm.deal(address(lender), 0.01e18);
 
-    // Lender submits a withdrawal request to the conversion queue with 100k consol
+    // Lender submits a withdrawal request to the conversion queue with 101k consol
     vm.startPrank(lender);
-    consol.approve(address(conversionQueue), 100_000e18);
-    conversionQueue.requestWithdrawal{value: 0.01e18}(100_000e18);
+    consol.approve(address(conversionQueue), 101_000e18);
+    conversionQueue.requestWithdrawal{value: 0.01e18}(101_000e18);
     vm.stopPrank();
 
     // Rando processes the withdrawal request
@@ -189,7 +189,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     vm.stopPrank();
 
     // Estimate how much of the BTC should have been converted (termConverted / triggerPrice)
-    uint256 convertedBTC = Math.mulDiv(129070000000000000000008, 1e8, 150_000e18);
+    uint256 convertedBTC = Math.mulDiv(130360700000000000000016, 1e8, 151_500e18);
 
     // Validate the the lender received convertedBTC amount of BTC
     assertEq(btc.balanceOf(address(lender)), convertedBTC, "btc.Balance");
@@ -206,11 +206,11 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[2] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[2] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[2] termOriginated");
-    assertEq(mortgagePosition.termBalance, 129070000000000000000008, "[2] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[2] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 130360700000000000000016, "[2] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[2] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[2] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[2] termPaid");
-    assertEq(mortgagePosition.termConverted, 129070000000000000000008, "[2] termConverted");
+    assertEq(mortgagePosition.termConverted, 130360700000000000000016, "[2] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[2] amountConverted");
     assertEq(mortgagePosition.penaltyAccrued, 0, "[2] penaltyAccrued");
     assertEq(mortgagePosition.penaltyPaid, 0, "[2] penaltyPaid");
@@ -220,7 +220,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[2] status");
     assertEq(
       mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termConverted),
-      100_000e18,
+      101_000e18,
       "[2] convertPaymentToPrincipal(termConverted)"
     );
 
@@ -246,11 +246,11 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[3] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[3] termOriginated");
-    assertEq(mortgagePosition.termBalance, 129070000000000000000008, "[3] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[3] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 130360700000000000000016, "[3] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[3] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[3] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[3] termPaid");
-    assertEq(mortgagePosition.termConverted, 129070000000000000000008, "[3] termConverted");
+    assertEq(mortgagePosition.termConverted, 130360700000000000000016, "[3] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[3] amountConverted");
     assertEq(mortgagePosition.penaltyAccrued, 0, "[3] penaltyAccrued");
     assertEq(mortgagePosition.penaltyPaid, 0, "[3] penaltyPaid");
@@ -260,7 +260,7 @@ contract Integration_14_CompoundingNoPlanConversionTest is IntegrationBaseTest {
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.REDEEMED), "[3] status");
     assertEq(
       mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termConverted),
-      100_000e18,
+      101_000e18,
       "[3] convertPaymentToPrincipal(termConverted)"
     );
 

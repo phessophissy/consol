@@ -30,13 +30,13 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -47,37 +47,37 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 2 BTC that he is willing to sell for $200k
+    // Mint the fulfiller 2 BTC that he is willing to sell for $202k
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 101k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 101_000e6);
+    // Mint 102_010 usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 102_010e6);
 
-    // Borrower deposits the 101k usdt into USDX
+    // Borrower deposits the 102_010 usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 101_000e6);
-    usdx.deposit(address(usdt), 101_000e6);
+    usdt.approve(address(usdx), 102_010e6);
+    usdx.deposit(address(usdt), 102_010e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k
+    // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 101k usdx
+    // Borrower approves the general manager to take the down payment of 102_010 usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 101_000e18);
+    usdx.approve(address(generalManager), 102_010e18);
     vm.stopPrank();
 
     // Deal 0.02 native tokens to the borrow to pay for the gas fee (enqueuing into a conversion queue)
@@ -119,13 +119,13 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
       orderPool.orders(0).conversionQueues[0], address(conversionQueue), "orderPool.orders(0).conversionQueues[0]"
     );
     assertEq(
-      orderPool.orders(0).orderAmounts.purchaseAmount, 200_000e18, "orderPool.orders(0).orderAmounts.purchaseAmount"
+      orderPool.orders(0).orderAmounts.purchaseAmount, 202_000e18, "orderPool.orders(0).orderAmounts.purchaseAmount"
     );
     assertEq(
       orderPool.orders(0).orderAmounts.collateralCollected, 0, "orderPool.orders(0).orderAmounts.collateralCollected"
     );
     assertEq(
-      orderPool.orders(0).orderAmounts.usdxCollected, 101_000e18, "orderPool.orders(0).orderAmounts.usdxCollected"
+      orderPool.orders(0).orderAmounts.usdxCollected, 102_010e18, "orderPool.orders(0).orderAmounts.usdxCollected"
     );
     assertEq(orderPool.orders(0).mortgageParams.owner, address(borrower), "orderPool.orders(0).mortgageParams.owner");
     assertEq(orderPool.orders(0).mortgageParams.tokenId, 1, "orderPool.orders(0).mortgageParams.tokenId");
@@ -145,7 +145,7 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
     );
     assertEq(orderPool.orders(0).mortgageParams.interestRate, 869, "orderPool.orders(0).mortgageParams.interestRate");
     assertEq(
-      orderPool.orders(0).mortgageParams.amountBorrowed, 100_000e18, "orderPool.orders(0).mortgageParams.amountBorrowed"
+      orderPool.orders(0).mortgageParams.amountBorrowed, 101_000e18, "orderPool.orders(0).mortgageParams.amountBorrowed"
     );
     assertEq(orderPool.orders(0).mortgageParams.totalPeriods, 36, "orderPool.orders(0).mortgageParams.totalPeriods");
     assertEq(
@@ -184,6 +184,6 @@ contract Integration_4_OrderExpiresTest is IntegrationBaseTest {
     assertEq(address(fulfiller).balance, 0.02e18, "Fulfiller should have 0.02 native tokens");
 
     // Check that assets have been returned to the borrower
-    assertEq(usdx.balanceOf(address(borrower)), 101_000e18, "Borrower should have 101k usdx");
+    assertEq(usdx.balanceOf(address(borrower)), 102_010e18, "Borrower should have 102_010 usdx");
   }
 }

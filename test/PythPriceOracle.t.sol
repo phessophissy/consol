@@ -31,7 +31,7 @@ contract PythPriceOracleTest is BaseTest {
 
   function test_price_sampleValues8Dec8Expo(bytes32 priceId) public {
     mockPyth.setPrice(priceId, 107537_17500000, 1_00000000, -8, block.timestamp);
-    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 8);
+    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 8, PRICE_SPREAD);
     uint256 price = samplePriceOracle.price();
 
     // Calculate the cost of 3.47 unit of the collateral
@@ -43,7 +43,7 @@ contract PythPriceOracleTest is BaseTest {
 
   function test_price_sampleValues18Dec8Expo(bytes32 priceId) public {
     mockPyth.setPrice(priceId, 42_58000000, 1_00000000, -8, block.timestamp);
-    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 18);
+    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 18, PRICE_SPREAD);
     uint256 price = samplePriceOracle.price();
 
     // Calculate the cost of 15.4567 unit of the collateral
@@ -55,7 +55,7 @@ contract PythPriceOracleTest is BaseTest {
 
   function test_price_sampleValues8Dec6Expo(bytes32 priceId) public {
     mockPyth.setPrice(priceId, 109647_000000, 1_000000, -6, block.timestamp);
-    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 8);
+    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 8, PRICE_SPREAD);
     uint256 price = samplePriceOracle.price();
 
     // Calculate the cost of 3.89 units of the collateral
@@ -67,7 +67,7 @@ contract PythPriceOracleTest is BaseTest {
 
   function test_price_sampleValues18Dec4Expo(bytes32 priceId) public {
     mockPyth.setPrice(priceId, 42_5800, 1_0000, -4, block.timestamp);
-    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 18);
+    PythPriceOracle samplePriceOracle = new PythPriceOracle(address(mockPyth), priceId, 1e18, 18, PRICE_SPREAD);
     uint256 price = samplePriceOracle.price();
 
     // Calculate the cost of 2.5 units of the collateral

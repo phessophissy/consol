@@ -35,13 +35,13 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -52,43 +52,43 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 2 BTC that he is willing to sell for $100k each
+    // Mint the fulfiller 2 BTC that he is willing to sell for $101k each
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 50.5k USDX to both borrowers via USDT
-    MockERC20(address(usdt)).mint(address(borrower), 50_500e6);
+    // Mint 51.055k USDX to both borrowers via USDT
+    MockERC20(address(usdt)).mint(address(borrower), 51_055e6);
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 50_500e6);
-    usdx.deposit(address(usdt), 50_500e6);
+    usdt.approve(address(usdx), 51_055e6);
+    usdx.deposit(address(usdt), 51_055e6);
     vm.stopPrank();
-    MockERC20(address(usdt)).mint(address(secondBorrower), 50_500e6);
+    MockERC20(address(usdt)).mint(address(secondBorrower), 51_055e6);
     vm.startPrank(secondBorrower);
-    usdt.approve(address(usdx), 50_500e6);
-    usdx.deposit(address(usdt), 50_500e6);
+    usdt.approve(address(usdx), 51_055e6);
+    usdx.deposit(address(usdt), 51_055e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k
+    // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Both borrowers approve the general manager to take the down payment of 50.5k usdx
+    // Both borrowers approve the general manager to take the down payment of 51.055k usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 50_500e18);
+    usdx.approve(address(generalManager), 51_055e18);
     vm.stopPrank();
     vm.startPrank(secondBorrower);
-    usdx.approve(address(generalManager), 50_500e18);
+    usdx.approve(address(generalManager), 51_055e18);
     vm.stopPrank();
 
     // Deal 0.02 native tokens to the both of the borrowers to pay for the gas fees
@@ -173,7 +173,7 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
       MortgageNode memory mortgageNode = conversionQueue.mortgageNodes(2);
       assertEq(mortgageNode.previous, 1, "previous");
       assertEq(mortgageNode.next, 0, "next");
-      assertEq(mortgageNode.triggerPrice, 150_000e18, "triggerPrice");
+      assertEq(mortgageNode.triggerPrice, 151_500e18, "triggerPrice");
       assertEq(mortgageNode.tokenId, 2, "tokenId");
       assertEq(mortgageNode.gasFee, 0.01e18, "gasFee");
     }
@@ -226,10 +226,10 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
       vm.stopPrank();
     }
 
-    // Have holder update the price of btc to $150k to hit the trigger price of both mortgages
+    // Have holder update the price of btc to $151_500k to hit the trigger price of both mortgages
     {
       vm.startPrank(rando);
-      MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 150_000e8, 4349253107, -8, block.timestamp);
+      MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 151_500e8, 4349253107, -8, block.timestamp);
       vm.stopPrank();
     }
 

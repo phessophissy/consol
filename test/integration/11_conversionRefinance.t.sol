@@ -33,13 +33,13 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -50,37 +50,37 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 2 BTC that he is willing to sell for $200k
+    // Mint the fulfiller 2 BTC that he is willing to sell for $202k
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 101k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 101_000e6);
+    // Mint 102_010k usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 102_010e6);
 
-    // Borrower deposits the 101k usdt into USDX
+    // Borrower deposits the 102_010k usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 101_000e6);
-    usdx.deposit(address(usdt), 101_000e6);
+    usdt.approve(address(usdx), 102_010e6);
+    usdx.deposit(address(usdt), 102_010e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k and the interest rate to 7.69%
+    // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 101k usdx
+    // Borrower approves the general manager to take the down payment of 102_010 usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 101_000e18);
+    usdx.approve(address(generalManager), 102_010e18);
     vm.stopPrank();
 
     // Deal 0.02 native tokens to the borrow to pay for the gas fees
@@ -136,8 +136,8 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
-    assertEq(mortgagePosition.termBalance, 126070000000000000000020, "[1] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[1] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[1] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[1] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[1] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[1] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[1] termConverted");
@@ -149,9 +149,9 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.hasPaymentPlan, true, "[1] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[1] status");
 
-    // Validate the purchase price is $100k
-    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "[1] purchasePrice");
-    assertEq(mortgagePosition.conversionTriggerPrice(), 150_000e18, "[1] conversionTriggerPrice");
+    // Validate the purchase price is $101k and the conversion trigger price is $151_500
+    assertEq(mortgagePosition.purchasePrice(), 101_000e18, "[1] purchasePrice");
+    assertEq(mortgagePosition.conversionTriggerPrice(), 151_500e18, "[1] conversionTriggerPrice");
 
     // Validate that the mortgage position is in the conversion queue
     assertEq(conversionQueue.mortgageHead(), mortgagePosition.tokenId, "mortgageHead");
@@ -162,33 +162,33 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     MortgageNode memory mortgageNode = conversionQueue.mortgageNodes(mortgagePosition.tokenId);
     assertEq(mortgageNode.previous, 0, "mortgageNode.Previous");
     assertEq(mortgageNode.next, 0, "mortgageNode.Next");
-    assertEq(mortgageNode.triggerPrice, 150_000e18, "mortgageNode.TriggerPrice");
+    assertEq(mortgageNode.triggerPrice, 151_500e18, "mortgageNode.triggerPrice");
     assertEq(
       mortgageNode.triggerPrice,
       mortgagePosition.conversionTriggerPrice(),
-      "mortgageNode.TriggerPrice == mortgagePosition.conversionTriggerPrice()"
+      "mortgageNode.triggerPrice == mortgagePosition.conversionTriggerPrice()"
     );
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "mortgageNode.GasFee");
 
-    // Have the lender enter the conversion queue with 50k Consol (via USDX)
+    // Have the lender enter the conversion queue with 50.5k Consol (via USDX)
     vm.deal(address(lender), 0.01e18);
-    MockERC20(address(usdt)).mint(address(lender), 50_000e6);
+    MockERC20(address(usdt)).mint(address(lender), 50_500e6);
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 50_000e6);
-    usdx.deposit(address(usdt), 50_000e6);
-    usdx.approve(address(consol), 50_000e18);
-    consol.deposit(address(usdx), 50_000e18);
-    consol.approve(address(conversionQueue), 50_000e18);
-    conversionQueue.requestWithdrawal{value: 0.01e18}(50_000e18);
+    usdt.approve(address(usdx), 50_500e6);
+    usdx.deposit(address(usdt), 50_500e6);
+    usdx.approve(address(consol), 50_500e18);
+    consol.deposit(address(usdx), 50_500e18);
+    consol.approve(address(conversionQueue), 50_500e18);
+    conversionQueue.requestWithdrawal{value: 0.01e18}(50_500e18);
     vm.stopPrank();
 
     // Validate that lender's withdrawal request is in the conversion queue
     assertEq(conversionQueue.withdrawalQueueLength(), 1, "withdrawalQueueLength");
     WithdrawalRequest memory withdrawalRequest = conversionQueue.withdrawalQueue(0);
     assertEq(withdrawalRequest.account, address(lender), "withdrawalRequest.Account");
-    assertEq(withdrawalRequest.shares, 50_000e26, "withdrawalRequest.Shares");
-    assertEq(withdrawalRequest.amount, 50_000e18, "withdrawalRequest.Amount");
+    assertEq(withdrawalRequest.shares, 50_500e26, "withdrawalRequest.Shares");
+    assertEq(withdrawalRequest.amount, 50_500e18, "withdrawalRequest.Amount");
     assertEq(withdrawalRequest.timestamp, block.timestamp, "withdrawalRequest.Timestamp");
 
     // Validate that it's not possible to process the withdrawal request yet
@@ -245,11 +245,11 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[2] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[2] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[2] termOriginated");
-    assertEq(mortgagePosition.termBalance, 126070000000000000000020, "[2] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[2] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[2] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[2] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[2] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[2] termPaid");
-    assertEq(mortgagePosition.termConverted, 63035000000000000000010, "[2] termConverted");
+    assertEq(mortgagePosition.termConverted, 63665350000000000000002, "[2] termConverted");
     assertEq(mortgagePosition.amountConverted, 0, "[2] amountConverted");
     assertEq(mortgagePosition.penaltyAccrued, 0, "[2] penaltyAccrued");
     assertEq(mortgagePosition.penaltyPaid, 0, "[2] penaltyPaid");
@@ -259,11 +259,11 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[2] status");
     assertEq(
       mortgagePosition.convertPaymentToPrincipal(mortgagePosition.termConverted),
-      50_000e18,
+      50_500e18,
       "convertPaymentToPrincipal(termConverted)"
     );
 
-    // Set the refinance rate to 10% ($5k fee)
+    // Set the refinance rate to 10% ($5.5k fee)
     vm.startPrank(admin1);
     generalManager.setRefinanceRate(1000);
     vm.stopPrank();
@@ -271,14 +271,14 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     // Update the interest rate oracle to 4%
     _updateInterestRateOracle(400);
 
-    // Mint 5k Consol to the borrower to pay for the refinance fee
-    MockERC20(address(usdt)).mint(address(borrower), 5_000e6);
+    // Mint 5.5k Consol to the borrower to pay for the refinance fee
+    MockERC20(address(usdt)).mint(address(borrower), 5_500e6);
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 5_000e6);
-    usdx.deposit(address(usdt), 5_000e6);
-    usdx.approve(address(consol), 5_000e18);
-    consol.deposit(address(usdx), 5_000e18);
-    consol.approve(address(loanManager), 5_000e18);
+    usdt.approve(address(usdx), 5_500e6);
+    usdx.deposit(address(usdt), 5_500e6);
+    usdx.approve(address(consol), 5_500e18);
+    consol.deposit(address(usdx), 5_500e18);
+    consol.approve(address(loanManager), 5_500e18);
     vm.stopPrank();
 
     // Have the borrower refinance the mortgage
@@ -298,25 +298,25 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[3] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[3] termOriginated");
-    assertEq(mortgagePosition.termBalance, 57500000000000000000028, "[3] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[3] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 58075000000000000000020, "[3] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[3] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[3] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[3] termPaid");
-    assertEq(mortgagePosition.amountConverted, 50_000e18, "[3] amountConverted");
-    assertEq(mortgagePosition.penaltyAccrued, 5_000e18, "[3] penaltyAccrued");
-    assertEq(mortgagePosition.penaltyPaid, 5_000e18, "[3] penaltyPaid");
+    assertEq(mortgagePosition.amountConverted, 50_500e18, "[3] amountConverted");
+    assertEq(mortgagePosition.penaltyAccrued, 5_050e18, "[3] penaltyAccrued");
+    assertEq(mortgagePosition.penaltyPaid, 5_050e18, "[3] penaltyPaid");
     assertEq(mortgagePosition.paymentsMissed, 0, "[3] paymentsMissed");
     assertEq(mortgagePosition.totalPeriods, 36, "[3] totalPeriods");
     assertEq(mortgagePosition.hasPaymentPlan, true, "[3] hasPaymentPlan");
     assertEq(uint8(mortgagePosition.status), uint8(MortgageStatus.ACTIVE), "[3] status");
 
     // Validate that the purchase price is still the same
-    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "[3] purchasePrice");
-    assertEq(mortgagePosition.conversionTriggerPrice(), 150_000e18, "[3] conversionTriggerPrice");
+    assertEq(mortgagePosition.purchasePrice(), 101_000e18, "[3] purchasePrice");
+    assertEq(mortgagePosition.conversionTriggerPrice(), 151_500e18, "[3] conversionTriggerPrice");
 
     // Validate that the trigger price in the conversion queue has not been changed (and other fields)
     mortgageNode = conversionQueue.mortgageNodes(mortgagePosition.tokenId);
-    assertEq(mortgageNode.triggerPrice, 150_000e18, "[3] mortgageNode.TriggerPrice");
+    assertEq(mortgageNode.triggerPrice, 151_500e18, "[3] mortgageNode.triggerPrice");
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "[3] mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "[3] mortgageNode.GasFee");
   }

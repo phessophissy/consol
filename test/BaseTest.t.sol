@@ -82,6 +82,7 @@ contract BaseTest is Test {
   string public constant MORTGAGE_NFT_NAME = "Mortgage NFT";
   string public constant MORTGAGE_NFT_SYMBOL = "MNFT";
   uint16 public constant INTEREST_RATE_BASE = 400; // 4%
+  uint16 public constant PRICE_SPREAD = 100; // 1%
 
   // Parameters
   uint16 public penaltyRate = 50; // 50 bps
@@ -130,7 +131,7 @@ contract BaseTest is Test {
       usdx: address(usdx),
       depositPhaseDuration: 1 weeks,
       deployPhaseDuration: 1 weeks,
-      defaultPoolLimit: 600_000e18, //$600k
+      defaultPoolLimit: 606_000e18, //$606k
       poolLimitGrowthRateBps: 100, // 1%
       poolMultiplierBps: 200 // 2%
     });
@@ -300,6 +301,7 @@ contract BaseTest is Test {
 
     // Grant amountBorrowed (+ commission) usdx to the requester and grant the general manager permission to spend it
     uint256 depositAmount = Math.mulDiv(amountBorrowed, 1e4 + originationPool.poolMultiplierBps(), 1e4);
+    depositAmount = Math.mulDiv(depositAmount, 1e4 + priceOracle.spread(), 1e4);
     _mintUsdx(requester, depositAmount);
     vm.startPrank(requester);
     usdx.approve(address(generalManager), depositAmount);
@@ -382,7 +384,7 @@ contract BaseTest is Test {
     // Create the oracles
     mockPyth = new MockPyth();
     interestRateOracle = new StaticInterestRateOracle(INTEREST_RATE_BASE);
-    priceOracle = new PythPriceOracle(address(mockPyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8);
+    priceOracle = new PythPriceOracle(address(mockPyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8, PRICE_SPREAD);
 
     // Create the general manager
     _createGeneralManager();

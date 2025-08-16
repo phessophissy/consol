@@ -183,7 +183,7 @@ library MortgageMath {
       amount,
       mortgagePosition.termBalance,
       mortgagePosition.amountBorrowed - mortgagePosition.amountConverted - mortgagePosition.amountPrior,
-      Math.Rounding.Floor
+      Math.Rounding.Ceil
     );
   }
 

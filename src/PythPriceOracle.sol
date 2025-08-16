@@ -6,12 +6,13 @@ import {IPyth} from "@pythnetwork/IPyth.sol";
 import {PythStructs} from "@pythnetwork/PythStructs.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Constants} from "./libraries/Constants.sol";
+
 /**
  * @title PythPriceOracle
  * @author SocksNFlops
  * @notice The PythPriceOracle contract is a contract that tracks the price of a given asset to determine the trigger price for conversions.
  */
-
 contract PythPriceOracle is IPriceOracle {
   using SafeCast for int64;
 
@@ -42,10 +43,13 @@ contract PythPriceOracle is IPriceOracle {
    */
   uint256 public immutable maxConfidence;
   /**
-   * @notice The number of decimals for the collateral
-   * @return collateralDecimals The number of decimals for the collateral
+   * @inheritdoc IPriceOracle
    */
   uint8 public immutable collateralDecimals;
+  /**
+   * @inheritdoc IPriceOracle
+   */
+  uint16 public immutable spread;
 
   /**
    * @notice The error thrown when the age of a price is greater than the maximum age
@@ -66,12 +70,14 @@ contract PythPriceOracle is IPriceOracle {
    * @param priceId_ The Pyth price ID
    * @param maxConfidence_ The maximum confidence
    * @param collateralDecimals_ The number of decimals for the collateral
+   * @param spread_ The spread for the oracle-price to incentivize the fulfiller to fill orders
    */
-  constructor(address pyth_, bytes32 priceId_, uint256 maxConfidence_, uint8 collateralDecimals_) {
+  constructor(address pyth_, bytes32 priceId_, uint256 maxConfidence_, uint8 collateralDecimals_, uint16 spread_) {
     pyth = IPyth(pyth_);
     pythPriceId = priceId_;
     maxConfidence = maxConfidence_;
     collateralDecimals = collateralDecimals_;
+    spread = spread_;
   }
 
   /**
@@ -105,7 +111,10 @@ contract PythPriceOracle is IPriceOracle {
    * @inheritdoc IPriceOracle
    */
   function cost(uint256 collateralAmount) public view override returns (uint256 totalCost, uint8 _collateralDecimals) {
-    totalCost = Math.mulDiv(collateralAmount, price(), (10 ** collateralDecimals));
+    // Add the price spread
+    uint256 purchasePrice = Math.mulDiv(price(), Constants.BPS + spread, Constants.BPS);
+    
+    totalCost = Math.mulDiv(collateralAmount, purchasePrice, (10 ** collateralDecimals));
     _collateralDecimals = collateralDecimals;
   }
 }

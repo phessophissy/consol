@@ -30,13 +30,13 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
@@ -45,42 +45,42 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
       IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(1)));
     vm.stopPrank();
 
-    // Confirm the originationPooll has a poolMultiplierBps of 100
+    // Confirm the originationPool has a poolMultiplierBps of 100
     assertEq(originationPool.poolMultiplierBps(), 100, "originationPool.poolMultiplierBps()");
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 2 BTC that he is willing to sell for $200k
+    // Mint the fulfiller 2 BTC that he is willing to sell for $202k
     MockERC20(address(btc)).mint(address(fulfiller), 2e8);
     btc.approve(address(orderPool), 2e8);
 
-    // Mint 101k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 101_000e6);
+    // Mint 102_010k usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 102_010e6);
 
-    // Borrower deposits the 101k usdt into USDX
+    // Borrower deposits the 102_010 usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 101_000e6);
-    usdx.deposit(address(usdt), 101_000e6);
+    usdt.approve(address(usdx), 102_010e6);
+    usdx.deposit(address(usdt), 102_010e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
     _updateInterestRateOracle(769);
 
-    // Borrower sets the btc price to $100k
+    // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 101k usdx
+    // Borrower approves the general manager to take the down payment of 102_010 usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 101_000e18);
+    usdx.approve(address(generalManager), 102_010e18);
     vm.stopPrank();
 
     // Deal 0.01 native tokens to the borrow to pay for the gas fee (not enqueuing into a conversion queue)
@@ -115,8 +115,8 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
     // Validate that the borrower has spent 101k USDX
     assertEq(usdx.balanceOf(address(borrower)), 0, "usdx.balanceOf(borrower)");
 
-    // Validate that the origination pool has 100k USDX
-    assertEq(usdx.balanceOf(address(originationPool)), 100_000e18, "usdx.balanceOf(originationPool)");
+    // Validate that the origination pool has 101k USDX
+    assertEq(usdx.balanceOf(address(originationPool)), 101_000e18, "usdx.balanceOf(originationPool)");
 
     // Fulfiller approves the order pool to take his 2 btc that he's selling
     vm.startPrank(fulfiller);
@@ -128,8 +128,8 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
     orderPool.processOrders(new uint256[](1), emptyHintPrevIdsList);
     vm.stopPrank();
 
-    // Validate that the origination pool has 101k Consol
-    assertEq(consol.balanceOf(address(originationPool)), 101_000e18, "consol.balanceOf(originationPool)");
+    // Validate that the origination pool has 102_010 Consol
+    assertEq(consol.balanceOf(address(originationPool)), 102_010e18, "consol.balanceOf(originationPool)");
 
     // Validate that the borrower has the mortgageNFT
     assertEq(mortgageNFT.ownerOf(1), address(borrower));
@@ -137,13 +137,13 @@ contract Integration_9_UsdxWithdrawTest is IntegrationBaseTest {
     // Time skips ahead to the redemption phase of the origination pool
     vm.warp(originationPool.redemptionPhaseTimestamp());
 
-    // Lender withdraws 100k of their receipt tokens from the origination pool
+    // Lender withdraws 101k of their receipt tokens from the origination pool
     vm.startPrank(lender);
-    originationPool.redeem(100_000e18);
+    originationPool.redeem(101_000e18);
     vm.stopPrank();
 
     // Validate the Consol balances
-    assertEq(consol.balanceOf(address(lender)), 101_000e18, "consol.balanceOf(lender)");
+    assertEq(consol.balanceOf(address(lender)), 102_010e18, "consol.balanceOf(lender)");
     assertEq(consol.balanceOf(address(originationPool)), 0, "consol.balanceOf(originationPool)");
 
     // Deal the gas fee to the lender

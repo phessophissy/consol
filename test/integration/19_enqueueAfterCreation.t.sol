@@ -35,41 +35,41 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
   }
 
   function run() public virtual override {
-    // Mint 100k usdt to the lender
-    MockERC20(address(usdt)).mint(address(lender), 100_000e6);
+    // Mint 101k usdt to the lender
+    MockERC20(address(usdt)).mint(address(lender), 101_000e6);
 
-    // Lender deposits the 100k usdt into USDX
+    // Lender deposits the 101k usdt into USDX
     vm.startPrank(lender);
-    usdt.approve(address(usdx), 100_000e6);
-    usdx.deposit(address(usdt), 100_000e6);
+    usdt.approve(address(usdx), 101_000e6);
+    usdx.deposit(address(usdt), 101_000e6);
     vm.stopPrank();
 
     // Lender deploys the origination pool
     vm.startPrank(lender);
     originationPool =
-      IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(2)));
+      IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(2))); // 2% commission, not 1%
     vm.stopPrank();
 
     // Lender deposits USDX into the origination pool
     vm.startPrank(lender);
-    usdx.approve(address(originationPool), 100_000e18);
-    originationPool.deposit(100_000e18);
+    usdx.approve(address(originationPool), 101_000e18);
+    originationPool.deposit(101_000e18);
     vm.stopPrank();
 
     // Skip time ahead to the deployPhase of the origination pool
     vm.warp(originationPool.deployPhaseTimestamp());
 
-    // Mint the fulfiller 2 BTC that he is willing to sell for $200k
-    MockERC20(address(btc)).mint(address(fulfiller), 2e8);
-    btc.approve(address(orderPool), 2e8);
+    // Mint the fulfiller 2 BTC that he is willing to sell for $202k
+    MockERC20(address(btc)).mint(address(fulfiller), 2.02e8);
+    btc.approve(address(orderPool), 2.02e8);
 
-    // Mint 102k usdt to the borrower
-    MockERC20(address(usdt)).mint(address(borrower), 102_000e6);
+    // Mint 103_020 usdt to the borrower
+    MockERC20(address(usdt)).mint(address(borrower), 103_020e6);
 
-    // Borrower deposits the 102k usdt into USDX
+    // Borrower deposits the 103_020 usdt into USDX
     vm.startPrank(borrower);
-    usdt.approve(address(usdx), 102_000e6);
-    usdx.deposit(address(usdt), 102_000e6);
+    usdt.approve(address(usdx), 103_020e6);
+    usdx.deposit(address(usdt), 103_020e6);
     vm.stopPrank();
 
     // Update the interest rate oracle to 7.69%
@@ -80,9 +80,9 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
     MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
-    // Borrower approves the general manager to take the down payment of 102k usdx
+    // Borrower approves the general manager to take the down payment of 103_020 usdx
     vm.startPrank(borrower);
-    usdx.approve(address(generalManager), 102_000e18);
+    usdx.approve(address(generalManager), 103_020e18);
     vm.stopPrank();
 
     // Deal 0.02 native tokens to the borrow to pay for the gas fees (not enqueuing into a conversion queue)
@@ -139,8 +139,8 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[1] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, block.timestamp, "[1] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[1] termOriginated");
-    assertEq(mortgagePosition.termBalance, 126070000000000000000020, "[1] termBalance");
-    assertEq(mortgagePosition.amountBorrowed, 100_000e18, "[1] amountBorrowed");
+    assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[1] termBalance");
+    assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[1] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[1] amountPrior");
     assertEq(mortgagePosition.termPaid, 0, "[1] termPaid");
     assertEq(mortgagePosition.termConverted, 0, "[1] termConverted");
@@ -156,6 +156,9 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
     assertEq(conversionQueue.mortgageHead(), 0, "[1] mortgageHead");
     assertEq(conversionQueue.mortgageTail(), 0, "[1] mortgageTail");
     assertEq(conversionQueue.mortgageSize(), 0, "[1] mortgageSize");
+
+    // Validate that the general manager has no conversion queue for the tokenId
+    assertEq(generalManager.conversionQueues(1).length, 0, "generalManager.conversionQueues(1)");
 
     // Borrower transfers the mortgageNFT to friend
     vm.startPrank(borrower);
@@ -178,18 +181,22 @@ contract Integration_19_EnqueueAfterCreationTest is IntegrationBaseTest {
     assertEq(conversionQueue.mortgageTail(), mortgagePosition.tokenId, "[2] mortgageTail");
     assertEq(conversionQueue.mortgageSize(), 1, "[2] mortgageSize");
 
-    // Validate purchase price is still $100k
-    assertEq(mortgagePosition.purchasePrice(), 100_000e18, "[2] purchasePrice");
+    // Validate purchase price is still $101k
+    assertEq(mortgagePosition.purchasePrice(), 101_000e18, "[2] purchasePrice");
 
-    // Validate that the conversion trigger price is $150k
-    assertEq(mortgagePosition.conversionTriggerPrice(), 150_000e18, "[2] conversionTriggerPrice");
+    // Validate that the conversion trigger price is $151_500
+    assertEq(mortgagePosition.conversionTriggerPrice(), 151_500e18, "[2] conversionTriggerPrice");
 
     // Validate the mortgageNode fields are correct
     MortgageNode memory mortgageNode = conversionQueue.mortgageNodes(mortgagePosition.tokenId);
     assertEq(mortgageNode.previous, 0, "mortgageNode.Previous");
     assertEq(mortgageNode.next, 0, "mortgageNode.Next");
-    assertEq(mortgageNode.triggerPrice, 150_000e18, "mortgageNode.TriggerPrice");
+    assertEq(mortgageNode.triggerPrice, 151_500e18, "mortgageNode.TriggerPrice");
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "mortgageNode.GasFee");
+
+    // Validate that the general manager has the conversion queue for the tokenId
+    assertEq(generalManager.conversionQueues(1).length, 1, "generalManager.conversionQueues(1)");
+    assertEq(generalManager.conversionQueues(1)[0], address(conversionQueue), "generalManager.conversionQueues(1)[0]");
   }
 }

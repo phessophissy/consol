@@ -8,10 +8,16 @@ pragma solidity ^0.8.20;
  */
 interface IPriceOracle {
   /**
-   * @notice Returns the collateral decimals
-   * @return The collateral decimals
+   * @notice The number of decimals for the collateral
+   * @return collateralDecimals The number of decimals for the collateral
    */
   function collateralDecimals() external view returns (uint8);
+
+  /**
+   * @notice The spread for the oracle-price to incentivize the fulfiller to fill orders
+   * @return priceSpread The spread for the price
+   */
+  function spread() external view returns (uint16);
 
   /**
    * @notice Returns the price of the collateral in USDX

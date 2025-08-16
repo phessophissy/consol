@@ -631,6 +631,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Ensure the amount borrowed is less than the minimum cap
     vm.assume(amountBorrowed < minimumCap);
@@ -675,6 +676,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Ensure the amount borrowed is more than the maximum cap
     vm.assume(amountBorrowed > maximumCap);
@@ -735,6 +737,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
     uint256 purchaseAmount =
       amountBorrowed * 2 - Math.mulDiv(amountBorrowed, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
 
@@ -840,6 +843,7 @@ contract GeneralManagerTest is BaseTest {
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    purchaseAmount = Math.mulDiv(purchaseAmount, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
     uint256 amountBorrowed = purchaseAmount / 2;
     uint256 requiredUsdxAmount = Math.mulDiv(amountBorrowed, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     if (purchaseAmount % 2 == 1) {
@@ -1164,6 +1168,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
@@ -1263,6 +1268,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
@@ -1363,6 +1369,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
@@ -1481,6 +1488,7 @@ contract GeneralManagerTest is BaseTest {
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    purchaseAmount = Math.mulDiv(purchaseAmount, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
     uint256 amountBorrowed = purchaseAmount / 2;
     uint256 requiredUsdxAmount = Math.mulDiv(amountBorrowed, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     if (purchaseAmount % 2 == 1) {
@@ -1632,6 +1640,7 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
@@ -2082,6 +2091,7 @@ contract GeneralManagerTest is BaseTest {
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(expansionRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    purchaseAmount = Math.mulDiv(purchaseAmount, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
     uint256 amountIn = purchaseAmount / 2;
     uint256 requiredUsdxAmount = Math.mulDiv(amountIn, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     if (purchaseAmount % 2 == 1) {
@@ -2220,6 +2230,8 @@ contract GeneralManagerTest is BaseTest {
       (creationRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountBorrowed = Math.mulDiv(creationRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountBorrowed = Math.mulDiv(amountBorrowed, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
+
 
     // Make sure that the amountBorrowed is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountBorrowed < originationPool.poolLimit() && amountBorrowed > 1e18);
@@ -2282,6 +2294,7 @@ contract GeneralManagerTest is BaseTest {
       (expansionRequest.base.collateralAmounts[0] + 1) / 2, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4
     );
     uint256 amountIn = Math.mulDiv(expansionRequest.base.collateralAmounts[0] / 2, 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    amountIn = Math.mulDiv(amountIn, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
 
     // Make sure that the amountIn is less than the pool limit but more than the minimum lend amount (from the origination pool's deposit minimum)
     vm.assume(amountIn < originationPool.poolLimit() && amountIn > 1e18);
@@ -2393,6 +2406,7 @@ contract GeneralManagerTest is BaseTest {
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
+    purchaseAmount = Math.mulDiv(purchaseAmount, 1e4 + priceOracle.spread(), 1e4); // Add the spread to the cost of the collateral
     uint256 amountBorrowed = purchaseAmount / 2;
     uint256 requiredUsdxAmount = Math.mulDiv(amountBorrowed, 1e4 + originationPoolConfig.poolMultiplierBps, 1e4);
     if (purchaseAmount % 2 == 1) {

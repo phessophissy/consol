@@ -51,11 +51,11 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
   uint256[] public hintPrevIds;
 
   function setupThreeMortgages() public {
-    // Deal 600k of usdx to lender1 and have them deposit it into the origination pool
-    _mintUsdx(lender1, 600_000e18);
+    // Deal 606k of usdx to lender1 and have them deposit it into the origination pool
+    _mintUsdx(lender1, 606_000e18);
     vm.startPrank(lender1);
-    usdx.approve(address(originationPool), 600_000e18);
-    originationPool.deposit(600_000e18);
+    usdx.approve(address(originationPool), 606_000e18);
+    originationPool.deposit(606_000e18);
     vm.stopPrank();
 
     // Move time forward into the deployment phase
@@ -375,14 +375,14 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Validate that there is 1 withdrawal request in the conversion queue
     assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
 
-    // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    // Set the price oracle to $202k per btc
+    mockPyth.setPrice(BTC_PRICE_ID, 202_000e8, 100e8, -8, block.timestamp);
 
-    // Validate that mortgagePosition1 had a purchase price of $100k
+    // Validate that mortgagePosition1 had a purchase price of $101k
     assertEq(
       loanManager.getMortgagePosition(1).purchasePrice(),
-      100_000e18,
-      "MortgagePosition1 should have a purchase price of $100k"
+      101_000e18,
+      "MortgagePosition1 should have a purchase price of $101k"
     );
 
     // Fetch mortgagePosition1
@@ -399,7 +399,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Update mortgagePosition1
     mortgagePosition1 = loanManager.getMortgagePosition(1);
 
-    uint256 expectedCollateralToUse = Math.mulDiv(expectedTermConverted, 1e8, 150_000e18); // expectedTermConverted worth of btc when the price is $150k per btc
+    uint256 expectedCollateralToUse = Math.mulDiv(expectedTermConverted, 1e8, 151_500e18); // expectedTermConverted worth of btc when the price is $151.5k per btc
 
     // Validate fields on mortgagePosition
     assertEq(mortgagePosition1.termConverted, expectedTermConverted, "termConverted should equal expectedTermConverted");
@@ -424,7 +424,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Setup the 3 mortgages
     setupThreeMortgages();
 
-    // Have borrower1 and borrower2 enqueue their $100k and $200k mortgages into the conversion queue (must be done through the general manager)
+    // Have borrower1 and borrower2 enqueue their $101k and $202k mortgages into the conversion queue (must be done through the general manager)
     vm.startPrank(borrower1);
     generalManager.enqueueMortgage(1, conversionQueues, hintPrevIds);
     vm.stopPrank();
@@ -448,8 +448,8 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(consol.balanceOf(lender3), 56_000e18, "Lender3 should have 56k consols left (306k - 250k)");
     assertEq(consol.balanceOf(address(conversionQueue)), 250_000e18, "Conversion queue should have 250k consols");
 
-    // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    // Set the price oracle to $202k per btc
+    mockPyth.setPrice(BTC_PRICE_ID, 202_000e8, 100e8, -8, block.timestamp);
 
     // Fetch mortgagePosition1 and mortgagePosition2 before conversions
     MortgagePosition memory mortgagePosition1 = loanManager.getMortgagePosition(1);
@@ -458,23 +458,23 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Validate the termBalance of mortgagePosition1 and mortgagePosition2
     assertEq(
       mortgagePosition1.termBalance,
-      115000000000000000000020,
-      "mortgagePosition1.termBalance == 115000000000000000000020"
+      116150000000000000000004,
+      "mortgagePosition1.termBalance == 116150000000000000000004"
     );
     assertEq(
       mortgagePosition2.termBalance,
-      230000000000000000000004,
-      "mortgagePosition2.termBalance == 230000000000000000000004"
+      232300000000000000000008,
+      "mortgagePosition2.termBalance == 232300000000000000000008"
     );
 
     // Mortgage1: Calculate the expected amountToUse, collateralToUse, and subConsolToUse
     uint256 expectedTermConverted1 = mortgagePosition1.termBalance;
-    uint256 expectedCollateralToUse1 = Math.mulDiv(mortgagePosition1.termBalance, 1e8, 150_000e18);
+    uint256 expectedCollateralToUse1 = Math.mulDiv(mortgagePosition1.termBalance, 1e8, 151_500e18);
 
     // Mortgage2: Calculate the expected amountToUse, collateralToUse, and subConsolToUse
-    uint256 expectedPrincipalConverted2 = 150_000e18;
+    uint256 expectedPrincipalConverted2 = 149_000e18;
     uint256 expectedTermConverted2 = mortgagePosition2.convertPrincipalToPayment(expectedPrincipalConverted2);
-    uint256 expectedCollateralToUse2 = Math.mulDiv(expectedTermConverted2, 1e8, 150_000e18);
+    uint256 expectedCollateralToUse2 = Math.mulDiv(expectedTermConverted2, 1e8, 151_500e18);
 
     // Have the keeper process the withdrawals (one mortgage pop, one request pop)
     vm.startPrank(keeper);
@@ -579,7 +579,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Setup the 3 mortgages
     setupThreeMortgages();
 
-    // Have borrower1 and borrower2 enqueue their $100k and $200k mortgages into the conversion queue (must be done through the general manager)
+    // Have borrower1 and borrower2 enqueue their $101k and $202k mortgages into the conversion queue (must be done through the general manager)
     vm.startPrank(borrower1);
     generalManager.enqueueMortgage(1, conversionQueues, hintPrevIds);
     vm.stopPrank();
@@ -590,7 +590,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Validate that the conversion queue has 2 mortgages
     assertEq(conversionQueue.mortgageSize(), 2, "Conversion queue does not have 2 mortgages");
 
-    // Now have Lender3 request a withdrawal of 306k consols (but only 300k is fillable)
+    // Now have Lender3 request a withdrawal of 306k consols (but only 303k is fillable)
     vm.startPrank(lender3);
     consol.approve(address(conversionQueue), 306_000e18);
     conversionQueue.requestWithdrawal(306_000e18);
@@ -633,22 +633,22 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     // Calculate the expected wbtc balance of lender3
     uint256 expectedWbtc;
     {
-      uint256 expectedWbtc1 = Math.mulDiv(mortgagePosition1.termBalance, 1e8, 150_000e18);
-      uint256 expectedWbtc2 = Math.mulDiv(mortgagePosition2.termBalance, 1e8, 150_000e18);
+      uint256 expectedWbtc1 = Math.mulDiv(mortgagePosition1.termBalance, 1e8, 151_500e18);
+      uint256 expectedWbtc2 = Math.mulDiv(mortgagePosition2.termBalance, 1e8, 151_500e18);
       expectedWbtc = expectedWbtc1 + expectedWbtc2;
     }
 
     // Validate that the consol balances of lender3 and the conversion queue are correct
     assertEq(wbtc.balanceOf(lender3), expectedWbtc, "Lender3 should have expectedWbtc amount of wbtc");
-    assertEq(consol.balanceOf(address(conversionQueue)), 6_000e18, "Conversion queue should have 6k consols left");
+    assertEq(consol.balanceOf(address(conversionQueue)), 3_000e18, "Conversion queue should have 3k consols left");
 
     // Validate that the withdrawal request has been partially filled
     withdrawalRequest = conversionQueue.withdrawalQueue(0);
     assertEq(withdrawalRequest.account, lender3, "Withdrawal request should be from lender3");
     assertEq(
-      withdrawalRequest.shares, consol.convertToShares(6_000e18), "Withdrawal request should have 6k worth of shares"
+      withdrawalRequest.shares, consol.convertToShares(3_000e18), "Withdrawal request should have 3k worth of shares"
     );
-    assertEq(withdrawalRequest.amount, 6_000e18, "Withdrawal request should have 6k amount");
+    assertEq(withdrawalRequest.amount, 3_000e18, "Withdrawal request should have 3k amount");
     assertEq(withdrawalRequest.timestamp, block.timestamp, "Withdrawal request should have the current timestamp");
     assertEq(withdrawalRequest.gasFee, 0, "Withdrawal request should have 0 gas fee");
   }

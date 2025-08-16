@@ -93,6 +93,7 @@ contract DeployAllTest is Test {
     vm.setEnv("INITIAL_ORIGINATION_POOL_2_POOL_LIMIT_GROWTH_RATE_BPS", "500");
     vm.setEnv("INITIAL_ORIGINATION_POOL_2_POOL_MULTIPLIER_BPS", "200");
     vm.setEnv("STATIC_INTEREST_RATE_ORACLE_BASE", "400");
+    vm.setEnv("PRICE_SPREAD", "100");
     vm.setEnv("PYTH_PRICE_ID_0", "0x4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b");
     vm.setEnv("PYTH_PRICE_ID_1", "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43");
     vm.setEnv("PYTH_PRICE_MAX_CONFIDENCE_0", "100000000000000000");

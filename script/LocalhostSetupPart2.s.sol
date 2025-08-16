@@ -68,12 +68,7 @@ contract LocalhostSetupPart2 is BaseScript {
     vm.startBroadcast(deployerPrivateKey);
 
     // Give permission to the general manager to take the borrower's down payment (rest of the usdx)
-    usdx.approve(address(generalManager), 51_000 * 1e18);
-
-    // Set the pyth price feed for the interest rate
-    pyth.setPrice(
-      0x25ac38864cd1802a9441e82d4b3e0a4eed9938a1849b8d2dcd788e631e3b288c, 384700003, 384706, -8, block.timestamp
-    );
+    usdx.approve(address(generalManager), 51_510 * 1e18);
 
     // Set the pyth price feed for the collateral ($50 per hype)
     pyth.setPrice(pythPriceId0, 50e8, 870832, -8, block.timestamp);
