@@ -806,6 +806,7 @@ contract GeneralManager is
     OrderAmounts memory orderAmounts,
     BaseRequest calldata baseRequest,
     address[] memory conversionQueueList,
+    uint256 requiredGasFee,
     bool expansion
   ) internal {
     // Fetch storage
@@ -825,7 +826,7 @@ contract GeneralManager is
     }
 
     // Send the order to the order pool
-    IOrderPool($._orderPool).sendOrder{value: _calculateRequiredGasFee(true, mortgageParams.tokenId)}(
+    IOrderPool($._orderPool).sendOrder{value: requiredGasFee}(
       baseRequest.originationPools,
       borrowAmounts,
       conversionQueueList,
@@ -852,6 +853,7 @@ contract GeneralManager is
     address collateral,
     address subConsol,
     address[] memory conversionQueueList,
+    uint256 requiredGasFee,
     bool hasPaymentPlan,
     bool expansion
   ) internal {
@@ -874,7 +876,7 @@ contract GeneralManager is
       _prepareOrder(tokenId, baseRequest, collateral, subConsol, hasPaymentPlan);
 
     // Send the order to the order pool
-    _sendOrder(borrowAmounts, mortgageParams, orderAmounts, baseRequest, conversionQueueList, expansion);
+    _sendOrder(borrowAmounts, mortgageParams, orderAmounts, baseRequest, conversionQueueList, requiredGasFee, expansion);
   }
 
   /**
@@ -915,6 +917,7 @@ contract GeneralManager is
       creationRequest.collateral,
       creationRequest.subConsol,
       creationRequest.conversionQueues,
+      requiredGasFee,
       creationRequest.hasPaymentPlan,
       false
     );
@@ -955,6 +958,7 @@ contract GeneralManager is
       mortgagePosition.collateral,
       mortgagePosition.subConsol,
       conversionQueues(expansionRequest.tokenId),
+      requiredGasFee,
       mortgagePosition.hasPaymentPlan,
       true
     );
