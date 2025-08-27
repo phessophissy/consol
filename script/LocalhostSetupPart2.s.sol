@@ -114,14 +114,7 @@ contract LocalhostSetupPart2 is BaseScript {
   function _setPythPrice(bytes32 priceId, int64 price, uint64 conf, int32 expo, uint256 publishTime) internal {
     bytes[] memory updateData = new bytes[](1);
     updateData[0] = MockPyth(address(pyth)).createPriceFeedUpdateData(
-      priceId,
-      price,
-      conf,
-      expo,
-      price,
-      conf,
-      uint64(publishTime),
-      uint64(publishTime)
+      priceId, price, conf, expo, price, conf, uint64(publishTime), uint64(publishTime)
     );
     pyth.updatePriceFeeds(updateData);
   }

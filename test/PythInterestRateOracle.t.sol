@@ -19,9 +19,7 @@ contract PythInterestRateOracleTest is BaseTest {
 
   function test_constructor() public view {
     assertEq(
-      address(PythInterestRateOracle(address(pythInterestRateOracle)).pyth()),
-      address(pyth),
-      "Pyth address mismatch"
+      address(PythInterestRateOracle(address(pythInterestRateOracle)).pyth()), address(pyth), "Pyth address mismatch"
     );
   }
 
