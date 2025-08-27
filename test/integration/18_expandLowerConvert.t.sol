@@ -6,7 +6,6 @@ import {IntegrationBaseTest} from "./IntegrationBase.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
 import {BaseRequest, CreationRequest, ExpansionRequest} from "../../src/types/orders/OrderRequests.sol";
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
@@ -109,7 +108,7 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
 
     // Hyperstrategy sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(hyperstrategy);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Hyperstrategy approves the general manager to take the down payment of 1.01 BTC
@@ -244,9 +243,12 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     // Update the interest rate oracle to 10%
     _updateInterestRateOracle(1000);
 
+    // Skip time ahead 1 second
+    skip(1);
+
     // Hyperstrategy sets the btc price to $50k (spread is 1% so cost will be $50.5k)
     vm.startPrank(hyperstrategy);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 50_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 50_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Hyperstrategy approves the general manager to take the down payment of 1.01 BTC
@@ -336,9 +338,15 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     assertEq(conversionQueue.mortgageSize(), 1, "[2] mortgageSize");
     assertEq(conversionQueue.mortgageNodes(mortgagePosition.tokenId).triggerPrice, 113_625e18, "[2] triggerPrice");
 
+    // Record new term originated
+    uint256 newTermOriginated = mortgagePosition.termOriginated;
+
+    // Skip time ahead 1 second
+    skip(1);
+
     // Arbitrager sets the price of BTC to $113_625 (spread is 1% so cost will be $113.652k)
     vm.startPrank(arbitrager);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 113_625e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 113_625e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Arbitrager mints $100k worth of Consol via USDT
@@ -386,7 +394,7 @@ contract Integration_18_ExpandLowerConvertTest is IntegrationBaseTest {
     assertEq(mortgagePosition.interestRate, 1046, "[3] interestRate");
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
     assertEq(mortgagePosition.dateOriginated, originalDateOriginated, "[3] dateOriginated");
-    assertEq(mortgagePosition.termOriginated, block.timestamp, "[3] termOriginated");
+    assertEq(mortgagePosition.termOriginated, newTermOriginated, "[3] termOriginated");
     assertEq(mortgagePosition.termBalance, 199040700000000000000024, "[3] termBalance");
     assertEq(mortgagePosition.amountBorrowed, 151_500e18, "[3] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[3] amountPrior");

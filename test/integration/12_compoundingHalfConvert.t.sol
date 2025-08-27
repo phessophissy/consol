@@ -6,7 +6,6 @@ import {IntegrationBaseTest} from "./IntegrationBase.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
 import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
@@ -69,7 +68,7 @@ contract Integration_12_CompoundingHalfConvertTest is IntegrationBaseTest {
 
     // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k usdx)
     vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Borrower approves the general manager to take the down payment of 1.01 BTC
@@ -189,7 +188,7 @@ contract Integration_12_CompoundingHalfConvertTest is IntegrationBaseTest {
     assertEq(mortgagePosition.principalRemaining(), 50_500e18, "principalRemaining");
 
     // Price of BTC increases to $200k
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 200_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 200_000e8, 4349253107, -8, block.timestamp);
 
     // Lender redeems all of their balance from the origination pool
     vm.startPrank(lender);

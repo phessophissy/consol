@@ -6,7 +6,6 @@ import {IntegrationBaseTest} from "./IntegrationBase.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
 import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
@@ -80,7 +79,7 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
 
     // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Both borrowers approve the general manager to take the down payment of 51.055k usdx
@@ -226,10 +225,13 @@ contract Integration_24_ConversionSmallAmount is IntegrationBaseTest {
       vm.stopPrank();
     }
 
+    // Skip time ahead 1 second
+    skip(1);
+
     // Have holder update the price of btc to $151_500k to hit the trigger price of both mortgages
     {
       vm.startPrank(rando);
-      MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 151_500e8, 4349253107, -8, block.timestamp);
+      _setPythPrice(pythPriceIdBTC, 151_500e8, 4349253107, -8, block.timestamp);
       vm.stopPrank();
     }
 

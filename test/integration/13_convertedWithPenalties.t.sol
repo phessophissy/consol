@@ -8,7 +8,6 @@ import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
 import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageMath} from "../../src/libraries/MortgageMath.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
 import {IGeneralManager} from "../../src/interfaces/IGeneralManager/IGeneralManager.sol";
@@ -74,7 +73,7 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
 
     // Borrower sets the btc price to $120k (spread is 1% so cost will be $121_200 usdx)
     vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 120_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 120_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Borrower approves the general manager to take the down payment of 122_412 usdx
@@ -190,7 +189,7 @@ contract Integration_13_ConvertedWithPenaltiesTest is IntegrationBaseTest {
     vm.stopPrank();
 
     // Price of BTC raises to $181_800
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 181_800e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 181_800e8, 4349253107, -8, block.timestamp);
 
     // Double-checking the arbitrager doesn't already have some BTC
     assertEq(btc.balanceOf(address(arbitrager)), 0, "btc.balanceOf(arbitrager) starts off at 0");

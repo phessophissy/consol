@@ -20,7 +20,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {LoanManager} from "../src/LoanManager.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.sol";
-import {MockPyth} from "./mocks/MockPyth.sol";
 import {SubConsol} from "../src/SubConsol.sol";
 import {ISubConsol} from "../src/interfaces/ISubConsol/ISubConsol.sol";
 import {Consol} from "../src/Consol.sol";
@@ -625,7 +624,7 @@ contract GeneralManagerTest is BaseTest {
     creationRequest.base.totalPeriods = totalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Attempt to request a mortgage with unsupported total periods
     vm.expectRevert(
@@ -649,7 +648,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount = Math.mulDiv(
@@ -694,7 +693,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount = Math.mulDiv(
@@ -755,7 +754,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount = Math.mulDiv(
@@ -864,7 +863,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
@@ -1021,7 +1020,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1116,7 +1115,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1215,7 +1214,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1315,7 +1314,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1416,7 +1415,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1540,7 +1539,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a non-compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1687,7 +1686,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 107537_17500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 107537_17500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage with a payment plan
     vm.startPrank(borrower);
@@ -1738,10 +1737,13 @@ contract GeneralManagerTest is BaseTest {
     // Calculate expectedTermConverted
     uint256 expectedTermConverted = mortgagePosition.convertPrincipalToPayment(principalConverting);
 
+    // Move one second forward
+    skip(1 seconds);
+
     // // Set the oracle values while ensuring currentPrice is greater than or equal to the conversion trigger price
     currentPrice =
       uint64(bound(currentPrice, mortgagePosition.conversionTriggerPrice() / 1e10 + 1, uint64(type(int64).max)));
-    mockPyth.setPrice(BTC_PRICE_ID, int64(currentPrice), 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, int64(currentPrice), 4349253107, -8, block.timestamp);
 
     // Have the caller convert the mortgage
     vm.startPrank(caller);
@@ -1866,7 +1868,7 @@ contract GeneralManagerTest is BaseTest {
     expansionRequest.base.totalPeriods = invalidTotalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Mock the loan manager to return a blank mortgage position (with wbtc as the collateral)
     MortgagePosition memory mortgagePosition;
@@ -1910,7 +1912,7 @@ contract GeneralManagerTest is BaseTest {
     expansionRequest.base.totalPeriods = expansionTotalPeriods;
 
     // Set the oracle values (even if the oracle provides it, should revert if general manager doesn't support it)
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Mock the loan manager to return a blank mortgage position (with wbtc as the collateral)
     MortgagePosition memory mortgagePosition;
@@ -1974,7 +1976,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required collateral deposit amount
     uint256 requiredCollateralAmount = Math.mulDiv(
@@ -2112,7 +2114,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(expansionRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals
@@ -2277,7 +2279,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding mortgage without a payment plan
     vm.startPrank(balanceSheetExpander);
@@ -2340,7 +2342,7 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
 
     // Update the oracle values (keep the same ones for simplicity)
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Request a compounding balance sheet expansion of the previous mortgage (tokenId should be 1 since it was the first mortgage)
     vm.startPrank(balanceSheetExpander);
@@ -2426,7 +2428,7 @@ contract GeneralManagerTest is BaseTest {
     vm.deal(borrower, orderPoolGasFee);
 
     // Set the oracle values
-    mockPyth.setPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 10753717500000, 4349253107, -8, block.timestamp);
 
     // Calculating the required usdx deposit amount
     uint256 purchaseAmount = Math.mulDiv(creationRequest.base.collateralAmounts[0], 107537_175000000_000000000, 1e8); // 1e8 since BTC has 8 decimals

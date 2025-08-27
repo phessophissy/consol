@@ -12,7 +12,7 @@ import {IUSDX} from "../../src/interfaces/IUSDX/IUSDX.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
 import {ISubConsol} from "../../src/interfaces/ISubConsol/ISubConsol.sol";
 import {IPyth} from "@pythnetwork/IPyth.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
+import {MockPyth} from "@pythnetwork/MockPyth.sol";
 import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
@@ -124,5 +124,20 @@ abstract contract IntegrationBaseTest is DeployAllTest {
     vm.startPrank(admin1);
     generalManager.setInterestRateOracle(address(newInterestRateOracle));
     vm.stopPrank();
+  }
+
+  function _setPythPrice(bytes32 priceId, int64 price, uint64 conf, int32 expo, uint256 publishTime) internal {
+    bytes[] memory updateData = new bytes[](1);
+    updateData[0] = MockPyth(address(pyth)).createPriceFeedUpdateData(
+      priceId,
+      price,
+      conf,
+      expo,
+      price,
+      conf,
+      uint64(publishTime),
+      uint64(publishTime)
+    );
+    pyth.updatePriceFeeds(updateData);
   }
 }

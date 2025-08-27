@@ -6,7 +6,6 @@ import {IntegrationBaseTest} from "./IntegrationBase.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
 import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
@@ -75,7 +74,7 @@ contract Integration_20_CompleteConversionTest is IntegrationBaseTest {
 
     // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Borrower approves the general manager to take the down payment of 103_020 usdx
@@ -169,9 +168,15 @@ contract Integration_20_CompleteConversionTest is IntegrationBaseTest {
     assertEq(mortgageNode.tokenId, mortgagePosition.tokenId, "mortgageNode.TokenId");
     assertEq(mortgageNode.gasFee, 0.01e18, "mortgageNode.GasFee");
 
+    // Record original dateOriginated
+    uint256 originalDateOriginated = mortgagePosition.dateOriginated;
+
+    // Skip time ahead 1 second
+    skip(1);
+
     // Lender updates the price of BTC up to $151_500 (1% spread so price will be $150k * 1.01 = $151.5k)
     vm.startPrank(lender);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 151_500e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 151_500e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Lender mints $101k worth of Consol via USDT
@@ -215,8 +220,8 @@ contract Integration_20_CompleteConversionTest is IntegrationBaseTest {
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[2] subConsol");
     assertEq(mortgagePosition.interestRate, 869, "[2] interestRate");
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[2] conversionPremiumRate");
-    assertEq(mortgagePosition.dateOriginated, block.timestamp, "[2] dateOriginated");
-    assertEq(mortgagePosition.termOriginated, block.timestamp, "[2] termOriginated");
+    assertEq(mortgagePosition.dateOriginated, originalDateOriginated, "[2] dateOriginated");
+    assertEq(mortgagePosition.termOriginated, originalDateOriginated, "[2] termOriginated");
     assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[2] termBalance");
     assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[2] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[2] amountPrior");

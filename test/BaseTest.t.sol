@@ -15,7 +15,6 @@ import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.so
 import {INFTMetadataGenerator} from "../src/interfaces/INFTMetadataGenerator.sol";
 import {MockNFTMetadataGenerator} from "./mocks/MockNFTMetadataGenerator.sol";
 import {OrderPool} from "../src/OrderPool.sol";
-import {MockPyth} from "./mocks/MockPyth.sol";
 import {IPriceOracle} from "../src/interfaces/IPriceOracle.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 import {PythPriceOracle} from "../src/PythPriceOracle.sol";
@@ -41,6 +40,7 @@ import {ILenderQueue} from "../src/interfaces/ILenderQueue/ILenderQueue.sol";
 import {IProcessor} from "../src/interfaces/IProcessor.sol";
 import {QueueProcessor} from "../src/QueueProcesssor.sol";
 import {Roles} from "../src/libraries/Roles.sol";
+import {MockPyth} from "@pythnetwork/MockPyth.sol";
 
 contract BaseTest is Test {
   using OPoolConfigIdLibrary for OPoolConfigId;
@@ -73,10 +73,12 @@ contract BaseTest is Test {
   ILenderQueue public usdxQueue;
   IProcessor public processor;
   // Oracles
-  MockPyth public mockPyth;
+  MockPyth public pyth;
   IPriceOracle public priceOracle;
   IInterestRateOracle public interestRateOracle;
   // Constants
+  uint256 public constant VALID_TIME_PERIOD = 120; // 2 minutes
+  uint256 public constant SINGLE_UPDATE_FEE_IN_WEI = 0; // Free price updates since that's not what we're testing
   bytes32 public constant BTC_PRICE_ID = 0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43;
   uint256 public constant MAX_CONFIDENCE = 100e18; // Confidence can not deviate more than $100 // ToDo: Rename this to MAX_PRICE_CONFIDENCE
   string public constant MORTGAGE_NFT_NAME = "Mortgage NFT";
@@ -289,6 +291,21 @@ contract BaseTest is Test {
     vm.stopPrank();
   }
 
+  function _setPythPrice(bytes32 priceId, int64 price, uint64 conf, int32 expo, uint256 publishTime) internal {
+    bytes[] memory updateData = new bytes[](1);
+    updateData[0] = pyth.createPriceFeedUpdateData(
+      priceId,
+      price,
+      conf,
+      expo,
+      price,
+      conf,
+      uint64(publishTime),
+      uint64(publishTime)
+    );
+    pyth.updatePriceFeeds(updateData);
+  }
+
   function _requestNoncompoundingPaymentPlanMortgage(
     address requester,
     string memory mortgageId,
@@ -297,7 +314,7 @@ contract BaseTest is Test {
     address conversionQueueAddress
   ) internal {
     // Set the price of BTC to (2 * amountBorrowed) / colllateralAmount (accounting for decimals too)
-    mockPyth.setPrice(
+    _setPythPrice(
       BTC_PRICE_ID, int64(uint64((2 * amountBorrowed * 1e8) / (collateralAmount * 1e10))), 100e8, -8, block.timestamp
     );
 
@@ -384,9 +401,9 @@ contract BaseTest is Test {
     consol = new Consol("Consol", "CONSOL", 8, address(admin), address(forfeitedAssetsPool));
     vm.label(address(consol), "CONSOL");
     // Create the oracles
-    mockPyth = new MockPyth();
+    pyth = new MockPyth(VALID_TIME_PERIOD, SINGLE_UPDATE_FEE_IN_WEI);
     interestRateOracle = new StaticInterestRateOracle(INTEREST_RATE_BASE);
-    priceOracle = new PythPriceOracle(address(mockPyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8);
+    priceOracle = new PythPriceOracle(address(pyth), BTC_PRICE_ID, MAX_CONFIDENCE, 8);
 
     // Create the general manager
     _createGeneralManager();
