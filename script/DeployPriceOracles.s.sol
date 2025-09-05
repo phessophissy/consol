@@ -6,7 +6,7 @@ import {PythPriceOracle} from "../src/PythPriceOracle.sol";
 import {DeployInterestOracle} from "./DeployInterestOracle.s.sol";
 import {CollateralSetup} from "./CollateralSetup.s.sol";
 import {IPyth} from "@pythnetwork/IPyth.sol";
-import {MockPyth} from "../test/mocks/MockPyth.sol";
+import {MockPyth} from "@pythnetwork/MockPyth.sol";
 
 contract DeployPriceOracles is DeployInterestOracle, CollateralSetup {
   IPyth public pyth;
@@ -26,7 +26,7 @@ contract DeployPriceOracles is DeployInterestOracle, CollateralSetup {
 
   function getOrCreatePyth() public returns (IPyth) {
     if (isTest || isTestnet) {
-      pyth = IPyth(address(new MockPyth()));
+      pyth = IPyth(address(new MockPyth(120, 0))); // Hardcoded to 2 minutes and 0 update fee during testing
     } else {
       pyth = IPyth(vm.envAddress("PYTH_ADDRESS"));
     }

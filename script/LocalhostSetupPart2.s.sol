@@ -9,7 +9,7 @@ import {IUSDX} from "../src/interfaces/IUSDX/IUSDX.sol";
 import {MockERC20} from "../test/mocks/MockERC20.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {ISubConsol} from "../src/interfaces/ISubConsol/ISubConsol.sol";
-import {MockPyth} from "../test/mocks/MockPyth.sol";
+import {MockPyth} from "@pythnetwork/MockPyth.sol";
 import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 import {IOrderPool} from "../src/interfaces/IOrderPool/IOrderPool.sol";
 import {CreationRequest, BaseRequest} from "../src/types/orders/OrderRequests.sol";
@@ -71,7 +71,7 @@ contract LocalhostSetupPart2 is BaseScript {
     usdx.approve(address(generalManager), 51_510 * 1e18);
 
     // Set the pyth price feed for the collateral ($50 per hype)
-    pyth.setPrice(pythPriceId0, 50e8, 870832, -8, block.timestamp);
+    _setPythPrice(pythPriceId0, 50e8, 870832, -8, block.timestamp);
 
     // Mint collateral to the deployer to fulfill the order and grant the orderPool permission to spend it
     uint256 collateralAmountTotal = 0;
@@ -109,5 +109,13 @@ contract LocalhostSetupPart2 is BaseScript {
 
     // Stop broadcasting
     vm.stopBroadcast();
+  }
+
+  function _setPythPrice(bytes32 priceId, int64 price, uint64 conf, int32 expo, uint256 publishTime) internal {
+    bytes[] memory updateData = new bytes[](1);
+    updateData[0] = MockPyth(address(pyth)).createPriceFeedUpdateData(
+      priceId, price, conf, expo, price, conf, uint64(publishTime), uint64(publishTime)
+    );
+    pyth.updatePriceFeeds(updateData);
   }
 }

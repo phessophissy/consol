@@ -4,8 +4,6 @@ pragma solidity ^0.8.13;
 import {BaseTest} from "./BaseTest.t.sol";
 import {PythInterestRateOracle} from "../src/PythInterestRateOracle.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
-import {MockPyth} from "./mocks/MockPyth.sol";
-import {PythStructs} from "@pythnetwork/PythStructs.sol";
 
 contract PythInterestRateOracleTest is BaseTest {
   // Contracts
@@ -16,14 +14,12 @@ contract PythInterestRateOracleTest is BaseTest {
 
   function setUp() public override {
     super.setUp();
-    pythInterestRateOracle = new PythInterestRateOracle(address(mockPyth));
+    pythInterestRateOracle = new PythInterestRateOracle(address(pyth));
   }
 
   function test_constructor() public view {
     assertEq(
-      address(PythInterestRateOracle(address(pythInterestRateOracle)).pyth()),
-      address(mockPyth),
-      "Pyth address mismatch"
+      address(PythInterestRateOracle(address(pythInterestRateOracle)).pyth()), address(pyth), "Pyth address mismatch"
     );
   }
 
@@ -35,7 +31,7 @@ contract PythInterestRateOracleTest is BaseTest {
   }
 
   function test_interestRate_sampleValues(bool hasPaymentPlan) public {
-    mockPyth.setPrice(TREASURY_3YR_ID, 401900002, 434412, -8, block.timestamp);
+    _setPythPrice(TREASURY_3YR_ID, 401900002, 434412, -8, block.timestamp);
     uint16 interestRate = pythInterestRateOracle.interestRate(DEFAULT_MORTGAGE_PERIODS, hasPaymentPlan);
     if (hasPaymentPlan) {
       assertEq(interestRate, 903, "Interest rate mismatch");

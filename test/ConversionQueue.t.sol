@@ -12,11 +12,10 @@ import {ConversionQueue} from "../src/ConversionQueue.sol";
 import {ILenderQueue, ILenderQueueEvents, ILenderQueueErrors} from "../src/interfaces/ILenderQueue/ILenderQueue.sol";
 import {IConversionQueue, IConversionQueueEvents} from "../src/interfaces/IConversionQueue/IConversionQueue.sol";
 import {IMortgageQueue, IMortgageQueueEvents} from "../src/interfaces/IMortgageQueue/IMortgageQueue.sol";
-import {MockPyth} from "./mocks/MockPyth.sol";
 import {IPriceOracle} from "../src/interfaces/IPriceOracle.sol";
 import {PythPriceOracle} from "../src/PythPriceOracle.sol";
 import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
-import {MockPyth} from "./mocks/MockPyth.sol";
+import {MockPyth} from "@pythnetwork/MockPyth.sol";
 import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IGeneralManager} from "../src/interfaces/IGeneralManager/IGeneralManager.sol";
@@ -131,7 +130,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     rawPrice = int64(uint64((bound(uint64(rawPrice), 10_000e8, 1_000_000e8))));
 
     // Set the price
-    mockPyth.setPrice(BTC_PRICE_ID, rawPrice, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, rawPrice, 100e8, -8, block.timestamp);
 
     // Fetch the current conversion price used in the conversion queue
     uint256 convertingPrice = conversionQueue.convertingPrice();
@@ -161,7 +160,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
 
     // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
     // Have the keeper attempt to process the withdrawal request
     vm.startPrank(keeper);
@@ -226,7 +225,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
 
     // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
     // Have the keeper process the queue (should pop the mortgage and the withdrawal request)
     vm.startPrank(keeper);
@@ -291,7 +290,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
 
     // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
     // Have the keeper process the queue (should pop the mortgage and the withdrawal request)
     vm.startPrank(keeper);
@@ -337,7 +336,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(conversionQueue.withdrawalQueueLength(), 0, "Conversion queue does not have 0 withdrawal requests");
 
     // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
     // Have the keeper process the withdrawal request
     vm.startPrank(keeper);
@@ -376,7 +375,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(conversionQueue.withdrawalQueueLength(), 1, "Conversion queue does not have 1 withdrawal request");
 
     // Set the price oracle to $202k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 202_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 202_000e8, 100e8, -8, block.timestamp);
 
     // Validate that mortgagePosition1 had a purchase price of $101k
     assertEq(
@@ -449,7 +448,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(consol.balanceOf(address(conversionQueue)), 250_000e18, "Conversion queue should have 250k consols");
 
     // Set the price oracle to $202k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 202_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 202_000e8, 100e8, -8, block.timestamp);
 
     // Fetch mortgagePosition1 and mortgagePosition2 before conversions
     MortgagePosition memory mortgagePosition1 = loanManager.getMortgagePosition(1);
@@ -566,7 +565,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(consol.balanceOf(address(conversionQueue)), 406_000e18, "Conversion queue should have 406k consols");
 
     // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
     // Have the keeper attempt to process three iterations (two mortgages pops, one request pop)
     vm.startPrank(keeper);
@@ -620,7 +619,7 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
     assertEq(withdrawalRequest.gasFee, 0, "Withdrawal request should have 0 gas fee");
 
     // Set the price oracle to $200k per btc
-    mockPyth.setPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
+    _setPythPrice(BTC_PRICE_ID, 200_000e8, 100e8, -8, block.timestamp);
 
     // Have the keeper do a partial withdrawal of the first request by passing in 0 requests
     vm.startPrank(keeper);

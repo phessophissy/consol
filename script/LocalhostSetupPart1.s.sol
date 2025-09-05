@@ -9,7 +9,7 @@ import {IUSDX} from "../src/interfaces/IUSDX/IUSDX.sol";
 import {MockERC20} from "../test/mocks/MockERC20.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {ISubConsol} from "../src/interfaces/ISubConsol/ISubConsol.sol";
-import {MockPyth} from "../test/mocks/MockPyth.sol";
+import {MockPyth} from "@pythnetwork/MockPyth.sol";
 import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 
 contract LocalhostSetupPart1 is BaseScript {
@@ -48,8 +48,8 @@ contract LocalhostSetupPart1 is BaseScript {
     originationPool2 =
       IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(2)));
 
-    // Mint 132_010 USDToken0 (+30k for extra og funds)
-    usdToken0.mint(address(deployerAddress), 132_010 * 1e6);
+    // Mint 152_010 USDToken0 (+50k for extra og funds)
+    usdToken0.mint(address(deployerAddress), 152_010 * 1e6);
 
     // Deposit the 132_010 USDToken0 into USDX
     usdToken0.approve(address(usdx), 132_010 * 1e6);

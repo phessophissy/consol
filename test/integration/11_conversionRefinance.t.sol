@@ -6,7 +6,6 @@ import {IntegrationBaseTest} from "./IntegrationBase.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
-import {MockPyth} from "../mocks/MockPyth.sol";
 import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
@@ -75,7 +74,7 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
 
     // Borrower sets the btc price to $100k (spread is 1% so cost will be $101k)
     vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 100_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Borrower approves the general manager to take the down payment of 102_010 usdx
@@ -158,6 +157,9 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(conversionQueue.mortgageTail(), mortgagePosition.tokenId, "mortgageTail");
     assertEq(conversionQueue.mortgageSize(), 1, "mortgageSize");
 
+    // Record original dateOriginated
+    uint256 originalDateOriginated = mortgagePosition.dateOriginated;
+
     // Validate that the trigger price for conversion is $150k (and other MortgageNode fields)
     MortgageNode memory mortgageNode = conversionQueue.mortgageNodes(mortgagePosition.tokenId);
     assertEq(mortgageNode.previous, 0, "mortgageNode.Previous");
@@ -198,9 +200,12 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
       // Expected
     }
 
+    // Skip time ahead 1 second
+    skip(1);
+
     // Race the price of BTC to $155k by writing to the pyth contract
     vm.startPrank(borrower);
-    MockPyth(address(pyth)).setPrice(pythPriceIdBTC, 155_000e8, 4349253107, -8, block.timestamp);
+    _setPythPrice(pythPriceIdBTC, 155_000e8, 4349253107, -8, block.timestamp);
     vm.stopPrank();
 
     // Have rando process the withdrawal request
@@ -243,8 +248,8 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[2] subConsol");
     assertEq(mortgagePosition.interestRate, 869, "[2] interestRate");
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[2] conversionPremiumRate");
-    assertEq(mortgagePosition.dateOriginated, block.timestamp, "[2] dateOriginated");
-    assertEq(mortgagePosition.termOriginated, block.timestamp, "[2] termOriginated");
+    assertEq(mortgagePosition.dateOriginated, originalDateOriginated, "[2] dateOriginated");
+    assertEq(mortgagePosition.termOriginated, originalDateOriginated, "[2] termOriginated");
     assertEq(mortgagePosition.termBalance, 127330700000000000000004, "[2] termBalance");
     assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[2] amountBorrowed");
     assertEq(mortgagePosition.amountPrior, 0, "[2] amountPrior");
@@ -296,7 +301,7 @@ contract Integration_11_ConversionRefinanceTest is IntegrationBaseTest {
     assertEq(mortgagePosition.subConsol, address(btcSubConsol), "[3] subConsol");
     assertEq(mortgagePosition.interestRate, 500, "[3] interestRate");
     assertEq(mortgagePosition.conversionPremiumRate, 5000, "[3] conversionPremiumRate");
-    assertEq(mortgagePosition.dateOriginated, block.timestamp, "[3] dateOriginated");
+    assertEq(mortgagePosition.dateOriginated, originalDateOriginated, "[3] dateOriginated");
     assertEq(mortgagePosition.termOriginated, block.timestamp, "[3] termOriginated");
     assertEq(mortgagePosition.termBalance, 58075000000000000000020, "[3] termBalance");
     assertEq(mortgagePosition.amountBorrowed, 101_000e18, "[3] amountBorrowed");
