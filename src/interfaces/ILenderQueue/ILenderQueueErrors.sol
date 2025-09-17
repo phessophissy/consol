@@ -46,7 +46,7 @@ interface ILenderQueueErrors {
    * @param index The index of the withdrawal request
    * @param withdrawalQueueLength The length of the withdrawal queue
    */
-  error WithdrawalRequestOutOfBounds(uint256 index, uint256 withdrawalQueueLength);
+  error WithdrawalRequestOutOfBounds(uint256 index, uint256 withdrawalQueueHead, uint256 withdrawalQueueLength);
 
   /**
    * @notice The caller is not the request's account.

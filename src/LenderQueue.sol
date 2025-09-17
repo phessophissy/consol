@@ -155,8 +155,8 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
    */
   function cancelWithdrawal(uint256 index) external override {
     // Validate that the request is in the queue
-    if (index >= withdrawalQueueLength) {
-      revert WithdrawalRequestOutOfBounds(index, withdrawalQueueLength);
+    if (index < withdrawalQueueHead || index >= withdrawalQueueHead + withdrawalQueueLength) {
+      revert WithdrawalRequestOutOfBounds(index, withdrawalQueueHead, withdrawalQueueLength);
     }
 
     // Cache the request into memory

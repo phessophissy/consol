@@ -7,19 +7,29 @@ import {ILenderQueue} from "../src/interfaces/ILenderQueue/ILenderQueue.sol";
 import {MockLenderQueue} from "./mocks/MockLenderQueue.sol";
 
 contract QueueProcessorTest is BaseTest {
+  receive() external payable {}
+
   function setUp() public override {
     super.setUp();
   }
 
-  function test_process(address asset, address consol, address admin, uint256 iterations) public {
+  function test_process(address asset, address admin, uint256 iterations) public {
+    // Keep iterations less than 1000 for gas reasons
+    iterations = bound(iterations, 1, 1000);
+
     // Deploy a mock queue
-    MockLenderQueue queue = new MockLenderQueue(asset, consol, admin);
+    MockLenderQueue queue = new MockLenderQueue(asset, address(consol), admin);
+
+    // Add iterations # of requests to the queue
+    for (uint256 i = 0; i < iterations; i++) {
+      queue.requestWithdrawal(0);
+    }
 
     // Process the queue
     vm.expectCall(
-      address(queue), abi.encodeWithSelector(ILenderQueue.processWithdrawalRequests.selector, iterations, address(this))
+      address(queue), abi.encodeWithSelector(ILenderQueue.processWithdrawalRequests.selector, 1, address(this))
     );
-    processor.process(address(queue), iterations);
+    processor.process(address(queue), 1);
   }
 
   function test_isBlocked(address queue) public view {

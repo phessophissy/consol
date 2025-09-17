@@ -171,12 +171,12 @@ contract BaseTest is Test {
       admin
     );
 
-    // Have the admin grant the consol's withdraw role to the usdx queue contract
+    // Have the admin grant the consol's withdraw role to the conversion queue contract
     vm.startPrank(admin);
     IAccessControl(address(consol)).grantRole(Roles.WITHDRAW_ROLE, address(conversionQueue));
     vm.stopPrank();
 
-    // Have the admin grant the SubConsol's withdraw role to the usdx queue contract
+    // Have the admin grant the SubConsol's withdraw role to the conversion queue contract
     vm.startPrank(admin);
     IAccessControl(address(subConsol)).grantRole(Roles.ACCOUNTING_ROLE, address(conversionQueue));
     vm.stopPrank();
