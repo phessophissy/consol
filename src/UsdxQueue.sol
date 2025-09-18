@@ -32,6 +32,7 @@ contract UsdxQueue is LenderQueue {
     virtual
     override
     nonReentrant
+    whenNotPaused
     onlyRole(Roles.PROCESSOR_ROLE)
   {
     // Validate that the queue is not empty

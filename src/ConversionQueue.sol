@@ -38,10 +38,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
    * @inheritdoc IConversionQueue
    */
   uint8 public immutable override decimals;
-  /**
-   * @inheritdoc IPausable
-   */
-  bool public paused;
 
   /**
    * @notice Constructor
@@ -56,16 +52,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
   {
     generalManager = generalManager_;
     decimals = decimals_;
-  }
-
-  /**
-   * @dev Modifier to check if the contract is paused
-   */
-  modifier whenNotPaused() {
-    if (paused) {
-      revert Paused();
-    }
-    _;
   }
 
   /**
@@ -288,12 +274,5 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
     if (!success) {
       revert FailedToWithdrawNativeGas(collectedGasFees);
     }
-  }
-
-  /**
-   * @inheritdoc IPausable
-   */
-  function setPaused(bool pause) external override onlyRole(Roles.PAUSE_ROLE) {
-    paused = pause;
   }
 }
