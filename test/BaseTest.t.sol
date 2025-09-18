@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Consol} from "../src/Consol.sol";
 import {IConsol} from "../src/interfaces/IConsol/IConsol.sol";
@@ -11,7 +11,6 @@ import {SubConsol} from "../src/SubConsol.sol";
 import {LoanManager} from "../src/LoanManager.sol";
 import {MortgageNFT} from "../src/MortgageNFT.sol";
 import {IGeneralManager} from "../src/interfaces/IGeneralManager/IGeneralManager.sol";
-import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.sol";
 import {INFTMetadataGenerator} from "../src/interfaces/INFTMetadataGenerator.sol";
 import {MockNFTMetadataGenerator} from "./mocks/MockNFTMetadataGenerator.sol";
 import {OrderPool} from "../src/OrderPool.sol";

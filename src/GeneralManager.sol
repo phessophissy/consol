@@ -464,7 +464,8 @@ contract GeneralManager is
    * @inheritdoc IGeneralManager
    */
   function setPenaltyRate(uint16 penaltyRate_) external onlyRole(Roles.DEFAULT_ADMIN_ROLE) {
-    emit PenaltyRateSet(_getGeneralManagerStorage()._penaltyRate, penaltyRate_);
+    uint16 oldPenaltyRate = _getGeneralManagerStorage()._penaltyRate;
+    emit PenaltyRateSet(oldPenaltyRate, penaltyRate_);
     _getGeneralManagerStorage()._penaltyRate = penaltyRate_;
   }
 
@@ -762,9 +763,15 @@ contract GeneralManager is
     view
     returns (MortgageParams memory mortgageParams, OrderAmounts memory orderAmounts, uint256[] memory borrowAmounts)
   {
-    borrowAmounts = new uint256[](baseRequest.originationPools.length);
+    // Validate that the origination pools list length matches the collateral amounts list length
+    uint256 arrayLength = baseRequest.originationPools.length;
+    if (arrayLength != baseRequest.collateralAmounts.length) {
+      revert OriginationPoolsListLengthMismatch(arrayLength, baseRequest.collateralAmounts.length);
+    }
+
+    borrowAmounts = new uint256[](arrayLength);
     if (baseRequest.isCompounding) {
-      for (uint256 i = 0; i < baseRequest.originationPools.length; i++) {
+      for (uint256 i = 0; i < arrayLength; i++) {
         // If compounding, need to collect 1/2 of the collateral amount + commission fee (this is in the form of collateral)
         orderAmounts.collateralCollected += IOriginationPool(baseRequest.originationPools[i]).calculateReturnAmount(
           (baseRequest.collateralAmounts[i] + 1) / 2
@@ -778,7 +785,7 @@ contract GeneralManager is
         mortgageParams.collateralAmount += baseRequest.collateralAmounts[i];
       }
     } else {
-      for (uint256 i = 0; i < baseRequest.originationPools.length; i++) {
+      for (uint256 i = 0; i < arrayLength; i++) {
         // If non-compounding, need to collect the full amountBorrowed in USDX + commission fee
         (uint256 _cost, uint8 _collateralDecimals) = _calculateCost(collateral, baseRequest.collateralAmounts[i]);
         orderAmounts.purchaseAmount += _cost;

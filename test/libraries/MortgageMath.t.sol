@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {MortgageMath} from "../../src/libraries/MortgageMath.sol";
 import {MortgagePosition, MortgageStatus} from "../../src/types/MortgagePosition.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Constants} from "../../src/libraries/Constants.sol";
 
 struct MortgagePositionSeed {

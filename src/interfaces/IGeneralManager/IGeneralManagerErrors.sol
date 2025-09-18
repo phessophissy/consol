@@ -43,6 +43,13 @@ interface IGeneralManagerErrors {
   error InvalidTotalPeriods(address collateral, uint8 totalPeriods);
 
   /**
+   * @notice The origination pools list length does not match the collateral amounts list length
+   * @param originationPoolsListLength The length of the origination pools list
+   * @param collateralAmountsListLength The length of the collateral amounts list
+   */
+  error OriginationPoolsListLengthMismatch(uint256 originationPoolsListLength, uint256 collateralAmountsListLength);
+
+  /**
    * @notice The caller is not the order pool
    * @param caller The address of the caller
    * @param orderPool The address of the order pool

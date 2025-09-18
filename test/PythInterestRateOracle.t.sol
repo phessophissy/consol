@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import {BaseTest} from "./BaseTest.t.sol";
 import {PythInterestRateOracle} from "../src/PythInterestRateOracle.sol";
-import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 
 contract PythInterestRateOracleTest is BaseTest {
   // Contracts

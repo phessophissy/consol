@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {console, BaseTest} from "./BaseTest.t.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {LoanManager} from "../src/LoanManager.sol";
 import {ILoanManager, ILoanManagerErrors, ILoanManagerEvents} from "../src/interfaces/ILoanManager/ILoanManager.sol";
 import {IConsolFlashSwap} from "../src/interfaces/IConsolFlashSwap.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -13,10 +12,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MortgageMath} from "../src/libraries/MortgageMath.sol";
 import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.sol";
 import {MortgageParams} from "../src/types/orders/MortgageParams.sol";
-import {IConsol} from "../src/interfaces/IConsol/IConsol.sol";
 import {MortgageMath} from "../src/libraries/MortgageMath.sol";
 import {IGeneralManager} from "../src/interfaces/IGeneralManager/IGeneralManager.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Constants} from "../src/libraries/Constants.sol";
 
 contract LoanManagerTest is BaseTest {

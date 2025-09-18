@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {console, BaseTest} from "./BaseTest.t.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {ForfeitedAssetsPool} from "../src/ForfeitedAssetsPool.sol";
 import {
   IForfeitedAssetsPool,
   IForfeitedAssetsPoolErrors,

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {BaseTest, console} from "./BaseTest.t.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IERC1822Proxiable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -14,14 +13,10 @@ import {
   IGeneralManagerErrors
 } from "../src/interfaces/IGeneralManager/IGeneralManager.sol";
 import {GeneralManager} from "../src/GeneralManager.sol";
-import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {LoanManager} from "../src/LoanManager.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
 import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.sol";
 import {SubConsol} from "../src/SubConsol.sol";
-import {ISubConsol} from "../src/interfaces/ISubConsol/ISubConsol.sol";
 import {ILoanManager} from "../src/interfaces/ILoanManager/ILoanManager.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {CreationRequest, ExpansionRequest} from "../src/types/orders/OrderRequests.sol";

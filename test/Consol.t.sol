@@ -1,20 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
-import {IConsol, IConsolEvents, IConsolErrors} from "../src/interfaces/IConsol/IConsol.sol";
-import {
-  IMultiTokenVault,
-  IMultiTokenVaultEvents,
-  IMultiTokenVaultErrors
-} from "../src/interfaces/IMultiTokenVault/IMultiTokenVault.sol";
+import {Test} from "forge-std/Test.sol";
+import {IConsol, IConsolEvents} from "../src/interfaces/IConsol/IConsol.sol";
+import {IMultiTokenVault, IMultiTokenVaultEvents} from "../src/interfaces/IMultiTokenVault/IMultiTokenVault.sol";
 import {Consol} from "../src/Consol.sol";
 import {ERC20Mock} from "@openzeppelin/contracts/mocks/token/ERC20Mock.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ForfeitedAssetsPool} from "../src/ForfeitedAssetsPool.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Roles} from "../src/libraries/Roles.sol";
 
 contract ConsolTest is Test, IConsolEvents, IMultiTokenVaultEvents {

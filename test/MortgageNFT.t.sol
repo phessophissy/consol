@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import {BaseTest, console} from "./BaseTest.t.sol";
-import {MortgageNFT} from "../src/MortgageNFT.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {MockNFTMetadataGenerator} from "./mocks/MockNFTMetadataGenerator.sol";
-import {IMortgageNFT} from "../src/interfaces/IMortgageNFT/IMortgageNFT.sol";
-import {IMortgageNFTEvents} from "../src/interfaces/IMortgageNFT/IMortgageNFTEvents.sol";
 import {IMortgageNFTErrors} from "../src/interfaces/IMortgageNFT/IMortgageNFTErrors.sol";
 import {MortgagePosition, MortgageStatus} from "../src/types/MortgagePosition.sol";
 import {ILoanManager} from "../src/interfaces/ILoanManager/ILoanManager.sol";

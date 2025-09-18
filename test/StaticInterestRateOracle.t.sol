@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 
 import {BaseTest} from "./BaseTest.t.sol";
 import {StaticInterestRateOracle} from "../src/StaticInterestRateOracle.sol";
-import {IInterestRateOracle} from "../src/interfaces/IInterestRateOracle.sol";
 
 contract StaticInterestRateOracleTest is BaseTest {
   function setUp() public override {

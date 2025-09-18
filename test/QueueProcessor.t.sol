@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {BaseTest, console} from "./BaseTest.t.sol";
-import {QueueProcessor} from "../src/QueueProcesssor.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {ILenderQueue} from "../src/interfaces/ILenderQueue/ILenderQueue.sol";
 import {MockLenderQueue} from "./mocks/MockLenderQueue.sol";
 
