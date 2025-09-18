@@ -906,9 +906,7 @@ contract GeneralManager is
     payable
     whenNotPaused
     nonReentrant
-    returns (
-      uint256 tokenId
-    )
+    returns (uint256 tokenId)
   {
     // If compounding, a conversion queue must be provided
     if (creationRequest.base.isCompounding && creationRequest.conversionQueues.length == 0) {
@@ -997,7 +995,13 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function originate(OriginationParameters calldata originationParameters) external payable onlyOrderPool whenNotPaused nonReentrant {
+  function originate(OriginationParameters calldata originationParameters)
+    external
+    payable
+    onlyOrderPool
+    whenNotPaused
+    nonReentrant
+  {
     // Fetch storage
     GeneralManagerStorage storage $ = _getGeneralManagerStorage();
 
