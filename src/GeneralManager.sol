@@ -1044,7 +1044,7 @@ contract GeneralManager is
         originationParameters.borrowAmounts[index + 1], abi.encode(originationParameters, index + 1)
       );
     } else {
-      // Send in the collateral to the LoanManager before creating the origination pool
+      // Send in the collateral to the LoanManager before creating/expanding the mortgage
       IERC20(originationParameters.mortgageParams.collateral).safeTransfer(
         address(ILoanManager($._loanManager)), originationParameters.mortgageParams.collateralAmount
       );
