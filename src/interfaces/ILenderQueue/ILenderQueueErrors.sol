@@ -55,4 +55,10 @@ interface ILenderQueueErrors {
    * @param caller The caller of the function
    */
   error CallerIsNotRequestAccount(address requestAccount, address caller);
+
+  /**
+   * @notice The withdrawal request has already been cancelled.
+   * @param index The index of the withdrawal request
+   */
+  error RequestAlreadyCancelled(uint256 index);
 }

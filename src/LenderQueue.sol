@@ -191,6 +191,9 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
     // Burn the excess shares that correspond to forfeited yield while the request was in the queue
     if (request.shares > 0 && request.amount > 0) {
       IConsol(consol).burnExcessShares(request.shares, request.amount);
+    } else {
+      // It's not possible to reach this point if the request has already been processed, so it must have been cancelled
+      revert RequestAlreadyCancelled(index);
     }
 
     // Transfer the request.amount of Consols back to the request owner's Account
