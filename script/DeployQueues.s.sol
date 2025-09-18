@@ -82,7 +82,6 @@ contract DeployQueues is DeployGeneralManager {
       ConversionQueue conversionQueue = new ConversionQueue(
         address(collateralTokens[i]),
         collateralTokens[i].decimals(),
-        address(subConsols[i]),
         address(consol),
         address(generalManager),
         deployerAddress

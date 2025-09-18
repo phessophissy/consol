@@ -93,7 +93,6 @@ contract ConversionQueueTest is BaseTest, ILenderQueueEvents, IConversionQueueEv
   function test_constructor() public view {
     assertEq(conversionQueue.asset(), address(wbtc), "Asset mismatch");
     assertEq(conversionQueue.decimals(), IERC20Metadata(address(wbtc)).decimals(), "Decimals mismatch");
-    assertEq(conversionQueue.subConsol(), address(subConsol), "SubConsol mismatch");
     assertEq(conversionQueue.consol(), address(consol), "Consol mismatch");
     assertEq(conversionQueue.generalManager(), address(generalManager), "General manager mismatch");
     assertTrue(

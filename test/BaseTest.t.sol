@@ -163,12 +163,7 @@ contract BaseTest is Test {
 
   function _createConversionQueue() internal {
     conversionQueue = new ConversionQueue(
-      address(wbtc),
-      IERC20Metadata(address(wbtc)).decimals(),
-      address(subConsol),
-      address(consol),
-      address(generalManager),
-      admin
+      address(wbtc), IERC20Metadata(address(wbtc)).decimals(), address(consol), address(generalManager), admin
     );
 
     // Have the admin grant the consol's withdraw role to the conversion queue contract

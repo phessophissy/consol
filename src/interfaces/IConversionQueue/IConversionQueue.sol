@@ -26,12 +26,6 @@ interface IConversionQueue is IMortgageQueue, ILenderQueue, IPausable, IConversi
   function decimals() external view returns (uint8);
 
   /**
-   * @notice The address of the SubConsol contract
-   * @return The address of the SubConsol contract
-   */
-  function subConsol() external view returns (address);
-
-  /**
    * @notice The current price of the collateral in USD
    * @return The price of the collateral in USD
    */

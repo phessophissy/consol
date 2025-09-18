@@ -39,10 +39,6 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
    */
   uint8 public immutable override decimals;
   /**
-   * @inheritdoc IConversionQueue
-   */
-  address public immutable override subConsol;
-  /**
    * @inheritdoc IPausable
    */
   bool public paused;
@@ -51,22 +47,15 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
    * @notice Constructor
    * @param asset_ The address of the asset to convert
    * @param decimals_ The number of decimals of the asset
-   * @param subConsol_ The address of the subConsol contract
    * @param consol_ The address of the Consol contract
    * @param generalManager_ The address of the GeneralManager contract
    * @param admin_ The address of the admin
    */
-  constructor(
-    address asset_,
-    uint8 decimals_,
-    address subConsol_,
-    address consol_,
-    address generalManager_,
-    address admin_
-  ) LenderQueue(asset_, consol_, admin_) {
+  constructor(address asset_, uint8 decimals_, address consol_, address generalManager_, address admin_)
+    LenderQueue(asset_, consol_, admin_)
+  {
     generalManager = generalManager_;
     decimals = decimals_;
-    subConsol = subConsol_;
   }
 
   /**
