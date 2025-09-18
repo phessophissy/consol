@@ -8,7 +8,7 @@ import {ILenderQueue} from "./interfaces/ILenderQueue/ILenderQueue.sol";
 /**
  * @title QueueProcessor
  * @author SocksNFlops
- * @notice The StaticInterestRateOracle contract is a contract that returns a static interest rate for new Mortgages being originated.
+ * @notice The QueueProcessor contract is a contract that processes withdrawal requests from LenderQueues, enforcing any ordering restrictions between the queues.
  */
 contract QueueProcessor is IProcessor, Context {
   /**

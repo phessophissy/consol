@@ -244,7 +244,7 @@ contract LenderQueueTest is BaseTest, ILenderQueueEvents {
 
   function test_cancelWithdrawal_revertIfRequestIsOutOfBounds(address caller) public {
     vm.startPrank(caller);
-    vm.expectRevert(abi.encodeWithSelector(ILenderQueueErrors.WithdrawalRequestOutOfBounds.selector, 0, 0));
+    vm.expectRevert(abi.encodeWithSelector(ILenderQueueErrors.WithdrawalRequestOutOfBounds.selector, 0, 0, 0));
     lenderQueue.cancelWithdrawal(0);
     vm.stopPrank();
   }
@@ -358,6 +358,103 @@ contract LenderQueueTest is BaseTest, ILenderQueueEvents {
 
     // Make sure that lenderQueue has burned all of the excess shares
     assertEq(consol.balanceOf(address(lenderQueue)), 0, "LenderQueue should have burned all of the excess shares");
+
+    // Validate that the withdrawal queue still has 1 request but that the amount and shares are 0
+    assertEq(lenderQueue.withdrawalQueueLength(), 1, "Withdrawal queue should still have 1 request");
+    WithdrawalRequest memory withdrawalRequest = lenderQueue.withdrawalQueue(0);
+    assertEq(withdrawalRequest.amount, 0, "Amount should be 0");
+    assertEq(withdrawalRequest.shares, 0, "Shares should be 0");
+  }
+
+  function test_cancelWithdrawal_firstProcessedSecondCancelled(
+    string calldata firstWithdrawerName,
+    string calldata secondWithdrawerName,
+    string calldata processorName,
+    uint256 firstAmount,
+    uint256 secondAmount,
+    uint256 gasFee
+  ) public {
+    // Making sure the withdrawer and holder are new addressses
+    address firstWithdrawer = makeAddr(firstWithdrawerName);
+    address secondWithdrawer = makeAddr(secondWithdrawerName);
+    address processor = makeAddr(processorName);
+    vm.assume(firstWithdrawer != secondWithdrawer);
+    vm.assume(firstWithdrawer != processor);
+    vm.assume(secondWithdrawer != processor);
+
+    // Make sure the gas fee isn't excessive
+    gasFee = bound(gasFee, 0, type(uint256).max / 2);
+
+    // Ensure the amounts being withdrawn are greater than zero and don't trigger an overflow
+    firstAmount =
+      bound(firstAmount, 1e18, type(uint128).max / (2 * 10 ** IRebasingERC20(address(consol)).decimalsOffset()));
+    secondAmount =
+      bound(secondAmount, 1e18, type(uint128).max / (2 * 10 ** IRebasingERC20(address(consol)).decimalsOffset()));
+
+    // Calculate the expected shares
+    uint256 firstExpectedShares = IRebasingERC20(address(consol)).convertToShares(firstAmount);
+    uint256 secondExpectedShares = IRebasingERC20(address(consol)).convertToShares(secondAmount);
+
+    // Have the admin set the withdrawal gas fee
+    vm.startPrank(admin);
+    lenderQueue.setWithdrawalGasFee(gasFee);
+    vm.stopPrank();
+
+    // Deal gasFee to the withdrawers
+    vm.deal(firstWithdrawer, gasFee);
+    vm.deal(secondWithdrawer, gasFee);
+
+    // Deal some consol to the withdrawers via usdx and have the withdrawers approve the consols to the LenderQueue
+    {
+      _mintUsdx(firstWithdrawer, firstAmount);
+      vm.startPrank(firstWithdrawer);
+      usdx.approve(address(consol), firstAmount);
+      consol.deposit(address(usdx), firstAmount);
+      consol.approve(address(lenderQueue), firstAmount);
+      vm.stopPrank();
+    }
+    {
+      _mintUsdx(secondWithdrawer, secondAmount);
+      vm.startPrank(secondWithdrawer);
+      usdx.approve(address(consol), secondAmount);
+      consol.deposit(address(usdx), secondAmount);
+      consol.approve(address(lenderQueue), secondAmount);
+      vm.stopPrank();
+    }
+
+    // First withdrawer requests a withdrawal from the Consol contract
+    vm.startPrank(firstWithdrawer);
+    lenderQueue.requestWithdrawal{value: gasFee}(firstAmount);
+    vm.stopPrank();
+
+    // Skip forward 1 second
+    skip(1);
+
+    // Second withdrawer requests a withdrawal from the Consol contract
+    vm.startPrank(secondWithdrawer);
+    lenderQueue.requestWithdrawal{value: gasFee}(secondAmount);
+    vm.stopPrank();
+
+    // Validate the withdrawers currently have 0 consol
+    assertEq(consol.balanceOf(firstWithdrawer), 0, "First withdrawer should have 0 consol");
+    assertEq(consol.balanceOf(secondWithdrawer), 0, "Second withdrawer should have 0 consol");
+
+    // First request is processed
+    vm.startPrank(processor);
+    lenderQueue.processWithdrawalRequests(1, processor);
+    vm.stopPrank();
+
+    // Second withdrawer cancels their withdrawal
+    vm.startPrank(secondWithdrawer);
+    vm.expectEmit(true, true, true, true);
+    emit WithdrawalCancelled(1, secondWithdrawer, secondExpectedShares, secondAmount, block.timestamp, gasFee);
+    lenderQueue.cancelWithdrawal(1);
+    vm.stopPrank();
+
+    // Validate that second withdrawer got their consol back (within a rounding error of 1e18)
+    assertApproxEqAbs(
+      consol.balanceOf(secondWithdrawer), secondAmount, 1, "Second withdrawer should have received their consol back"
+    );
 
     // Validate that the withdrawal queue still has 1 request but that the amount and shares are 0
     assertEq(lenderQueue.withdrawalQueueLength(), 1, "Withdrawal queue should still have 1 request");
