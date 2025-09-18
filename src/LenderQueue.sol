@@ -14,6 +14,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Roles} from "./libraries/Roles.sol";
 // solhint-disable-next-line no-unused-import
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+// solhint-disable-next-line no-unused-import
 import {IPausable} from "./interfaces/IPausable/IPausable.sol";
 
 /**
