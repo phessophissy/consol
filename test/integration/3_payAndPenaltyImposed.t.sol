@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {IntegrationBaseTest} from "./IntegrationBase.t.sol";
 import {MockERC20} from "../mocks/MockERC20.sol";
 import {MortgageStatus} from "../../src/types/enums/MortgageStatus.sol";
@@ -9,7 +9,6 @@ import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests
 import {MortgagePosition} from "../../src/types/MortgagePosition.sol";
 import {MortgageMath} from "../../src/libraries/MortgageMath.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
-import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
 import {IGeneralManager} from "../../src/interfaces/IGeneralManager/IGeneralManager.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 

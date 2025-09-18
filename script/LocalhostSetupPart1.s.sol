@@ -8,7 +8,6 @@ import {IGeneralManager} from "../src/interfaces/IGeneralManager/IGeneralManager
 import {IUSDX} from "../src/interfaces/IUSDX/IUSDX.sol";
 import {MockERC20} from "../test/mocks/MockERC20.sol";
 import {IOriginationPool} from "../src/interfaces/IOriginationPool/IOriginationPool.sol";
-import {ISubConsol} from "../src/interfaces/ISubConsol/ISubConsol.sol";
 import {MockPyth} from "@pythnetwork/MockPyth.sol";
 import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 

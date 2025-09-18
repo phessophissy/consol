@@ -31,6 +31,7 @@ import {ISubConsol} from "./interfaces/ISubConsol/ISubConsol.sol";
 import {Roles} from "./libraries/Roles.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title GeneralManager
@@ -42,7 +43,8 @@ contract GeneralManager is
   ERC165Upgradeable,
   AccessControlUpgradeable,
   UUPSUpgradeable,
-  IGeneralManager
+  IGeneralManager,
+  ReentrancyGuard
 {
   using SafeERC20 for IERC20;
 
@@ -903,10 +905,8 @@ contract GeneralManager is
     external
     payable
     whenNotPaused
-    returns (
-      // sufficientGasFeeAndRefund(true, creationRequest.base.conversionQueues)
-      uint256 tokenId
-    )
+    nonReentrant
+    returns (uint256 tokenId)
   {
     // If compounding, a conversion queue must be provided
     if (creationRequest.base.isCompounding && creationRequest.conversionQueues.length == 0) {
@@ -951,7 +951,7 @@ contract GeneralManager is
     payable
     onlyRole(Roles.EXPANSION_ROLE)
     whenNotPaused
-    // sufficientGasFeeAndRefund(true, expansionRequest.base.conversionQueues)
+    nonReentrant
     onlyMortgageOwner(expansionRequest.tokenId)
   {
     // Calculate the required gas fee
@@ -995,7 +995,13 @@ contract GeneralManager is
   /**
    * @inheritdoc IGeneralManager
    */
-  function originate(OriginationParameters calldata originationParameters) external payable onlyOrderPool whenNotPaused {
+  function originate(OriginationParameters calldata originationParameters)
+    external
+    payable
+    onlyOrderPool
+    whenNotPaused
+    nonReentrant
+  {
     // Fetch storage
     GeneralManagerStorage storage $ = _getGeneralManagerStorage();
 
@@ -1108,7 +1114,7 @@ contract GeneralManager is
     external
     payable
     whenNotPaused
-    // sufficientGasFeeAndRefund(false, conversionQueueList)
+    nonReentrant
     onlyMortgageOwner(tokenId)
   {
     // Add the conversion queues for the mortgage position
@@ -1134,6 +1140,7 @@ contract GeneralManager is
     external
     onlyRole(Roles.CONVERSION_ROLE)
     whenNotPaused
+    nonReentrant
   {
     // Fetch storage
     GeneralManagerStorage storage $ = _getGeneralManagerStorage();

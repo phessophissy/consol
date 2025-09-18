@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 import {DeployAllTest} from "../script/DeployAll.t.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
 import {IGeneralManager} from "../../src/interfaces/IGeneralManager/IGeneralManager.sol";
 import {IOriginationPool} from "../../src/interfaces/IOriginationPool/IOriginationPool.sol";
 import {IOriginationPoolScheduler} from "../../src/interfaces/IOriginationPoolScheduler/IOriginationPoolScheduler.sol";
@@ -13,7 +12,6 @@ import {IOrderPool} from "../../src/interfaces/IOrderPool/IOrderPool.sol";
 import {ISubConsol} from "../../src/interfaces/ISubConsol/ISubConsol.sol";
 import {IPyth} from "@pythnetwork/IPyth.sol";
 import {MockPyth} from "@pythnetwork/MockPyth.sol";
-import {BaseRequest, CreationRequest} from "../../src/types/orders/OrderRequests.sol";
 import {Roles} from "../../src/libraries/Roles.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {ILoanManager} from "../../src/interfaces/ILoanManager/ILoanManager.sol";
