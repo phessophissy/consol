@@ -158,6 +158,9 @@ contract USDX is IUSDX, MultiTokenVault {
       total += convertAmount(token, balances[i]);
     }
 
+    // Burn the tokens from the user
+    _burn(_msgSender(), amount);
+
     // Iterate over each of the balances and burn a proportional amount of the token
     uint256 totalBurned = 0;
     for (uint256 i = 0; i < supportedTokens.length(); i++) {
@@ -176,8 +179,5 @@ contract USDX is IUSDX, MultiTokenVault {
         totalBurned += burnedAmount;
       }
     }
-
-    // Burn the tokens from the user
-    _burn(_msgSender(), amount);
   }
 }
