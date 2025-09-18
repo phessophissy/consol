@@ -5,14 +5,13 @@ import {IMortgageQueue} from "../IMortgageQueue/IMortgageQueue.sol";
 import {ILenderQueue} from "../ILenderQueue/ILenderQueue.sol";
 import {IConversionQueueEvents} from "./IConversionQueueEvents.sol";
 import {IConversionQueueErrors} from "./IConversionQueueErrors.sol";
-import {IPausable} from "../IPausable/IPausable.sol";
 
 /**
  * @title IConversionQueue
  * @author @SocksNFlops
  * @notice Interface for the Conversion Queue contract. Maintains a priority queue of MortgagePositions sorted by trigger price, as well as a lender queue of withdrawals.
  */
-interface IConversionQueue is IMortgageQueue, ILenderQueue, IPausable, IConversionQueueEvents, IConversionQueueErrors {
+interface IConversionQueue is IMortgageQueue, ILenderQueue, IConversionQueueEvents, IConversionQueueErrors {
   /**
    * @notice Get the GeneralManager contract.
    * @return The address of the GeneralManager contract

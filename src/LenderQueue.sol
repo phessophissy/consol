@@ -14,6 +14,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {Roles} from "./libraries/Roles.sol";
 // solhint-disable-next-line no-unused-import
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import {IPausable} from "./interfaces/IPausable/IPausable.sol";
 
 /**
  * @title LenderQueue
@@ -52,6 +53,20 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
    * @inheritdoc ILenderQueue
    */
   uint256 public override minimumWithdrawalAmount;
+  /**
+   * @inheritdoc IPausable
+   */
+  bool public paused;
+
+  /**
+   * @dev Modifier to check if the contract is paused
+   */
+  modifier whenNotPaused() {
+    if (paused) {
+      revert Paused();
+    }
+    _;
+  }
 
   /**
    * @notice Constructor
@@ -182,5 +197,12 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
 
     // Emit the event
     emit WithdrawalCancelled(index, request.account, request.shares, request.amount, request.timestamp, request.gasFee);
+  }
+
+  /**
+   * @inheritdoc IPausable
+   */
+  function setPaused(bool pause) external override onlyRole(Roles.PAUSE_ROLE) {
+    paused = pause;
   }
 }

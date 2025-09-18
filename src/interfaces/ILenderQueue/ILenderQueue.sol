@@ -4,13 +4,14 @@ pragma solidity ^0.8.20;
 import {ILenderQueueErrors} from "./ILenderQueueErrors.sol";
 import {ILenderQueueEvents} from "./ILenderQueueEvents.sol";
 import {WithdrawalRequest} from "../../types/WithdrawalRequest.sol";
+import {IPausable} from "../IPausable/IPausable.sol";
 
 /**
  * @title ILenderQueue
  * @author SocksNFlops
  * @notice Interface for the LenderQueue contract.
  */
-interface ILenderQueue is ILenderQueueErrors, ILenderQueueEvents {
+interface ILenderQueue is ILenderQueueErrors, ILenderQueueEvents, IPausable {
   /**
    * @notice Get the Consol contract.
    * @return The address of the Consol contract
