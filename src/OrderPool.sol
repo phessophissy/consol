@@ -196,6 +196,9 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
     // Fetch the order from the orders mapping
     PurchaseOrder memory order = _orders[index];
 
+    // Delete the order (already cached)
+    delete _orders[index];
+
     // If the order has expired, cancel it. Otherwise, process it.
     if (order.expiration < block.timestamp) {
       // Cancel the mortgage request
@@ -243,9 +246,6 @@ contract OrderPool is Context, ERC165, AccessControl, IOrderPool, ReentrancyGuar
     }
     // Record the amount of gas to reimburse
     collectedGasFee += order.orderPoolGasFee;
-
-    // Delete the order
-    delete _orders[index];
   }
 
   /**
