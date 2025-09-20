@@ -6,12 +6,12 @@ optimizer_runs = 10_000
 
 # Create additional compiler profiles to satisfy compilation restrictions
 additional_compiler_profiles = [
-    { name = "low-opt", optimizer = true, optimizer_runs = 1_000 }
+    { name = "low-opt", optimizer = true, optimizer_runs = 500 }
 ]
 
 compilation_restrictions = [
-    { paths = "src/LoanManager.sol", optimizer_runs = 1_000 },
-    { paths = "src/GeneralManager.sol", optimizer_runs = 1_000 },
+    { paths = "src/LoanManager.sol", optimizer_runs = 500 },
+    { paths = "src/GeneralManager.sol", optimizer_runs = 500 },
 ]
 
 fs_permissions = [

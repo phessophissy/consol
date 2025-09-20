@@ -399,10 +399,15 @@ contract GeneralManager is
       revert EmptyOriginationPools();
     }
 
-    // Validate that the origination pools used are registered
+    // Validate that the origination pools used are registered and no duplicates have been submitted
     for (uint256 i = 0; i < originationPools.length; i++) {
       if (!IOriginationPoolScheduler($._originationPoolScheduler).isRegistered(originationPools[i])) {
         revert InvalidOriginationPool(originationPools[i]);
+      }
+      for (uint256 j = i + 1; j < originationPools.length; j++) {
+        if (originationPools[i] == originationPools[j]) {
+          revert DuplicateOriginationPool(originationPools[i]);
+        }
       }
     }
   }
