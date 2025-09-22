@@ -1034,8 +1034,8 @@ contract GeneralManager is
       originationParameters.borrowAmounts[0], abi.encode(originationParameters, 0)
     );
 
-    // Send purchaseAmount of USDX to the fulfiller
-    IERC20($._usdx).safeTransfer(originationParameters.fulfiller, originationParameters.purchaseAmount);
+    // Send the rest of the USDX in the contract to the fulfiller (should be equal to purchaseAmount)
+    IERC20($._usdx).safeTransfer(originationParameters.fulfiller, IERC20($._usdx).balanceOf(address(this)));
   }
 
   /**
@@ -1043,7 +1043,7 @@ contract GeneralManager is
    * @dev amount = amountBorrowed
    * @dev returnAmount = amountBorrowed + originationFee
    */
-  function originationPoolDeployCallback(uint256 amount, uint256 returnAmount, bytes calldata data)
+  function originationPoolDeployCallback(uint256, uint256 returnAmount, bytes calldata data)
     external
     onlyRegisteredOriginationPool
   {
@@ -1088,13 +1088,16 @@ contract GeneralManager is
       );
     }
 
-    // Deposit `returnAmount - amount` of USDX into Consol to pay the originationFee
-    if (returnAmount - amount > 0) {
-      IConsol($._consol).deposit($._usdx, returnAmount - amount);
+    // Deposit sufficient USDX to mint `returnAmount - amount` of Consol to pay the originationFee
+    {
+      uint256 consolBalance = IConsol($._consol).balanceOf(address(this));
+      if (consolBalance < returnAmount) {
+        IConsol($._consol).deposit($._usdx, IConsol($._consol).convertUnderlying($._usdx, returnAmount - consolBalance));
+      }
     }
 
-    // Send `returnAmount` of Consol back to the origination pool
-    IERC20($._consol).safeTransfer(_msgSender(), returnAmount);
+    // Send entire balance of Consol back to the origination pool (GeneralManager should be empty otherwise)
+    IERC20($._consol).safeTransfer(_msgSender(), IConsol($._consol).balanceOf(address(this)));
   }
 
   /**

@@ -612,8 +612,9 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Ensure the amountBorrowed is greater than $1 and less than the origination pool limit
     amountBorrowed = bound(amountBorrowed, 1e18, originationPool.poolLimit());
 
-    // Ensure the purchaseAmount (amount being paid to purchase the collateral) is less than or equal to the amountBorrowed
-    orderAmounts.purchaseAmount = bound(orderAmounts.purchaseAmount, 1, amountBorrowed);
+    // The entire amount of USDX being borrowed is being paid to the fulfiller (excluding what is being paid to the origination pool)
+    orderAmounts.purchaseAmount =
+      (2 * amountBorrowed) - IOriginationPool(originationPool).calculateReturnAmount(amountBorrowed);
 
     // Ensure that the Purchase Order's expiration timestamp is after the origination pool's deploy phase (when the process call will be made)
     expiration = bound(
@@ -683,9 +684,6 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
       false // Expansion  is false since this is a creating a mortgage for the first time
     );
     vm.stopPrank();
-
-    // Send the purchaseAmount to the general manager to simulate the origination pool sending the funds
-    _mintUsdx(address(generalManager), orderAmounts.purchaseAmount);
 
     // Send the amount of collateral being purchased to the fulfiller so that they may fulfill the order, and approve the order pool to spend it
     vm.startPrank(fulfiller);
@@ -757,8 +755,8 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     // Ensure the amountBorrowed is greater than $1 and less than the origination pool limit
     amountBorrowed = bound(amountBorrowed, 1e18, originationPool.poolLimit());
 
-    // Ensure the purchaseAmount (amount being paid to purchase the collateral) is less than or equal to the amountBorrowed
-    orderAmounts.purchaseAmount = bound(orderAmounts.purchaseAmount, 1, amountBorrowed);
+    // The purchase amount is double of what is being borrowed (the other half is being paid by borrower)
+    orderAmounts.purchaseAmount = amountBorrowed * 2;
 
     // Ensure that the Purchase Order's expiration timestamp is after the origination pool's deploy phase (when the process call will be made)
     expiration = bound(
@@ -787,7 +785,7 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
     orderPool.setGasFee(orderPoolGasFee);
     vm.stopPrank();
 
-    // Deal the general manager the gas fee
+    // Deal the general manager the gas fees involved
     vm.deal(address(generalManager), mortgageGasFee + orderPoolGasFee);
 
     // Deal amountBorrowed of usdx to lender and have them deposit it into the origination pool
@@ -827,9 +825,6 @@ contract OrderPoolTest is BaseTest, IOrderPoolEvents {
       false // Expansion  is false since this is a creating a mortgage for the first time
     );
     vm.stopPrank();
-
-    // Send the purchaseAmount to the general manager to simulate the origination pool sending the funds
-    _mintUsdx(address(generalManager), orderAmounts.purchaseAmount);
 
     // Send the amount of collateral being purchased to the fulfiller so that they may fulfill the order, and approve the order pool to spend it
     vm.startPrank(fulfiller);
