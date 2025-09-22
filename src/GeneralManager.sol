@@ -279,10 +279,10 @@ contract GeneralManager is
   /**
    * @dev Calculates the required gas fee for the caller
    * @param usingOrderPool Whether the caller is using the order pool
-   * @param tokenId The tokenId of the mortgage position
+   * @param conversionQueueList The list of conversion queues to calculate the required gas fee for
    * @return requiredGasFee The required gas fee
    */
-  function _calculateRequiredGasFee(bool usingOrderPool, uint256 tokenId)
+  function _calculateRequiredGasFee(bool usingOrderPool, address[] memory conversionQueueList)
     internal
     view
     returns (uint256 requiredGasFee)
@@ -291,9 +291,6 @@ contract GeneralManager is
     if (usingOrderPool) {
       requiredGasFee += IOrderPool(orderPool()).gasFee();
     }
-
-    // Fetch the conversion queues for the mortgage position
-    address[] memory conversionQueueList = conversionQueues(tokenId);
 
     // Add in the required gas fee for the conversion queues
     for (uint256 i = 0; i < conversionQueueList.length; i++) {
@@ -936,7 +933,7 @@ contract GeneralManager is
     _addConversionQueues(tokenId, creationRequest.conversionQueues);
 
     // Check if the caller has sent enough gas and refund the surplus
-    uint256 requiredGasFee = _calculateRequiredGasFee(true, tokenId);
+    uint256 requiredGasFee = _calculateRequiredGasFee(true, creationRequest.conversionQueues);
     _checkSufficientGas(requiredGasFee);
 
     // Send the request to the order pool
@@ -967,7 +964,7 @@ contract GeneralManager is
     onlyMortgageOwner(expansionRequest.tokenId)
   {
     // Calculate the required gas fee
-    uint256 requiredGasFee = _calculateRequiredGasFee(true, expansionRequest.tokenId);
+    uint256 requiredGasFee = _calculateRequiredGasFee(true, conversionQueues(expansionRequest.tokenId));
 
     // Check if the caller has sent enough gas and refund the surplus
     _checkSufficientGas(requiredGasFee);
@@ -1136,7 +1133,7 @@ contract GeneralManager is
     _addConversionQueues(tokenId, conversionQueueList);
 
     // Calculate the required gas fee
-    uint256 requiredGasFee = _calculateRequiredGasFee(false, tokenId);
+    uint256 requiredGasFee = _calculateRequiredGasFee(false, conversionQueueList);
 
     // Check if the caller has sent enough gas and refund the surplus
     _checkSufficientGas(requiredGasFee);
