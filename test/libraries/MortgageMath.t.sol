@@ -40,7 +40,7 @@ contract MortgageMathTest is Test {
     view
     returns (MortgagePosition memory mortgagePosition)
   {
-    mortgagePositionSeed.totalPeriods = uint8(bound(mortgagePositionSeed.totalPeriods, 1, type(uint8).max));
+    mortgagePositionSeed.totalPeriods = uint8(bound(mortgagePositionSeed.totalPeriods, 1, Constants.MAX_TOTAL_PERIODS));
     mortgagePositionSeed.interestRate = uint16(bound(mortgagePositionSeed.interestRate, 1, 10_000));
     mortgagePositionSeed.amountBorrowed = bound(mortgagePositionSeed.amountBorrowed, 1, 100_000_000e18);
     mortgagePositionSeed.collateralAmount = bound(mortgagePositionSeed.collateralAmount, 1, 100e8);
@@ -1007,6 +1007,10 @@ contract MortgageMathTest is Test {
     uint8 expectedPeriodsPaid = uint8(amount / MortgageMath.monthlyPayment(mortgagePosition));
     uint8 expectedPaymentsMissed = mortgagePosition.periodsSinceTermOrigination(latePaymentWindow);
     expectedPaymentsMissed = expectedPaymentsMissed - uint8(Math.min(expectedPaymentsMissed, expectedPeriodsPaid));
+    // If the entire mortgage is paid off, then there are no missed payments
+    if (amount == mortgagePosition.termBalance) {
+      expectedPaymentsMissed = 0;
+    }
 
     // Apply the penalties
     (mortgagePosition,,) = MortgageMath.applyPenalties(mortgagePosition, latePaymentWindow, penaltyRate);
@@ -1528,6 +1532,139 @@ contract MortgageMathTest is Test {
       0,
       "termBalance should be divisible by the remaining periods on the mortgage"
     );
+  }
+
+  function test_convertMortgage_noPaymentPlanNoPenaltiesWhenUnderTotalPeriods(
+    MortgagePositionSeed memory mortgagePositionSeed,
+    uint256 currentPrice,
+    uint256 principalConverting,
+    uint256 collateralConverting,
+    uint256 latePaymentWindow,
+    uint256 timePassed
+  ) public validLatePenaltyWindow(latePaymentWindow) {
+    // Fuzz the mortgage position
+    MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
+    mortgagePosition.hasPaymentPlan = false;
+
+    // Make sure totalPeriods > 1 (need to be over 1 period but less than the total periods)
+    mortgagePosition.totalPeriods = uint8(bound(mortgagePosition.totalPeriods, 2, type(uint8).max));
+
+    // Ensure currentPrice is greater than the conversion trigger price
+    currentPrice = bound(currentPrice, mortgagePosition.conversionTriggerPrice(), type(uint256).max);
+
+    // Ensure the time passed is greater than a period + late payment window, but less than the total periods
+    timePassed = bound(
+      timePassed,
+      Constants.PERIOD_DURATION + latePaymentWindow + 1,
+      (mortgagePosition.totalPeriods * Constants.PERIOD_DURATION) + latePaymentWindow
+    );
+
+    // Validate that monthlyPayment == 0
+    assertEq(mortgagePosition.monthlyPayment(), 0, "monthlyPayment should be 0");
+
+    // Ensure the principalConverting is less than or equal to the principalRemaining
+    principalConverting = bound(principalConverting, 0, mortgagePosition.principalRemaining());
+    // Ensure the collateralConverting is less than or equal to the collateralAmount
+    collateralConverting = bound(collateralConverting, 0, mortgagePosition.collateralAmount);
+
+    //Skip time forward by timePassed
+    skip(timePassed);
+
+    // Apply the penalties and validate that there are no missed payments
+    uint256 penaltyAmount;
+    uint8 additionalPaymentsMissed;
+    (mortgagePosition, penaltyAmount, additionalPaymentsMissed) =
+      MortgageMath.applyPenalties(mortgagePosition, latePaymentWindow, 0);
+    assertEq(additionalPaymentsMissed, 0, "[1] additionalPaymentsMissed should be 0");
+    assertEq(mortgagePosition.paymentsMissed, 0, "[1] paymentsMissed should be 0");
+    assertEq(mortgagePosition.penaltyAccrued, 0, "[1] penaltyAccrued should be 0");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[1] penaltyPaid should be 0");
+
+    // Convert the mortgage
+    mortgagePosition =
+      mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
+
+    // Validate that there still are no penalties
+    assertEq(additionalPaymentsMissed, 0, "[2] additionalPaymentsMissed should be 0");
+    assertEq(mortgagePosition.paymentsMissed, 0, "[2] paymentsMissed should be 0");
+    assertEq(mortgagePosition.penaltyAccrued, 0, "[2] penaltyAccrued should be 0");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[2] penaltyPaid should be 0");
+  }
+
+  function test_convertMortgage_noPaymentPlanPartiallyConvertPastTotalPeriods(
+    MortgagePositionSeed memory mortgagePositionSeed,
+    uint256 currentPrice,
+    uint256 principalConverting,
+    uint256 collateralConverting,
+    uint256 latePaymentWindow,
+    uint256 timePassed
+  ) public validLatePenaltyWindow(latePaymentWindow) {
+    // Fuzz the mortgage position
+    MortgagePosition memory mortgagePosition = _fuzzMortgagePositionWithSeed(mortgagePositionSeed);
+    mortgagePosition.hasPaymentPlan = false;
+
+    // Ensure currentPrice is greater than the conversion trigger price
+    currentPrice = bound(currentPrice, mortgagePosition.conversionTriggerPrice(), type(uint256).max);
+
+    // Time passed is over totalPeriods (+ late payment window) but less than 1 periods passed totalPeriods (+ late payment window)
+    timePassed = bound(
+      timePassed,
+      (mortgagePosition.totalPeriods * Constants.PERIOD_DURATION) + latePaymentWindow + 1,
+      ((mortgagePosition.totalPeriods + uint256(1)) * Constants.PERIOD_DURATION) + latePaymentWindow
+    );
+
+    // Validate that monthlyPayment == 0
+    assertEq(mortgagePosition.monthlyPayment(), 0, "monthlyPayment should be 0");
+
+    // Ensure the principalConverting is strictly less than the principalRemaining
+    principalConverting = bound(principalConverting, 0, mortgagePosition.principalRemaining() - 1);
+    // Ensure the collateralConverting is strictly less than the collateralAmount
+    collateralConverting = bound(collateralConverting, 0, mortgagePosition.collateralAmount - 1);
+
+    //Skip time forward by timePassed
+    skip(timePassed);
+
+    // Calculate the expected penalty amount (10% of monthlyPayment)
+    uint256 expectedPenaltyAmount = mortgagePosition.calculatePenaltyAmount(1, 1e3);
+
+    // Apply the penalties with a 10% penalty rate
+    uint256 penaltyAmount;
+    uint8 additionalPaymentsMissed;
+    (mortgagePosition, penaltyAmount, additionalPaymentsMissed) =
+      MortgageMath.applyPenalties(mortgagePosition, latePaymentWindow, 1000);
+
+    // Validate that there is one missed payment and that periodsSinceOrigination is equal to totalPeriods
+    assertEq(additionalPaymentsMissed, 1, "[1] additionalPaymentsMissed should be 1");
+    assertEq(mortgagePosition.paymentsMissed, 1, "[1] paymentsMissed should be 1");
+    assertEq(
+      mortgagePosition.penaltyAccrued,
+      expectedPenaltyAmount,
+      "[1] penaltyAccrued should be equal to expectedPenaltyAmount"
+    );
+    assertEq(penaltyAmount, expectedPenaltyAmount, "[1] penaltyAmount should be equal to expectedPenaltyAmount");
+    assertEq(mortgagePosition.penaltyPaid, 0, "[1] penaltyPaid should be 0");
+    assertEq(
+      mortgagePosition.periodsSinceTermOrigination(latePaymentWindow),
+      mortgagePosition.totalPeriods,
+      "[1] periodsSinceOrigination should be equal to totalPeriods"
+    );
+
+    // Convert the mortgage
+    mortgagePosition =
+      mortgagePosition.convert(currentPrice, principalConverting, collateralConverting, latePaymentWindow);
+
+    // Validate that the mortgage is still active
+    assertGt(mortgagePosition.termRemaining(), 0, "[2] termRemaining should be greater than 0");
+
+    // Validate that mortgage has the same penalties as before conversion
+    assertEq(additionalPaymentsMissed, 1, "[2] additionalPaymentsMissed should be 1");
+    assertEq(mortgagePosition.paymentsMissed, 1, "[2] paymentsMissed should be 1");
+    assertEq(
+      mortgagePosition.penaltyAccrued,
+      expectedPenaltyAmount,
+      "[2] penaltyAccrued should be equal to expectedPenaltyAmount"
+    );
+    assertEq(mortgagePosition.penaltyPaid, 0, "[2] penaltyPaid should be 0");
   }
 
   function test_calculateNewAvergageInterestRate(

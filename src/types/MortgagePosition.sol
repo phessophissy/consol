@@ -23,7 +23,7 @@ import {MortgageStatus} from "./enums/MortgageStatus.sol";
  * @param amountConverted The amount of the principal that has been forgiven as a result of a conversion in previous terms. Excludes the current term.
  * @param penaltyAccrued Sum of penalties accrued. This number is never decremented.
  * @param penaltyPaid The penalty paid by the borrower. Incremented with every call to penaltyPay()
- * @param paymentsMissed The number of payments missed by the borrower. Reset to 0 when penaltyPaid == penaltyAccrued
+ * @param paymentsMissed The number of payments missed by the borrower. It records the number of penalties that have already been applied. Reset to 0 when mortgage is paid in full.
  * @param totalPeriods The total number of periods that the mortgage will last
  * @param hasPaymentPlan Whether the mortgage has a payment plan
  * @param status The status of the mortgage

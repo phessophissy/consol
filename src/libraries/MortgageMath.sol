@@ -406,11 +406,19 @@ library MortgageMath {
 
     // Update the termPaid
     mortgagePosition.termPaid += amount;
+
     // Make sure paymentsMissed is up to date
-    uint8 periodsSinceOrigination = mortgagePosition.periodsSinceTermOrigination(latePenaltyWindow);
     uint8 _periodsPaid = mortgagePosition.periodsPaid();
-    mortgagePosition.paymentsMissed =
-      _periodsPaid > periodsSinceOrigination ? 0 : periodsSinceOrigination - _periodsPaid;
+    // If the mortgage is paid in full, there are no more missed payments since and additional penalties can no longer be applied
+    if (_periodsPaid == mortgagePosition.totalPeriods) {
+      mortgagePosition.paymentsMissed = 0;
+    } else {
+      // If the mortgage has a payment plan, the number of missed payments is the difference between the periods since origination and the periods paid
+      uint8 periodsSinceOrigination = mortgagePosition.periodsSinceTermOrigination(latePenaltyWindow);
+      mortgagePosition.paymentsMissed =
+        _periodsPaid > periodsSinceOrigination ? 0 : periodsSinceOrigination - _periodsPaid;
+    }
+
     // Return the updated mortgage position
     return (mortgagePosition, principalPayment, refund);
   }
@@ -485,7 +493,7 @@ library MortgageMath {
       if (mortgagePosition.hasPaymentPlan) {
         // If the mortgage does have a payment plan, then delta is (periodsSinceOrigination - _periodsPaid)
         additionalPaymentsMissed = periodsSinceOrigination - _periodsPaid - mortgagePosition.paymentsMissed;
-      } else if (!mortgagePosition.hasPaymentPlan && periodsSinceOrigination >= mortgagePosition.totalPeriods) {
+      } else if (periodsSinceOrigination >= mortgagePosition.totalPeriods) {
         // If the mortgage does not have a payment plan, then delta is (periodsSinceOrigination - totalPeriods + 1)
         additionalPaymentsMissed =
           periodsSinceOrigination - mortgagePosition.totalPeriods + 1 - mortgagePosition.paymentsMissed;
@@ -682,10 +690,17 @@ library MortgageMath {
     mortgagePosition.collateralConverted += collateralConverting;
 
     // Make sure paymentsMissed is up to date
-    uint8 periodsSinceOrigination = mortgagePosition.periodsSinceTermOrigination(latePenaltyWindow);
     uint8 _periodsPaid = mortgagePosition.periodsPaid();
-    mortgagePosition.paymentsMissed =
-      _periodsPaid > periodsSinceOrigination ? 0 : periodsSinceOrigination - _periodsPaid;
+    // If the mortgage is paid in full, there are no more missed payments since and additional penalties can no longer be applied
+    if (_periodsPaid == mortgagePosition.totalPeriods) {
+      mortgagePosition.paymentsMissed = 0;
+    } else if (mortgagePosition.hasPaymentPlan) {
+      // If the mortgage has a payment plan, the number of missed payments is the difference between the periods since origination and the periods paid
+      uint8 periodsSinceOrigination = mortgagePosition.periodsSinceTermOrigination(latePenaltyWindow);
+      mortgagePosition.paymentsMissed =
+        _periodsPaid > periodsSinceOrigination ? 0 : periodsSinceOrigination - _periodsPaid;
+    }
+
     // Return the updated mortgage position
     return mortgagePosition;
   }
