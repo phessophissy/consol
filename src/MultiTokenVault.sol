@@ -220,7 +220,7 @@ contract MultiTokenVault is Context, ERC165, AccessControl, RebasingERC20, IMult
   function burnExcessShares(uint256 shares, uint256 amount) public virtual override {
     // Calculate the amount of shares that will be minted
     uint256 sharesMinted =
-      SharesMath.convertToShares(amount, totalShares - shares, _totalSupply() - amount, decimalsOffset);
+      SharesMath.convertToShares(amount, totalShares - shares, _totalSupply() - amount, decimalsOffset, false);
 
     // Ensure the amount of shares minted is not greater than the amount of shares being burned.
     // This way, shares are only burnt if they have increased in value.

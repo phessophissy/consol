@@ -118,7 +118,7 @@ contract ForfeitedAssetsQueueTest is BaseTest, ILenderQueueEvents {
     assertEq(consol.balanceOf(address(forfeitedAssetsQueue)), 0, "Forfeited assets queue contract balance mismatch");
 
     // Validate that the holder absorbed the donation amount
-    assertEq(consol.balanceOf(holder), amount + donationAmount, "Holder did not absorb the donation amount");
+    assertApproxEqAbs(consol.balanceOf(holder), amount + donationAmount, 1, "Holder did not absorb the donation amount");
 
     // Validate that the caller has received the gas fees
     assertEq(caller.balance, gasFee, "Caller did not receive the gas fees");

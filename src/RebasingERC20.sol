@@ -58,14 +58,14 @@ abstract contract RebasingERC20 is Context, IRebasingERC20, IERC20Metadata, IERC
    * @inheritdoc IRebasingERC20
    */
   function convertToAssets(uint256 shares) public view virtual returns (uint256) {
-    return SharesMath.convertToAssets(shares, totalShares, _totalSupply(), decimalsOffset);
+    return SharesMath.convertToAssets(shares, totalShares, _totalSupply(), decimalsOffset, true);
   }
 
   /**
    * @inheritdoc IRebasingERC20
    */
   function convertToShares(uint256 assets) public view virtual returns (uint256) {
-    return SharesMath.convertToShares(assets, totalShares, _totalSupply(), decimalsOffset);
+    return SharesMath.convertToShares(assets, totalShares, _totalSupply(), decimalsOffset, true);
   }
 
   /**

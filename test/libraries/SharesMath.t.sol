@@ -31,8 +31,8 @@ contract SharesMathTest is Test {
     // Calculate what the underlying should be if you want to get the expectedAssets
     uint256 underlying = SharesMath.convertToUnderlying(expectedAssets, totalShares, totalSupply);
 
-    uint256 shares = SharesMath.convertToShares(underlying, totalShares, totalSupply, DECIMALS_OFFSET);
-    uint256 assets = SharesMath.convertToAssets(shares, totalShares, totalSupply, DECIMALS_OFFSET);
+    uint256 shares = SharesMath.convertToShares(underlying, totalShares, totalSupply, DECIMALS_OFFSET, true);
+    uint256 assets = SharesMath.convertToAssets(shares, totalShares, totalSupply, DECIMALS_OFFSET, true);
 
     assertGe(assets, expectedAssets, "Assets should always be greater than or equal to expected assets");
     assertApproxEqAbs(assets, expectedAssets, 1, "Assets should be within 1 of expected assets");

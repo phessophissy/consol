@@ -178,8 +178,8 @@ contract ConsolTest is Test, IConsolEvents, IMultiTokenVaultEvents {
     consol.burnExcessShares(consol.sharesOf(caller), amount);
     vm.stopPrank();
 
-    // Validate that the caller has the correct amount of Consol (rounded down)
+    // Validate that the caller has the correct amount of Consol (rounded up)
     assertApproxEqRel(consol.balanceOf(caller), amount, 0.0001e18, "Caller should have the original amount of Consol");
-    assertLe(consol.balanceOf(caller), amount, "Balance should be rounded down");
+    assertGe(consol.balanceOf(caller), amount, "Balance should be rounded up");
   }
 }

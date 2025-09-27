@@ -352,7 +352,9 @@ contract LenderQueueTest is BaseTest, ILenderQueueEvents {
     assertApproxEqAbs(consol.balanceOf(withdrawer), amount, 1, "Withdrawer should have received their consol back");
 
     // Validate that the holder absorbed the forfeited yield
-    assertEq(consol.balanceOf(holder), amount + donationAmount, "Holder should have absorbed the forfeited yield");
+    assertApproxEqAbs(
+      consol.balanceOf(holder), amount + donationAmount, 1, "Holder should have absorbed the forfeited yield"
+    );
 
     // Make sure that lenderQueue has burned all of the excess shares
     assertEq(consol.balanceOf(address(lenderQueue)), 0, "LenderQueue should have burned all of the excess shares");

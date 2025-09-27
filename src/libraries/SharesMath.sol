@@ -15,20 +15,23 @@ library SharesMath {
    * @param totalShares The total number of shares in the contract
    * @param totalSupply The total supply of the contract
    * @param decimalsOffset The number of decimals the shares are offset by
+   * @param roundDown The rounding direction
    * @return The number of assets that the shares are worth
    */
-  function convertToAssets(uint256 shares, uint256 totalShares, uint256 totalSupply, uint8 decimalsOffset)
-    public
-    pure
-    returns (uint256)
-  {
+  function convertToAssets(
+    uint256 shares,
+    uint256 totalShares,
+    uint256 totalSupply,
+    uint8 decimalsOffset,
+    bool roundDown
+  ) public pure returns (uint256) {
     if (totalShares == 0) {
       return 0;
     }
     if (totalSupply == 0) {
       return shares / (10 ** decimalsOffset);
     } else {
-      return Math.mulDiv(shares, totalSupply, totalShares);
+      return Math.mulDiv(shares, totalSupply, totalShares, roundDown ? Math.Rounding.Floor : Math.Rounding.Ceil);
     }
   }
 
@@ -38,17 +41,20 @@ library SharesMath {
    * @param totalShares The total number of shares in the contract
    * @param totalSupply The total supply of the contract
    * @param decimalsOffset The number of decimals the shares are offset by
+   * @param roundDown The rounding direction
    * @return The number of shares that the assets are worth
    */
-  function convertToShares(uint256 assets, uint256 totalShares, uint256 totalSupply, uint8 decimalsOffset)
-    public
-    pure
-    returns (uint256)
-  {
+  function convertToShares(
+    uint256 assets,
+    uint256 totalShares,
+    uint256 totalSupply,
+    uint8 decimalsOffset,
+    bool roundDown
+  ) public pure returns (uint256) {
     if (totalShares == 0 || totalSupply == 0) {
       return assets * (10 ** decimalsOffset);
     } else {
-      return Math.mulDiv(assets, totalShares, totalSupply, Math.Rounding.Floor);
+      return Math.mulDiv(assets, totalShares, totalSupply, roundDown ? Math.Rounding.Floor : Math.Rounding.Ceil);
     }
   }
 

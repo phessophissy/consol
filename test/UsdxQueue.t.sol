@@ -118,7 +118,9 @@ contract UsdxQueueTest is BaseTest, ILenderQueueEvents {
     assertEq(consol.balanceOf(address(usdxQueue)), 0, "UsdxQueue contract balance mismatch");
 
     // Validate that the holder absorbed the donation amount
-    assertEq(consol.balanceOf(holder), amount + donationAmount, "Holder did not absorb the donation amount");
+    assertApproxEqAbs(
+      consol.balanceOf(holder), amount + donationAmount, 1, "Holder should have absorbed the donation amount"
+    );
 
     // Validate that the caller has received the gas fees
     assertEq(caller.balance, gasFee, "Caller did not receive the gas fees");
