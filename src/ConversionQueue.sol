@@ -244,7 +244,9 @@ contract ConversionQueue is LenderQueue, MortgageQueue, IConversionQueue {
         // Increment the collected gas fees for the caller
         collectedGasFees += mortgageGasFee;
         // Increment the count
-        count++;
+        if (amountToUse < request.amount) {
+          count++;
+        }
       }
     }
 

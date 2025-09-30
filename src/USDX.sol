@@ -171,7 +171,7 @@ contract USDX is IUSDX, MultiTokenVault {
         // Transfer the tokens to the user
         IERC20(token).safeTransfer(_msgSender(), tokenAmount);
         // Emit the withdraw event (because of precision loss, the last withdraw event will contain the remainder)
-        if (i == supportedTokens.length() - 1) {
+        if (i != supportedTokens.length() - 1) {
           emit Withdraw(_msgSender(), token, tokenAmount, burnedAmount);
         } else {
           emit Withdraw(_msgSender(), token, tokenAmount, amount - totalBurned);

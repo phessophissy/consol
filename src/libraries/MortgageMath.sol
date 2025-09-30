@@ -393,7 +393,7 @@ library MortgageMath {
       revert CannotOverpay(mortgagePosition, amount);
     }
     // If the mortgage does not have a payment plan, the mortgage is paid in full at the end of the term
-    if (!mortgagePosition.hasPaymentPlan && amount < mortgagePosition.termBalance) {
+    if (!mortgagePosition.hasPaymentPlan && amount < mortgagePosition.termRemaining()) {
       revert CannotPartialPrepay(mortgagePosition);
     }
     // Calculate the refund and subtract it from the amount
