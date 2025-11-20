@@ -272,12 +272,12 @@ contract OriginationPoolSchedulerTest is BaseTest {
     assertEq(originationPoolScheduler.configLength(), 0, "Config should be removed");
   }
 
-  function test_currentEpoch(uint16 numWeeks) public {
+  function test_currentEpoch(uint16 numDays) public {
     // Skip the timeskip
-    skip(uint256(numWeeks) * 1 weeks);
+    skip(uint256(numDays) * 1 days);
 
     // Assert that the current epoch is as expected
-    assertEq(originationPoolScheduler.currentEpoch(), uint256(numWeeks) + 1, "Current epoch should be as expected");
+    assertEq(originationPoolScheduler.currentEpoch(), uint256(numDays) + 1, "Current epoch should be as expected");
   }
 
   function test_deployOriginationPool(OriginationPoolConfig memory config) public ensureValidConfig(config) {

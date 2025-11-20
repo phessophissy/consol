@@ -35,6 +35,10 @@ cast rpc anvil_setStorageAt 0x5555555555555555555555555555555555555555 0x1 0x574
 # Slot 2: decimals = 18 (0x12)
 cast rpc anvil_setStorageAt 0x5555555555555555555555555555555555555555 0x2 0x0000000000000000000000000000000000000000000000000000000000000012 --rpc-url http://localhost:8545
 
+# Set the Multicall3 precompile to the 0xcA11bde05977b3631167028862bE2a173976CA11 address
+echo "Deploying Multicall3 precompile to 0xcA11bde05977b3631167028862bE2a173976CA11"
+cast rpc anvil_setCode 0xcA11bde05977b3631167028862bE2a173976CA11 "$(jq -r '.deployedBytecode.object' script/artifacts/Multicall3.json)" --rpc-url http://localhost:8545
+
 # Deploy the contracts using forge
 echo "Deploying contracts"
 forge script script/DeployAll.s.sol --rpc-url http://localhost:8545 --broadcast --slow
@@ -43,11 +47,11 @@ forge script script/DeployAll.s.sol --rpc-url http://localhost:8545 --broadcast 
 forge script script/LocalhostSetupPart1.s.sol --rpc-url http://localhost:8545 --broadcast --slow --ffi
 
 # Move time forward to the origination pool's deploy phase
-cast rpc evm_increaseTime 604800 --rpc-url http://localhost:8545
+cast rpc evm_increaseTime 86400 --rpc-url http://localhost:8545
 cast rpc evm_mine --rpc-url http://localhost:8545
 
-# Run the localhost setup script part 2
-forge script script/LocalhostSetupPart2.s.sol --rpc-url http://localhost:8545 --broadcast --slow --ffi
+# # Run the localhost setup script part 2
+# forge script script/LocalhostSetupPart2.s.sol --rpc-url http://localhost:8545 --broadcast --slow --ffi
 
 # # Move time forward to the origination pool's redeem phase
 # cast rpc evm_increaseTime 604800 --rpc-url http://localhost:8545

@@ -114,8 +114,7 @@ contract MortgageNFT is IMortgageNFT, ERC721 {
    * @inheritdoc ERC721
    */
   function tokenURI(uint256 tokenId) public view override returns (string memory) {
-    return INFTMetadataGenerator(nftMetadataGenerator).generateMetadata(
-      ILoanManager(IGeneralManager(generalManager).loanManager()).getMortgagePosition(tokenId)
-    );
+    return INFTMetadataGenerator(nftMetadataGenerator)
+      .generateMetadata(ILoanManager(IGeneralManager(generalManager).loanManager()).getMortgagePosition(tokenId));
   }
 }

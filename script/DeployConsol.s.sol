@@ -43,6 +43,11 @@ contract DeployConsol is DeployUSDX, DeployForfeitedAssetsPool, DeploySubConsols
     consol.addSupportedToken(address(usdx));
   }
 
+  function setConsolUsdxMaximumCap() public {
+    uint256 consolUsdxMaximumCap = vm.envUint("CONSOL_USDX_MAXIMUM_CAP");
+    Consol(address(consol)).setMaximumCap(address(usdx), consolUsdxMaximumCap);
+  }
+
   function logConsol(string memory objectKey) public returns (string memory json) {
     json = vm.serializeAddress(objectKey, "consolAddress", address(consol));
   }
@@ -76,7 +81,7 @@ contract DeployConsol is DeployUSDX, DeployForfeitedAssetsPool, DeploySubConsols
     // Grant IGNORE_CAP_ROLE to the General Manager
     Consol(address(consol)).grantRole(Roles.IGNORE_CAP_ROLE, address(generalManager));
 
-    // Renounce roles
+    // Renounce roles // Disable for production
     Consol(address(consol)).renounceRole(Roles.SUPPORTED_TOKEN_ROLE, deployerAddress);
     Consol(address(consol)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }

@@ -35,32 +35,32 @@ contract LocalhostSetupTest is DeployAllTest {
 
   function run() public override(DeployAllTest) {
     localhostSetupPart1.run();
-    IOriginationPool originationPool2 =
-      IOriginationPool(deployAll.originationPoolScheduler().lastConfigDeployment(2).deploymentAddress);
+    IOriginationPool originationPool0 =
+      IOriginationPool(deployAll.originationPoolScheduler().lastConfigDeployment(0).deploymentAddress);
 
     // Validate that the origination pool is in the deposit phase
     assertEq(
-      uint8(originationPool2.currentPhase()),
+      uint8(originationPool0.currentPhase()),
       uint8(OriginationPoolPhase.DEPOSIT),
       "Origination pool is not in the deposit phase"
     );
 
-    skip(1 weeks);
+    skip(1 days);
 
     // Validate that the origination pool is in the deploy phase
     assertEq(
-      uint8(originationPool2.currentPhase()),
+      uint8(originationPool0.currentPhase()),
       uint8(OriginationPoolPhase.DEPLOY),
       "Origination pool is not in the deploy phase"
     );
 
     localhostSetupPart2.setUp();
     localhostSetupPart2.run();
-    skip(1 weeks);
+    skip(2 days);
 
     // Validate that the origination pool is in the redemption phase
     assertEq(
-      uint8(originationPool2.currentPhase()),
+      uint8(originationPool0.currentPhase()),
       uint8(OriginationPoolPhase.REDEMPTION),
       "Origination pool is not in the redemption phase"
     );

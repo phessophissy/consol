@@ -108,9 +108,12 @@ library MortgageMath {
    * @param other The other mortgage position to evaluate
    * @return True if the mortgage positions are equal, false otherwise
    */
-  function equals(MortgagePosition memory mortgagePosition, MortgagePosition memory other) internal pure returns (bool) {
-    return (
-      mortgagePosition.tokenId == other.tokenId && mortgagePosition.collateral == other.collateral
+  function equals(MortgagePosition memory mortgagePosition, MortgagePosition memory other)
+    internal
+    pure
+    returns (bool)
+  {
+    return (mortgagePosition.tokenId == other.tokenId && mortgagePosition.collateral == other.collateral
         && mortgagePosition.collateralDecimals == other.collateralDecimals
         && mortgagePosition.collateralAmount == other.collateralAmount
         && mortgagePosition.collateralConverted == other.collateralConverted
@@ -122,9 +125,9 @@ library MortgageMath {
         && mortgagePosition.termPaid == other.termPaid && mortgagePosition.termConverted == other.termConverted
         && mortgagePosition.amountConverted == other.amountConverted
         && mortgagePosition.penaltyAccrued == other.penaltyAccrued && mortgagePosition.penaltyPaid == other.penaltyPaid
-        && mortgagePosition.paymentsMissed == other.paymentsMissed && mortgagePosition.totalPeriods == other.totalPeriods
-        && mortgagePosition.status == other.status && mortgagePosition.hasPaymentPlan == other.hasPaymentPlan
-    );
+        && mortgagePosition.paymentsMissed == other.paymentsMissed
+        && mortgagePosition.totalPeriods == other.totalPeriods && mortgagePosition.status == other.status
+        && mortgagePosition.hasPaymentPlan == other.hasPaymentPlan);
   }
 
   /**

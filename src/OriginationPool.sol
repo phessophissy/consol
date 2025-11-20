@@ -229,14 +229,12 @@ contract OriginationPool is IOriginationPool, ERC165, AccessControl, ERC20, Reen
     _burn(_msgSender(), amount);
 
     // Transfer the USD tokens to the user (amount/cacheTotalSupply proportion of the pool's USD holdings)
-    IERC20(usdx).safeTransfer(
-      _msgSender(), Math.mulDiv(amount, IERC20(usdx).balanceOf(address(this)), cachedTotalSupply)
-    );
+    IERC20(usdx)
+      .safeTransfer(_msgSender(), Math.mulDiv(amount, IERC20(usdx).balanceOf(address(this)), cachedTotalSupply));
 
     // Transfer the Consol tokens to the user (amount/cacheTotalSupply proportion of the pool's Consol holdings)
-    IERC20(consol).safeTransfer(
-      _msgSender(), Math.mulDiv(amount, IERC20(consol).balanceOf(address(this)), cachedTotalSupply)
-    );
+    IERC20(consol)
+      .safeTransfer(_msgSender(), Math.mulDiv(amount, IERC20(consol).balanceOf(address(this)), cachedTotalSupply));
 
     // Emit a Redeem event
     emit Redeem(_msgSender(), amount);

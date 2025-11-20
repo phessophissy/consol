@@ -130,11 +130,7 @@ contract MortgageQueue is Context, ERC165, AccessControl, IMortgageQueue {
 
     // Create the new node
     _mortgageNodes[tokenId] = MortgageNode({
-      previous: hintPrevId,
-      next: nextId,
-      triggerPrice: triggerPrice,
-      tokenId: tokenId,
-      gasFee: mortgageGasFee
+      previous: hintPrevId, next: nextId, triggerPrice: triggerPrice, tokenId: tokenId, gasFee: mortgageGasFee
     });
 
     // Update the previous node's next pointer

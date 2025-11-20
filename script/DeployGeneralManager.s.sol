@@ -92,7 +92,7 @@ contract DeployGeneralManager is DeployPriceOracles, DeployConsol {
       GeneralManager(address(generalManager)).grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[i]);
     }
 
-    // Renounce the admin role from the broadcaster
+    // Renounce the admin role from the broadcaster // Disable for production
     GeneralManager(address(generalManager)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 

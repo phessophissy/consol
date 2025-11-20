@@ -283,7 +283,9 @@ contract SubConsolTest is Test, ISubConsolEvents {
     );
   }
 
-  function test_withdrawFromYieldStrategy_shouldRevertIfDoesNotHavePortfolioRole(address caller, uint256 amount) public {
+  function test_withdrawFromYieldStrategy_shouldRevertIfDoesNotHavePortfolioRole(address caller, uint256 amount)
+    public
+  {
     // Ensure the caller does not have the portfolio role
     vm.assume(!subConsol.hasRole(Roles.PORTFOLIO_ROLE, caller));
 

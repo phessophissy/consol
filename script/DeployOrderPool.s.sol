@@ -44,7 +44,7 @@ contract DeployOrderPool is DeployGeneralManager {
       IAccessControl(address(orderPool)).grantRole(Roles.FULFILLMENT_ROLE, deployerAddress);
     }
 
-    // Renounce admin role
+    // Renounce admin role // Disable for production
     IAccessControl(address(orderPool)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 

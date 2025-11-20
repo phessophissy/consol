@@ -53,19 +53,20 @@ contract DeployOriginationScheduler is DeployGeneralManager {
       uint16 poolMultiplierBps =
         uint16(vm.envUint(string.concat("INITIAL_ORIGINATION_POOL_", vm.toString(i), "_POOL_MULTIPLIER_BPS")));
 
-      OriginationPoolScheduler(address(originationPoolScheduler)).addConfig(
-        OriginationPoolConfig({
-          namePrefix: namePrefix,
-          symbolPrefix: symbolPrefix,
-          consol: address(consol),
-          usdx: address(usdx),
-          depositPhaseDuration: depositPhaseDuration,
-          deployPhaseDuration: deployPhaseDuration,
-          defaultPoolLimit: defaultPoolLimit,
-          poolLimitGrowthRateBps: poolLimitGrowthRateBps,
-          poolMultiplierBps: poolMultiplierBps
-        })
-      );
+      OriginationPoolScheduler(address(originationPoolScheduler))
+        .addConfig(
+          OriginationPoolConfig({
+            namePrefix: namePrefix,
+            symbolPrefix: symbolPrefix,
+            consol: address(consol),
+            usdx: address(usdx),
+            depositPhaseDuration: depositPhaseDuration,
+            deployPhaseDuration: deployPhaseDuration,
+            defaultPoolLimit: defaultPoolLimit,
+            poolLimitGrowthRateBps: poolLimitGrowthRateBps,
+            poolMultiplierBps: poolMultiplierBps
+          })
+        );
     }
   }
 
@@ -75,7 +76,7 @@ contract DeployOriginationScheduler is DeployGeneralManager {
       OriginationPoolScheduler(address(originationPoolScheduler)).grantRole(Roles.DEFAULT_ADMIN_ROLE, admins[i]);
     }
 
-    // Renounce the admin role from the deployer
+    // Renounce the admin role from the deployer // Disable for production
     OriginationPoolScheduler(address(originationPoolScheduler)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 

@@ -775,15 +775,14 @@ contract GeneralManager is
     if (baseRequest.isCompounding) {
       for (uint256 i = 0; i < arrayLength; i++) {
         // If compounding, need to collect 1/2 of the collateral amount + commission fee (this is in the form of collateral)
-        orderAmounts.collateralCollected += IOriginationPool(baseRequest.originationPools[i]).calculateReturnAmount(
-          (baseRequest.collateralAmounts[i] + 1) / 2
-        );
+        orderAmounts.collateralCollected += IOriginationPool(baseRequest.originationPools[i])
+          .calculateReturnAmount((baseRequest.collateralAmounts[i] + 1) / 2);
         (uint256 _cost, uint8 _collateralDecimals) = _calculateCost(collateral, baseRequest.collateralAmounts[i] / 2);
         borrowAmounts[i] = _cost;
         mortgageParams.amountBorrowed += _cost;
         mortgageParams.collateralDecimals = _collateralDecimals;
-        orderAmounts.purchaseAmount +=
-          (2 * _cost) - IOriginationPool(baseRequest.originationPools[i]).calculateReturnAmount(_cost);
+        orderAmounts.purchaseAmount += (2 * _cost)
+          - IOriginationPool(baseRequest.originationPools[i]).calculateReturnAmount(_cost);
         mortgageParams.collateralAmount += baseRequest.collateralAmounts[i];
       }
     } else {
@@ -1027,9 +1026,8 @@ contract GeneralManager is
 
     // Call deploy on the origination pool with the amount of USDX to deploy from it
     // After this call, the origination pool will flash lend `deployAmount` to the GeneralManager and call `originationPoolDeployCallback`
-    IOriginationPool(originationParameters.originationPools[0]).deploy(
-      originationParameters.borrowAmounts[0], abi.encode(originationParameters, 0)
-    );
+    IOriginationPool(originationParameters.originationPools[0])
+      .deploy(originationParameters.borrowAmounts[0], abi.encode(originationParameters, 0));
 
     // Send the rest of the USDX in the contract to the fulfiller (should be equal to purchaseAmount)
     IERC20($._usdx).safeTransfer(originationParameters.fulfiller, IERC20($._usdx).balanceOf(address(this)));
@@ -1055,23 +1053,22 @@ contract GeneralManager is
     // If there are more origination pools in the array, call deploy on the next one to flash lend the remaining amount of USDX
     // If this is the last originationPool in the array, stop and continue with the origination
     if (index < originationParameters.originationPools.length - 1) {
-      IOriginationPool(originationParameters.originationPools[index + 1]).deploy(
-        originationParameters.borrowAmounts[index + 1], abi.encode(originationParameters, index + 1)
-      );
+      IOriginationPool(originationParameters.originationPools[index + 1])
+        .deploy(originationParameters.borrowAmounts[index + 1], abi.encode(originationParameters, index + 1));
     } else {
       // Send in the collateral to the LoanManager before creating/expanding the mortgage
-      IERC20(originationParameters.mortgageParams.collateral).safeTransfer(
-        address(ILoanManager($._loanManager)), originationParameters.mortgageParams.collateralAmount
-      );
+      IERC20(originationParameters.mortgageParams.collateral)
+        .safeTransfer(address(ILoanManager($._loanManager)), originationParameters.mortgageParams.collateralAmount);
 
       if (originationParameters.expansion) {
         // Expand the balance sheet of an existing mortgage position
-        ILoanManager($._loanManager).expandBalanceSheet(
-          originationParameters.mortgageParams.tokenId,
-          originationParameters.mortgageParams.amountBorrowed,
-          originationParameters.mortgageParams.collateralAmount,
-          originationParameters.mortgageParams.interestRate
-        );
+        ILoanManager($._loanManager)
+          .expandBalanceSheet(
+            originationParameters.mortgageParams.tokenId,
+            originationParameters.mortgageParams.amountBorrowed,
+            originationParameters.mortgageParams.collateralAmount,
+            originationParameters.mortgageParams.interestRate
+          );
       } else {
         // Create a new mortgage position
         ILoanManager($._loanManager).createMortgage(originationParameters.mortgageParams);
@@ -1089,9 +1086,8 @@ contract GeneralManager is
     {
       uint256 consolBalance = IConsol($._consol).balanceOf(address(this));
       if (consolBalance < returnAmount + 1) {
-        IConsol($._consol).deposit(
-          $._usdx, IConsol($._consol).convertUnderlying($._usdx, returnAmount + 1 - consolBalance)
-        );
+        IConsol($._consol)
+          .deposit($._usdx, IConsol($._consol).convertUnderlying($._usdx, returnAmount + 1 - consolBalance));
       }
     }
 
@@ -1115,9 +1111,10 @@ contract GeneralManager is
       }
 
       // Enqueue the mortgage position into conversionQueueList[i]
-      IConversionQueue(conversionQueueList[i]).enqueueMortgage{
-        value: IConversionQueue(conversionQueueList[i]).mortgageGasFee()
-      }(tokenId, hintPrevIds[i]);
+      IConversionQueue(conversionQueueList[i])
+      .enqueueMortgage{value: IConversionQueue(conversionQueueList[i]).mortgageGasFee()}(
+        tokenId, hintPrevIds[i]
+      );
     }
   }
 

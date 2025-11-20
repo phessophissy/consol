@@ -25,7 +25,7 @@ contract LocalhostSetupPart2 is BaseScript {
   IOriginationPoolScheduler public originationPoolScheduler;
   ILoanManager public loanManager;
   IGeneralManager public generalManager;
-  IOriginationPool public originationPool2;
+  IOriginationPool public originationPool0;
   IOrderPool public orderPool;
   IConversionQueue public conversionQueue;
   MockPyth public pyth;
@@ -58,8 +58,8 @@ contract LocalhostSetupPart2 is BaseScript {
     orderPool = IOrderPool(contractAddresses.orderPoolAddress);
     conversionQueue = IConversionQueue(contractAddresses.conversionQueues[0]);
     pyth = MockPyth(contractAddresses.pythAddress);
-    originationPool2 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(2).deploymentAddress);
-    originationPools = [address(originationPool2)];
+    originationPool0 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(0).deploymentAddress);
+    originationPools = [address(originationPool0)];
     conversionQueues = [address(conversionQueue)];
   }
 
@@ -68,7 +68,7 @@ contract LocalhostSetupPart2 is BaseScript {
     vm.startBroadcast(deployerPrivateKey);
 
     // Give permission to the general manager to take the borrower's down payment (rest of the usdx)
-    usdx.approve(address(generalManager), 51_510 * 1e18);
+    usdx.approve(address(generalManager), 50_500 * 1e18);
 
     // Set the pyth price feed for the collateral ($50 per hype)
     _setPythPrice(pythPriceId0, 50e8, 870832, -8, block.timestamp);
@@ -113,9 +113,8 @@ contract LocalhostSetupPart2 is BaseScript {
 
   function _setPythPrice(bytes32 priceId, int64 price, uint64 conf, int32 expo, uint256 publishTime) internal {
     bytes[] memory updateData = new bytes[](1);
-    updateData[0] = MockPyth(address(pyth)).createPriceFeedUpdateData(
-      priceId, price, conf, expo, price, conf, uint64(publishTime), uint64(publishTime)
-    );
+    updateData[0] = MockPyth(address(pyth))
+      .createPriceFeedUpdateData(priceId, price, conf, expo, price, conf, uint64(publishTime), uint64(publishTime));
     pyth.updatePriceFeeds(updateData);
   }
 }

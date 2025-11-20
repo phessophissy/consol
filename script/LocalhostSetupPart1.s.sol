@@ -12,12 +12,14 @@ import {MockPyth} from "@pythnetwork/MockPyth.sol";
 import {ContractAddresses} from "../test/utils/ContractAddresses.sol";
 
 contract LocalhostSetupPart1 is BaseScript {
-  MockERC20 public usdToken0;
+  MockERC20 public usdt0;
+  MockERC20 public usdc;
+  MockERC20 public usdh;
   IUSDX public usdx;
   IOriginationPoolScheduler public originationPoolScheduler;
   ILoanManager public loanManager;
   IGeneralManager public generalManager;
-  IOriginationPool public originationPool2;
+  IOriginationPool public originationPool0;
   MockPyth public pyth;
 
   function setUp() public override(BaseScript) {
@@ -30,7 +32,9 @@ contract LocalhostSetupPart1 is BaseScript {
     bytes memory data = vm.parseJson(json);
     ContractAddresses memory contractAddresses = abi.decode(data, (ContractAddresses));
 
-    usdToken0 = MockERC20(contractAddresses.usdAddresses[0]);
+    usdt0 = MockERC20(contractAddresses.usdAddresses[0]);
+    usdc = MockERC20(contractAddresses.usdAddresses[1]);
+    usdh = MockERC20(contractAddresses.usdAddresses[2]);
     usdx = IUSDX(contractAddresses.usdxAddress);
     originationPoolScheduler = IOriginationPoolScheduler(contractAddresses.originationPoolSchedulerAddress);
     loanManager = ILoanManager(contractAddresses.loanManagerAddress);
@@ -41,22 +45,26 @@ contract LocalhostSetupPart1 is BaseScript {
   function run() public override(BaseScript) {
     vm.startBroadcast(deployerPrivateKey);
 
-    // Deploy all three origination pool configs
-    originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(0));
-    originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(1));
-    originationPool2 =
-      IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(2)));
+    // Deploy the first origination pool config
+    originationPool0 =
+      IOriginationPool(originationPoolScheduler.deployOriginationPool(originationPoolScheduler.configIdAt(0)));
 
     // Mint 152_010 USDToken0 (+50k for extra og funds)
-    usdToken0.mint(address(deployerAddress), 152_010 * 1e6);
+    usdt0.mint(address(deployerAddress), 152_010 * 1e6);
+
+    // Mint 10_000 USDC tokens
+    usdc.mint(address(deployerAddress), 10_000 * 1e6);
+
+    // Mint 10_000 USDH tokens
+    usdh.mint(address(deployerAddress), 10_000 * 1e6);
 
     // Deposit the 132_010 USDToken0 into USDX
-    usdToken0.approve(address(usdx), 132_010 * 1e6);
-    usdx.deposit(address(usdToken0), 132_010 * 1e6);
+    usdt0.approve(address(usdx), 132_010 * 1e6);
+    usdx.deposit(address(usdt0), 132_010 * 1e6);
 
-    // Deposit the 50.5k USDX into the origination pool (+30k for extra og funds)
-    usdx.approve(address(originationPool2), 80_500 * 1e18);
-    originationPool2.deposit(80_500 * 1e18);
+    // Deposit the 50k USDX into the origination pool (+3k for extra og funds)
+    usdx.approve(address(originationPool0), 53_000 * 1e18);
+    originationPool0.deposit(53_000 * 1e18);
 
     // Stop broadcasting
     vm.stopBroadcast();

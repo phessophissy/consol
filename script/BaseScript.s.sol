@@ -12,12 +12,12 @@ contract BaseScript is Script {
 
   function setUp() public virtual {
     deployerAddress = vm.envAddress("DEPLOYER_ADDRESS");
-    deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+    deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY"); // Disable for production
     getAdmins();
     isTest = vm.envBool("IS_TEST");
     isTestnet = vm.envBool("IS_TESTNET");
 
-    require(deployerAddress == vm.addr(deployerPrivateKey), "Deployer address and private key do not match");
+    require(deployerAddress == vm.addr(deployerPrivateKey), "Deployer address and private key do not match"); // Disable for production
   }
 
   function getAdmins() public {

@@ -13,7 +13,7 @@ import {ILenderQueue} from "../src/interfaces/ILenderQueue/ILenderQueue.sol";
 contract LocalhostSetupPart3 is BaseScript {
   IUSDX public usdx;
   IOriginationPoolScheduler public originationPoolScheduler;
-  IOriginationPool public originationPool2;
+  IOriginationPool public originationPool0;
   IConsol public consol;
   ILenderQueue public usdxQueue;
 
@@ -29,7 +29,7 @@ contract LocalhostSetupPart3 is BaseScript {
 
     usdx = IUSDX(contractAddresses.usdxAddress);
     originationPoolScheduler = IOriginationPoolScheduler(contractAddresses.originationPoolSchedulerAddress);
-    originationPool2 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(2).deploymentAddress);
+    originationPool0 = IOriginationPool(originationPoolScheduler.lastConfigDeployment(0).deploymentAddress);
     consol = IConsol(contractAddresses.consolAddress);
     usdxQueue = ILenderQueue(contractAddresses.usdxQueue);
   }
@@ -38,7 +38,7 @@ contract LocalhostSetupPart3 is BaseScript {
     vm.startBroadcast(deployerPrivateKey);
 
     // Redeem entire balance from the origination pool
-    originationPool2.redeem(IERC20(address(originationPool2)).balanceOf(deployerAddress));
+    originationPool0.redeem(IERC20(address(originationPool0)).balanceOf(deployerAddress));
 
     // Submit a withdrawal request for 25k Consol -> 25k USDX
     consol.approve(address(usdxQueue), 25_000 * 1e18);

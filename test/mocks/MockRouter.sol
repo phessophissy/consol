@@ -119,16 +119,15 @@ contract MockRouter is Context {
   {
     if (creationRequest.base.isCompounding) {
       // If compounding, need to collect 1/2 of the collateral amount + commission fee (this is in the form of collateral)
-      collateralCollected = IOriginationPool(creationRequest.base.originationPools[0]).calculateReturnAmount(
-        (creationRequest.base.collateralAmounts[0] + 1) / 2
-      );
+      collateralCollected = IOriginationPool(creationRequest.base.originationPools[0])
+        .calculateReturnAmount((creationRequest.base.collateralAmounts[0] + 1) / 2);
       collateralDecimals =
         IPriceOracle(IGeneralManager(generalManager).priceOracles(creationRequest.collateral)).collateralDecimals();
     } else {
       // If non-compounding, need to collect the full mortgage amount in USDX + commission fee
       (paymentAmount, collateralDecimals) = IPriceOracle(
-        IGeneralManager(generalManager).priceOracles(creationRequest.collateral)
-      ).cost(creationRequest.base.collateralAmounts[0]);
+          IGeneralManager(generalManager).priceOracles(creationRequest.collateral)
+        ).cost(creationRequest.base.collateralAmounts[0]);
       usdxCollected =
         IOriginationPool(creationRequest.base.originationPools[0]).calculateReturnAmount(paymentAmount / 2);
       if (paymentAmount % 2 == 1) {
@@ -167,9 +166,13 @@ contract MockRouter is Context {
     ILoanManager(loanManager).penaltyPay(tokenId, consolAmount);
   }
 
-  function _getOrCreateOriginationPool(OPoolConfigId oPoolConfigId) internal returns (IOriginationPool originationPool) {
-    originationPool =
-      IOriginationPool(IOriginationPoolScheduler(originationPoolScheduler).predictOriginationPool(oPoolConfigId));
+  function _getOrCreateOriginationPool(OPoolConfigId oPoolConfigId)
+    internal
+    returns (IOriginationPool originationPool)
+  {
+    originationPool = IOriginationPool(
+      IOriginationPoolScheduler(originationPoolScheduler).predictOriginationPool(oPoolConfigId)
+    );
     if (!IOriginationPoolScheduler(originationPoolScheduler).isRegistered(address(originationPool))) {
       IOriginationPool(IOriginationPoolScheduler(originationPoolScheduler).deployOriginationPool(oPoolConfigId));
     }

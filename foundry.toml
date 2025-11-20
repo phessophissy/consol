@@ -18,6 +18,7 @@ fs_permissions = [
   { access = "read-write", path = "./addresses/tests/"},
   { access = "read-write", path = "./addresses/addresses-31337.json"},
   { access = "read-write", path = "./addresses/addresses-998.json"},
+  { access = "read-write", path = "./addresses/addresses-999.json"},
   { access = "read", path = "./script/artifacts/WHYPE9.json"}
 ]
 

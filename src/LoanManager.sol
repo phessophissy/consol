@@ -72,7 +72,9 @@ contract LoanManager is ILoanManager, ERC165, Context {
     view
     returns (MortgagePosition memory outputMortgagePosition, uint256 penaltyAmount, uint8 additionalPaymentsMissed)
   {
-    (outputMortgagePosition, penaltyAmount, additionalPaymentsMissed) = mortgagePosition.applyPenalties(
+    (
+      outputMortgagePosition, penaltyAmount, additionalPaymentsMissed
+    ) = mortgagePosition.applyPenalties(
       Constants.LATE_PAYMENT_WINDOW, IGeneralManager(generalManager).penaltyRate(mortgagePosition)
     );
   }
@@ -329,8 +331,7 @@ contract LoanManager is ILoanManager, ERC165, Context {
     override
     mortgageExistsAndActive(tokenId)
     imposePenaltyBefore(tokenId)
-  // solhint-disable-next-line no-empty-blocks
-  {}
+  {} // solhint-disable-line no-empty-blocks
 
   /**
    * @inheritdoc ILoanManager
@@ -429,9 +430,8 @@ contract LoanManager is ILoanManager, ERC165, Context {
     MortgagePosition memory mortgagePosition = mortgagePositions[tokenId];
 
     // Fetch the interest rate
-    uint16 interestRate = IGeneralManager(generalManager).interestRate(
-      mortgagePosition.collateral, totalPeriods, mortgagePosition.hasPaymentPlan
-    );
+    uint16 interestRate = IGeneralManager(generalManager)
+      .interestRate(mortgagePosition.collateral, totalPeriods, mortgagePosition.hasPaymentPlan);
 
     // Update the mortgage position to be refinanced
     uint256 refinanceFee;
@@ -467,12 +467,13 @@ contract LoanManager is ILoanManager, ERC165, Context {
     IGeneralManager(generalManager).burnMortgageNFT(tokenId);
 
     // Execute a flash-swap to pull out the SubConsol and replace it with at least as much forfeited assets pool tokens
-    IConsol(consol).flashSwap(
-      IConsol(consol).forfeitedAssetsPool(),
-      mortgagePosition.subConsol,
-      mortgagePosition.principalRemaining(),
-      abi.encode(mortgagePosition)
-    );
+    IConsol(consol)
+      .flashSwap(
+        IConsol(consol).forfeitedAssetsPool(),
+        mortgagePosition.subConsol,
+        mortgagePosition.principalRemaining(),
+        abi.encode(mortgagePosition)
+      );
 
     // Emit a foreclose mortgage event
     emit ForecloseMortgage(tokenId);
@@ -507,15 +508,17 @@ contract LoanManager is ILoanManager, ERC165, Context {
       );
 
       // Approving the collateral to the forfeited assets pool
-      IERC20(mortgagePosition.collateral).approve(
-        forfeitedAssetsPool, mortgagePosition.collateralAmount - mortgagePosition.collateralConverted
-      );
+      IERC20(mortgagePosition.collateral)
+        .approve(forfeitedAssetsPool, mortgagePosition.collateralAmount - mortgagePosition.collateralConverted);
 
       // Send the collateral to the forfeited assets pool
       if (amount > 0) {
-        IForfeitedAssetsPool(forfeitedAssetsPool).depositAsset(
-          mortgagePosition.collateral, mortgagePosition.collateralAmount - mortgagePosition.collateralConverted, amount
-        );
+        IForfeitedAssetsPool(forfeitedAssetsPool)
+          .depositAsset(
+            mortgagePosition.collateral,
+            mortgagePosition.collateralAmount - mortgagePosition.collateralConverted,
+            amount
+          );
       }
 
       // Transfer the forfeited assets pool tokens directly to the Consol contract

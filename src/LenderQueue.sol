@@ -1,4 +1,4 @@
-  // SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
 import {ILenderQueue} from "./interfaces/ILenderQueue/ILenderQueue.sol";
@@ -144,11 +144,7 @@ abstract contract LenderQueue is Context, ERC165, AccessControl, ILenderQueue, R
     // Add the request to the queue
     uint256 shares = IRebasingERC20(consol).convertToShares(amount);
     withdrawalRequests[index] = WithdrawalRequest({
-      account: _msgSender(),
-      shares: shares,
-      amount: amount,
-      timestamp: block.timestamp,
-      gasFee: withdrawalGasFee
+      account: _msgSender(), shares: shares, amount: amount, timestamp: block.timestamp, gasFee: withdrawalGasFee
     });
 
     emit WithdrawalRequested(index, _msgSender(), shares, amount, block.timestamp, withdrawalGasFee);

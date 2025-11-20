@@ -256,7 +256,9 @@ contract GeneralManagerTest is BaseTest {
     assertEq(interestRate, expectedInterestRate, "Interest rate should be set correctly");
   }
 
-  function test_setConversionPremiumRate_shouldRevertIfNotAdmin(address caller, uint16 newConversionPremiumRate) public {
+  function test_setConversionPremiumRate_shouldRevertIfNotAdmin(address caller, uint16 newConversionPremiumRate)
+    public
+  {
     // Ensure the caller doesn't have the admin role
     vm.assume(!GeneralManager(address(generalManager)).hasRole(Roles.DEFAULT_ADMIN_ROLE, caller));
 
@@ -415,9 +417,9 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
   }
 
-  function test_updateSupportedMortgagePeriodTerms_shouldRevertIfSupportedTotalPeriodsExceedsMaximum(
-    uint8 invalidMortgagePeriods
-  ) public {
+  function test_updateSupportedMortgagePeriodTerms_shouldRevertIfSupportedTotalPeriodsExceedsMaximum(uint8 invalidMortgagePeriods)
+    public
+  {
     // Make sure the invalid mortgage periods exceeds the maximum
     invalidMortgagePeriods = uint8(bound(invalidMortgagePeriods, Constants.MAX_TOTAL_PERIODS + 1, type(uint8).max));
 
@@ -478,9 +480,9 @@ contract GeneralManagerTest is BaseTest {
     assertEq(generalManager.priceOracles(collateral), newPriceOracle, "Price oracle should be set correctly");
   }
 
-  function test_requestMortgageCreation_revertsIfCompoundingAndNoConversionQueue(
-    CreationRequest memory createRequestSeed
-  ) public {
+  function test_requestMortgageCreation_revertsIfCompoundingAndNoConversionQueue(CreationRequest memory createRequestSeed)
+    public
+  {
     // Fuzz the create request with compounding and no conversion queue
     CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
     creationRequest.base.isCompounding = true;
@@ -491,9 +493,9 @@ contract GeneralManagerTest is BaseTest {
     generalManager.requestMortgageCreation(creationRequest);
   }
 
-  function test_requestMortgageCreation_revertsIfNonCompoundingAndNoPaymentPlan(
-    CreationRequest memory createRequestSeed
-  ) public {
+  function test_requestMortgageCreation_revertsIfNonCompoundingAndNoPaymentPlan(CreationRequest memory createRequestSeed)
+    public
+  {
     // Fuzz the create request with non-compounding and no payment plan
     CreationRequest memory creationRequest = fuzzCreateRequestFromSeed(createRequestSeed);
     creationRequest.base.isCompounding = false;
@@ -949,9 +951,9 @@ contract GeneralManagerTest is BaseTest {
   // // ToDo: test_requestMortgageCreation_compoundingWithoutPaymentPlan
   // // ToDo: test_requestMortgageCreation_nonCompoundingWithoutPaymentPlan
 
-  function test_originate_compoundingShouldRevertIfOriginationPoolsEmpty(
-    OriginationParameters memory originationParameters
-  ) public {
+  function test_originate_compoundingShouldRevertIfOriginationPoolsEmpty(OriginationParameters memory originationParameters)
+    public
+  {
     // Set the originationPools to an empty array
     originationParameters.originationPools = new address[](0);
 
@@ -1036,9 +1038,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Unregister the origination pool from the origination pool scheduler
@@ -1131,9 +1132,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Remove the totalPeriods duration from the supported mortgage periods
@@ -1230,9 +1230,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Make sure the minimum cap is more than the amount borrowed
@@ -1330,9 +1329,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Make sure the maximum cap is less than the amount borrowed
@@ -1431,9 +1429,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Have the fulfiller process the order on the OrderPool
@@ -1702,9 +1699,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Have the fulfiller process the order on the OrderPool
@@ -1795,9 +1791,9 @@ contract GeneralManagerTest is BaseTest {
     vm.stopPrank();
   }
 
-  function test_requestBalanceSheetExpansion_shouldRevertIfOriginationPoolsEmpty(
-    ExpansionRequest memory expansionRequestSeed
-  ) public {
+  function test_requestBalanceSheetExpansion_shouldRevertIfOriginationPoolsEmpty(ExpansionRequest memory expansionRequestSeed)
+    public
+  {
     // Fuzz the expansion request with an empty origination pools array
     ExpansionRequest memory expansionRequest = fuzzExpansionRequestFromSeed(expansionRequestSeed);
     expansionRequest.base.originationPools = new address[](0);
@@ -2295,9 +2291,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), creationRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Have the fulfiller process the order on the OrderPool
@@ -2361,9 +2356,8 @@ contract GeneralManagerTest is BaseTest {
     // Deal the remaining collateral to the fulfiller and approve the OrderPool to spend it
     vm.startPrank(fulfiller);
     ERC20Mock(address(wbtc)).mint(fulfiller, expansionRequest.base.collateralAmounts[0] - requiredCollateralAmount);
-    ERC20Mock(address(wbtc)).approve(
-      address(orderPool), expansionRequest.base.collateralAmounts[0] - requiredCollateralAmount
-    );
+    ERC20Mock(address(wbtc))
+      .approve(address(orderPool), expansionRequest.base.collateralAmounts[0] - requiredCollateralAmount);
     vm.stopPrank();
 
     // Have the fulfiller process the order on the OrderPool

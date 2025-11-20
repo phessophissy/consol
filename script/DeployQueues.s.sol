@@ -50,7 +50,7 @@ contract DeployQueues is DeployGeneralManager {
     // Set the withdrawal gas fee
     UsdxQueue(address(usdxQueue)).setWithdrawalGasFee(usdxWithdrawalGasFee);
 
-    // Renounce admin role
+    // Renounce admin role // Disable for production
     UsdxQueue(address(usdxQueue)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 
@@ -69,7 +69,7 @@ contract DeployQueues is DeployGeneralManager {
     // Set the withdrawal gas fee
     ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).setWithdrawalGasFee(forfeitedAssetsWithdrawalGasFee);
 
-    // Renounce admin role
+    // Renounce admin role // Disable for production
     ForfeitedAssetsQueue(address(forfeitedAssetsQueue)).renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
   }
 
@@ -101,7 +101,7 @@ contract DeployQueues is DeployGeneralManager {
       conversionQueue.setMortgageGasFee(conversionMortgageGasFee);
       conversionQueue.setWithdrawalGasFee(conversionWithdrawalGasFee);
 
-      // Renounce admin role
+      // Renounce admin role // Disable for production
       conversionQueue.renounceRole(Roles.DEFAULT_ADMIN_ROLE, deployerAddress);
 
       // Push to the array of collateralQueues

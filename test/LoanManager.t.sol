@@ -488,9 +488,8 @@ contract LoanManagerTest is BaseTest {
     // Validate that subConsol has been escrowed inside the loan manager
     assertEq(
       subConsol.balanceOf(address(loanManager)),
-      loanManager.getMortgagePosition(mortgageParams.tokenId).convertPaymentToPrincipal(
-        loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()
-      ),
+      loanManager.getMortgagePosition(mortgageParams.tokenId)
+        .convertPaymentToPrincipal(loanManager.getMortgagePosition(mortgageParams.tokenId).monthlyPayment()),
       "SubConsol escrow should have been stored inside the loan manager"
     );
     // Validate that the amountBorrowed has not changed
@@ -637,7 +636,8 @@ contract LoanManagerTest is BaseTest {
       "Penalty accrued should be equal to the penalty amount"
     );
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
+      loanManager.getMortgagePosition(mortgageParams.tokenId)
+        .periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
       mortgageParams.hasPaymentPlan ? 1 : mortgageParams.totalPeriods,
       "Periods since term origination should be 1 if hasPaymentPlan, or totalPeriods if does not have a payment plan"
     );
@@ -671,7 +671,8 @@ contract LoanManagerTest is BaseTest {
     );
     // Validate that the periods since term origination has not changed
     assertEq(
-      loanManager.getMortgagePosition(mortgageParams.tokenId).periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
+      loanManager.getMortgagePosition(mortgageParams.tokenId)
+        .periodsSinceTermOrigination(Constants.LATE_PAYMENT_WINDOW),
       mortgageParams.hasPaymentPlan ? 1 : mortgageParams.totalPeriods,
       "Periods since term origination should not have changed since the penalty was imposed"
     );

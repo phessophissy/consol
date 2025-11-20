@@ -41,12 +41,12 @@ library Constants {
    * @notice The duration of a single epoch for deploying origination pools. A new batch of origination pools is deployable every epoch.
    * @return EPOCH_DURATION The duration of a single epoch for deploying origination pools
    */
-  uint256 public constant EPOCH_DURATION = 1 weeks;
+  uint256 public constant EPOCH_DURATION = 1 days;
   /**
    * @notice The offset for the epoch start time. This guarantees that every epoch starts at Friday 2am GMT every week
    * @return EPOCH_OFFSET The offset for the epoch start time
    */
-  uint256 public constant EPOCH_OFFSET = 1 days + 2 hours;
+  uint256 public constant EPOCH_OFFSET = 12 hours;
   /**
    * @notice The minimum permitted USDX deposit for an origination pool
    * @return MINIMUM_ORIGINATION_DEPOSIT The minimum permitted USDX deposit for an origination pool
