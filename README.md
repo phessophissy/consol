@@ -1,4 +1,4 @@
-## Cash Protocol
+## Consol Protocol
 
 ## Production Notes
 - Deployer should deposit at least $1 into USDX and then into Consol, and then transfer ownership to the contract to lock it in. This will help defend against donation attacks.
